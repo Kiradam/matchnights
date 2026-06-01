@@ -30,7 +30,11 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    if (error.response?.status !== 401 || original._retry) {
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      original.url?.includes("/auth/refresh")
+    ) {
       return Promise.reject(error);
     }
 
@@ -60,7 +64,10 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       sessionStorage.removeItem("access_token");
-      window.location.href = "/login";
+      const publicPaths = ["/login", "/register", "/reset-password"];
+      if (!publicPaths.some((p) => window.location.pathname.startsWith(p))) {
+        window.location.href = "/login";
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
