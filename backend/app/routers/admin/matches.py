@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import require_admin
 from app.db.session import get_db
 from app.models.audit import AuditLog
@@ -18,8 +19,8 @@ from app.services.football_api import fetch_wc_fixtures
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-MIN_SYNC_INTERVAL_MINUTES = 60  # configurable; refuse sync if last was < this ago
-DAILY_QUOTA = 100
+MIN_SYNC_INTERVAL_MINUTES = 60
+DAILY_QUOTA = 100  # only relevant for api_sports source
 
 
 async def _get_or_create_sync_state(db: AsyncSession) -> SyncState:
@@ -46,8 +47,8 @@ async def sync_matches(
         state.request_count_today = 0
         state.request_count_date = today
 
-    # Quota guard
-    if state.request_count_today >= DAILY_QUOTA:
+    # Quota guard — only enforced for api_sports (openfootball is a free GitHub fetch)
+    if settings.FOOTBALL_DATA_SOURCE == "api_sports" and state.request_count_today >= DAILY_QUOTA:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Daily API quota of {DAILY_QUOTA} requests exhausted. Try again tomorrow.",
@@ -70,7 +71,8 @@ async def sync_matches(
 
     try:
         fixtures, skipped_parse = await fetch_wc_fixtures()
-        state.request_count_today += 1
+        if settings.FOOTBALL_DATA_SOURCE == "api_sports":
+            state.request_count_today += 1
         skipped += skipped_parse
     except Exception as exc:
         error_msg = f"API fetch failed: {exc}"

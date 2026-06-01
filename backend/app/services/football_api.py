@@ -1,6 +1,14 @@
-"""api-football.com client with quota guard and defensive deserialization."""
+"""Football data client.
+
+Two sources are supported, selected by FOOTBALL_DATA_SOURCE in settings:
+  "openfootball"  — free GitHub JSON, no key required (default)
+  "api_sports"    — api-sports.io v3, requires FOOTBALL_API_KEY and a paid plan
+                    for the current season
+"""
+import hashlib
 import logging
-from datetime import UTC, datetime
+import re
+from datetime import UTC, datetime, timedelta, timezone
 
 import httpx
 from pydantic import BaseModel, ValidationError, field_validator
@@ -9,21 +17,121 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
+# ── Shared normalised record ─────────────────────────────────────────────────
+
+class NormalisedMatch:
+    __slots__ = ("external_id", "home_team", "away_team", "stage",
+                 "match_datetime", "venue", "status")
+
+    def __init__(
+        self,
+        external_id: str,
+        home_team: str,
+        away_team: str,
+        stage: str,
+        match_datetime: datetime,  # naive UTC
+        venue: str | None,
+        status: str,
+    ) -> None:
+        self.external_id = external_id
+        self.home_team = home_team
+        self.away_team = away_team
+        self.stage = stage
+        self.match_datetime = match_datetime
+        self.venue = venue
+        self.status = status
+
+
+# ── openfootball source ──────────────────────────────────────────────────────
+
+_OFB_URL = (
+    "https://raw.githubusercontent.com/openfootball/worldcup.json"
+    "/master/2026/worldcup.json"
+)
+
+# "13:00 UTC-6"  →  offset = -6
+_TZ_RE = re.compile(r"UTC([+-]\d+)$")
+
+
+def _parse_ofb_datetime(date_str: str, time_str: str) -> datetime:
+    """Parse openfootball date + time strings to a naive UTC datetime."""
+    hour, minute = map(int, time_str.split()[0].split(":"))
+    m = _TZ_RE.search(time_str)
+    offset_h = int(m.group(1)) if m else 0
+    tz = timezone(timedelta(hours=offset_h))
+    local_dt = datetime(
+        *map(int, date_str.split("-")), hour, minute, tzinfo=tz
+    )
+    return local_dt.astimezone(UTC).replace(tzinfo=None)
+
+
+def _infer_status(match_utc: datetime) -> str:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    # Allow 115 min for a match to be considered "live" (90 min + stoppage)
+    if match_utc > now + timedelta(minutes=30):
+        return "scheduled"
+    if match_utc > now - timedelta(minutes=115):
+        return "live"
+    return "finished"
+
+
+def _stable_id(date: str, home: str, away: str) -> str:
+    key = f"{date}|{home}|{away}"
+    return "ofb-" + hashlib.sha1(key.encode()).hexdigest()[:12]
+
+
+async def _fetch_openfootball() -> tuple[list[NormalisedMatch], int]:
+    async with httpx.AsyncClient(timeout=30) as client:
+        logger.info("openfootball fetch", extra={"url": _OFB_URL})
+        response = await client.get(_OFB_URL)
+        response.raise_for_status()
+
+    raw = response.json()
+    matches_raw = raw.get("matches", [])
+
+    normalised: list[NormalisedMatch] = []
+    skipped = 0
+    for m in matches_raw:
+        try:
+            date = m["date"]
+            time_str = m.get("time", "12:00 UTC+0")
+            home = m["team1"]
+            away = m["team2"]
+            stage = m.get("group") or m.get("round", "Unknown")
+            venue = m.get("ground")
+
+            match_utc = _parse_ofb_datetime(date, time_str)
+            status = _infer_status(match_utc)
+            ext_id = _stable_id(date, home, away)
+
+            normalised.append(NormalisedMatch(
+                external_id=ext_id,
+                home_team=home,
+                away_team=away,
+                stage=stage,
+                match_datetime=match_utc,
+                venue=venue,
+                status=status,
+            ))
+        except Exception as exc:
+            logger.warning("openfootball: skipping match due to parse error: %s", exc)
+            skipped += 1
+
+    return normalised, skipped
+
+
+# ── api-sports.io source ─────────────────────────────────────────────────────
+
 _STATUS_MAP = {
-    # scheduled
     "NS": "scheduled", "TBD": "scheduled",
-    # live
     "1H": "live", "HT": "live", "2H": "live",
     "ET": "live", "BT": "live", "P": "live", "LIVE": "live",
-    # finished
     "FT": "finished", "AET": "finished", "PEN": "finished",
-    # cancelled / other
     "CANC": "cancelled", "ABD": "cancelled", "AWD": "cancelled", "WO": "cancelled",
-    "PST": "scheduled",  # postponed → treat as scheduled
+    "PST": "scheduled",
 }
 
-
-# ── Defensive Pydantic models for api-football.com response ─────────────────
 
 class _Venue(BaseModel):
     name: str | None = None
@@ -71,47 +179,36 @@ class _ApiResponse(BaseModel):
     response: list[_Fixture] = []
 
 
-# ── Normalised match record ──────────────────────────────────────────────────
+def _normalise_api_sports(f: _Fixture) -> NormalisedMatch:
+    fi = f.fixture
+    if fi.date:
+        try:
+            match_utc = datetime.fromisoformat(fi.date).astimezone(UTC).replace(tzinfo=None)
+        except ValueError:
+            match_utc = datetime(2026, 6, 11)
+    else:
+        match_utc = datetime(2026, 6, 11)
 
-class NormalisedMatch:
-    __slots__ = ("external_id", "home_team", "away_team", "stage",
-                 "match_datetime", "venue", "status")
+    venue_parts = [fi.venue.name, fi.venue.city]
+    venue = ", ".join(p for p in venue_parts if p) or None
 
-    def __init__(self, f: _Fixture) -> None:
-        fi = f.fixture
-        self.external_id = str(fi.id)
-        self.home_team = f.teams.home.name
-        self.away_team = f.teams.away.name
-        self.stage = f.league.round
-
-        if fi.date:
-            try:
-                self.match_datetime = datetime.fromisoformat(fi.date).astimezone(UTC).replace(tzinfo=None)
-            except ValueError:
-                self.match_datetime = datetime(2026, 6, 11, tzinfo=UTC).replace(tzinfo=None)
-        else:
-            self.match_datetime = datetime(2026, 6, 11, tzinfo=UTC).replace(tzinfo=None)
-
-        venue_parts = [fi.venue.name, fi.venue.city]
-        self.venue = ", ".join(p for p in venue_parts if p) or None
-        self.status = _STATUS_MAP.get(fi.status.short, "scheduled")
+    return NormalisedMatch(
+        external_id=str(fi.id),
+        home_team=f.teams.home.name,
+        away_team=f.teams.away.name,
+        stage=f.league.round,
+        match_datetime=match_utc,
+        venue=venue,
+        status=_STATUS_MAP.get(fi.status.short, "scheduled"),
+    )
 
 
-# ── API client ───────────────────────────────────────────────────────────────
-
-async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
-    """
-    Fetch WC 2026 fixtures from api-football.com.
-    Returns (matches, raw_response_count).
-    Raises httpx.HTTPStatusError on non-2xx.
-    """
+async def _fetch_api_sports() -> tuple[list[NormalisedMatch], int]:
     url = f"https://{settings.FOOTBALL_API_HOST}/fixtures"
     params = {
         "league": str(settings.FOOTBALL_WC_LEAGUE_ID),
         "season": str(settings.FOOTBALL_WC_SEASON),
     }
-    # api-sports.io direct key uses x-apisports-key; RapidAPI uses X-RapidAPI-Key.
-    # We support both: always send both headers so either provider works.
     headers = {
         "x-apisports-key": settings.FOOTBALL_API_KEY,
         "X-RapidAPI-Key": settings.FOOTBALL_API_KEY,
@@ -119,38 +216,50 @@ async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = client.build_request("GET", url, params=params, headers=headers)
-        logger.info("football_api request", extra={"url": str(resp.url)})
-        response = await client.send(resp)
+        req = client.build_request("GET", url, params=params, headers=headers)
+        logger.info("api_sports request", extra={"url": str(req.url)})
+        response = await client.send(req)
         response.raise_for_status()
 
     raw = response.json()
 
-    # Surface API-level errors (e.g. plan restrictions) before parsing
     if raw.get("errors"):
         err_msg = "; ".join(
-            f"{k}: {v}" for k, v in (raw["errors"].items() if isinstance(raw["errors"], dict)
-                                      else {"error": raw["errors"]}.items())
+            f"{k}: {v}" for k, v in (
+                raw["errors"].items() if isinstance(raw["errors"], dict)
+                else {"error": raw["errors"]}.items()
+            )
         )
-        logger.error("football_api returned errors: %s", err_msg)
+        logger.error("api_sports returned errors: %s", err_msg)
         raise RuntimeError(f"API error: {err_msg}")
 
     try:
         parsed = _ApiResponse.model_validate(raw)
     except ValidationError as exc:
-        logger.error("football_api response validation failed: %s", exc)
+        logger.error("api_sports response validation failed: %s", exc)
         raise
 
     normalised: list[NormalisedMatch] = []
     skipped = 0
     for item in parsed.response:
         try:
-            normalised.append(NormalisedMatch(item))
+            normalised.append(_normalise_api_sports(item))
         except Exception as exc:
-            logger.warning("skipping fixture due to parse error: %s", exc)
+            logger.warning("api_sports: skipping fixture: %s", exc)
             skipped += 1
 
-    if skipped:
-        logger.warning("skipped %d fixtures during normalisation", skipped)
-
     return normalised, skipped
+
+
+# ── Public entry point ───────────────────────────────────────────────────────
+
+async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
+    """Fetch WC 2026 fixtures using the configured data source.
+
+    Returns (normalised_matches, skipped_count).
+    Raises on unrecoverable errors.
+    """
+    source = settings.FOOTBALL_DATA_SOURCE
+    if source == "api_sports":
+        return await _fetch_api_sports()
+    return await _fetch_openfootball()

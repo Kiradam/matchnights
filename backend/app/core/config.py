@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    # "openfootball" = free GitHub JSON (default); "api_sports" = api-sports.io paid plan
+    FOOTBALL_DATA_SOURCE: str = "openfootball"
     FOOTBALL_API_KEY: str = ""
     FOOTBALL_API_HOST: str = "v3.football.api-sports.io"
     FOOTBALL_WC_LEAGUE_ID: int = 1
