@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 class NormalisedMatch:
     __slots__ = ("external_id", "home_team", "away_team", "stage",
-                 "match_datetime", "venue", "status")
+                 "match_datetime", "venue", "status",
+                 "home_team_crest", "away_team_crest")
 
     def __init__(
         self,
@@ -33,6 +34,8 @@ class NormalisedMatch:
         match_datetime: datetime,  # naive UTC
         venue: str | None,
         status: str,
+        home_team_crest: str | None = None,
+        away_team_crest: str | None = None,
     ) -> None:
         self.external_id = external_id
         self.home_team = home_team
@@ -41,6 +44,8 @@ class NormalisedMatch:
         self.match_datetime = match_datetime
         self.venue = venue
         self.status = status
+        self.home_team_crest = home_team_crest
+        self.away_team_crest = away_team_crest
 
 
 # ── openfootball source ──────────────────────────────────────────────────────
@@ -304,8 +309,12 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
     skipped = 0
     for m in matches_raw:
         try:
-            home = (m.get("homeTeam") or {}).get("name") or "TBD"
-            away = (m.get("awayTeam") or {}).get("name") or "TBD"
+            home_obj = m.get("homeTeam") or {}
+            away_obj = m.get("awayTeam") or {}
+            home = home_obj.get("name") or "TBD"
+            away = away_obj.get("name") or "TBD"
+            home_crest = home_obj.get("crest") or None
+            away_crest = away_obj.get("crest") or None
             stage = _fd_stage(m.get("stage", ""), m.get("group"))
             status = _FD_STATUS_MAP.get(m.get("status", ""), "scheduled")
             match_utc = datetime.fromisoformat(
@@ -320,6 +329,8 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
                 match_datetime=match_utc,
                 venue=None,         # not provided in free plan response
                 status=status,
+                home_team_crest=home_crest,
+                away_team_crest=away_crest,
             ))
         except Exception as exc:
             logger.warning("football_data: skipping match: %s", exc)

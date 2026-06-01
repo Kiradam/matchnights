@@ -19,6 +19,8 @@ class MatchOut(BaseModel):
     external_id: str
     home_team: str
     away_team: str
+    home_team_crest: str | None = None
+    away_team_crest: str | None = None
     stage: str
     match_datetime: datetime
     venue: str | None

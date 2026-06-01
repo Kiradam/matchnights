@@ -30,6 +30,8 @@ class Match(Base):
     last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    home_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    away_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     preferences: Mapped[list["Preference"]] = relationship(  # noqa: F821
         "Preference", back_populates="match"

@@ -108,6 +108,10 @@ async def sync_matches(
                 existing.venue = fix.venue
                 existing.status = fix.status  # type: ignore[assignment]
                 existing.last_synced_at = now
+                if fix.home_team_crest:
+                    existing.home_team_crest = fix.home_team_crest
+                if fix.away_team_crest:
+                    existing.away_team_crest = fix.away_team_crest
             else:
                 match = Match(
                     external_id=fix.external_id,
@@ -118,6 +122,8 @@ async def sync_matches(
                     venue=fix.venue,
                     status=fix.status,  # type: ignore[arg-type]
                     last_synced_at=now,
+                    home_team_crest=fix.home_team_crest,
+                    away_team_crest=fix.away_team_crest,
                 )
                 db.add(match)
             synced += 1

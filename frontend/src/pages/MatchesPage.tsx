@@ -168,6 +168,21 @@ function GroupPanel({
   );
 }
 
+// ── Crest image ─────────────────────────────────────────────────────────────
+
+function CrestImg({ src, alt }: { src: string | null; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-5 h-5 object-contain shrink-0"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 // ── Match card ──────────────────────────────────────────────────────────────
 
 function togetherPct(summaries: GroupPreferenceSummary[]): number {
@@ -306,10 +321,12 @@ function MatchCard({
                 <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
               )}
             </div>
-            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {match.home_team}{" "}
-              <span className="text-gray-400 dark:text-gray-500 font-normal">vs</span>{" "}
-              {match.away_team}
+            <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-gray-100">
+              <CrestImg src={match.home_team_crest} alt={match.home_team} />
+              <span className="truncate min-w-0">{match.home_team}</span>
+              <span className="text-gray-400 dark:text-gray-500 font-normal shrink-0">vs</span>
+              <span className="truncate min-w-0">{match.away_team}</span>
+              <CrestImg src={match.away_team_crest} alt={match.away_team} />
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {dateStr} · {timeStr}
