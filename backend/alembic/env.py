@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import Base and all models so Alembic can see them for autogenerate
 from app.db.base import Base
 import app.models.user  # noqa: F401
 import app.models.token  # noqa: F401
@@ -15,6 +14,7 @@ import app.models.group  # noqa: F401
 import app.models.match  # noqa: F401
 import app.models.preference  # noqa: F401
 import app.models.audit  # noqa: F401
+import app.models.sync  # noqa: F401
 
 config = context.config
 

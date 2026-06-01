@@ -4,23 +4,26 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.logging_config import setup_logging
 from app.core.seed import seed_admin
 from app.db.session import async_session_maker
 from app.routers import health
 from app.routers.auth import router as auth_router
+from app.routers.groups import router as groups_router
+from app.routers.matches import router as matches_router
+from app.routers.preferences import router as preferences_router
 from app.routers.users import router as users_router
+from app.routers.admin.groups import router as admin_groups_router
+from app.routers.admin.matches import router as admin_matches_router
 from app.routers.admin.users import router as admin_users_router
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -65,4 +68,9 @@ async def request_id_middleware(request: Request, call_next):
 app.include_router(health.router)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(matches_router)
+app.include_router(preferences_router)
+app.include_router(groups_router)
 app.include_router(admin_users_router)
+app.include_router(admin_groups_router)
+app.include_router(admin_matches_router)
