@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../api/axios";
-import type { Match, Paginated, PreferenceChoice } from "../types";
+import type { Match, PreferenceChoice } from "../types";
 
 const CHOICE_LABELS: Record<PreferenceChoice, string> = {
   watch: "Watch",
@@ -89,67 +89,50 @@ function MatchCard({ match, onPreferenceChange }: {
 }
 
 export function MatchesPage() {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState("");
-  const [stages, setStages] = useState<string[]>([]);
-  const pageSize = 20;
   const fetchRef = useRef(0);
 
-  const load = useCallback(async (p: number, stage: string) => {
+  const load = useCallback(async () => {
     setLoading(true);
     const id = ++fetchRef.current;
     try {
-      const params: Record<string, string | number> = { page: p, page_size: pageSize };
-      if (stage) params.stage = stage;
-      const { data } = await api.get<Paginated<Match>>("/matches", { params });
+      const { data } = await api.get<Match[]>("/matches", { params: { page_size: 200 } });
       if (id !== fetchRef.current) return;
-      setMatches(data.items);
-      setTotal(data.total);
-      if (stages.length === 0 && data.items.length > 0) {
-        // collect unique stages from this page for the filter dropdown
-      }
+      setAllMatches(data);
     } finally {
       if (id === fetchRef.current) setLoading(false);
     }
-  }, [stages.length]);
-
-  // fetch distinct stages once
-  useEffect(() => {
-    api.get<Paginated<Match>>("/matches", { params: { page: 1, page_size: 200 } }).then(({ data }) => {
-      const s = Array.from(new Set(data.items.map((m) => m.stage))).sort();
-      setStages(s);
-    });
   }, []);
 
-  useEffect(() => {
-    load(page, stageFilter);
-  }, [page, stageFilter, load]);
+  useEffect(() => { load(); }, [load]);
 
   const handlePreferenceChange = (matchId: number, choice: PreferenceChoice | null) => {
-    setMatches((prev) =>
+    setAllMatches((prev) =>
       prev.map((m) => (m.id === matchId ? { ...m, my_preference: choice } : m))
     );
   };
 
-  const totalPages = Math.ceil(total / pageSize);
+  const stages = Array.from(new Set(allMatches.map((m) => m.stage))).sort();
+  const matches = stageFilter ? allMatches.filter((m) => m.stage === stageFilter) : allMatches;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-gray-900">Matches</h1>
-        <div className="flex items-center gap-3">
+        <h1 className="text-xl font-semibold text-gray-900">
+          Matches {!loading && <span className="text-sm font-normal text-gray-400">({matches.length})</span>}
+        </h1>
+        {stages.length > 1 && (
           <select
             value={stageFilter}
-            onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
+            onChange={(e) => setStageFilter(e.target.value)}
             className="text-sm border border-gray-200 rounded px-2 py-1.5 text-gray-700 bg-white"
           >
             <option value="">All stages</option>
             {stages.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-        </div>
+        )}
       </div>
 
       {loading ? (
@@ -160,44 +143,21 @@ export function MatchesPage() {
               <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
               <div className="h-3 bg-gray-100 rounded w-1/2 mb-4" />
               <div className="flex gap-2">
-                {[0,1,2].map(j => <div key={j} className="flex-1 h-7 bg-gray-100 rounded" />)}
+                {[0, 1, 2].map(j => <div key={j} className="flex-1 h-7 bg-gray-100 rounded" />)}
               </div>
             </div>
           ))}
         </div>
       ) : matches.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
-          No matches found. An admin can sync match data from the Admin panel.
+          No matches found.{allMatches.length === 0 && " An admin can sync match data from the Admin panel."}
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {matches.map((m) => (
-              <MatchCard key={m.id} match={m} onPreferenceChange={handlePreferenceChange} />
-            ))}
-          </div>
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1.5 text-sm border rounded disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <span className="px-3 py-1.5 text-sm text-gray-600">
-                {page} / {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 text-sm border rounded disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {matches.map((m) => (
+            <MatchCard key={m.id} match={m} onPreferenceChange={handlePreferenceChange} />
+          ))}
+        </div>
       )}
     </div>
   );
