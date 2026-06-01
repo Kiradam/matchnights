@@ -12,7 +12,8 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
-RUN chown -R appuser:appuser /app
+COPY entrypoint.sh /entrypoint.sh
+RUN mkdir -p /app/data && chown -R appuser:appuser /app && chmod +x /entrypoint.sh
 
 USER appuser
 
@@ -21,5 +22,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["sh", "/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+from app.core.config import settings
 from app.db.base import Base
 import app.models.user  # noqa: F401
 import app.models.token  # noqa: F401
@@ -23,9 +24,13 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# Always use the DATABASE_URL from application settings so that environment
+# variable overrides (e.g. in Docker) are respected instead of alembic.ini.
+_db_url: str = settings.DATABASE_URL
+
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = _db_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -49,7 +54,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        {**config.get_section(config.config_ini_section, {}), "sqlalchemy.url": _db_url},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
