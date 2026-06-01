@@ -1,0 +1,78 @@
+export type UserRole = "user" | "admin";
+export type MatchStatus = "scheduled" | "live" | "finished" | "cancelled";
+export type PreferenceChoice = "watch" | "watch_together" | "skip";
+
+export interface User {
+  id: number;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Match {
+  id: number;
+  external_id: string;
+  home_team: string;
+  away_team: string;
+  stage: string;
+  match_datetime: string;
+  venue: string | null;
+  status: MatchStatus;
+  my_preference: PreferenceChoice | null;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface GroupMemberPreference {
+  user_id: number;
+  full_name: string;
+  is_active: boolean;
+  choice: PreferenceChoice | null;
+}
+
+export interface MatchPreferenceSummary {
+  watch: number;
+  watch_together: number;
+  skip: number;
+  no_response: number;
+  members: GroupMemberPreference[];
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  member_count: number;
+}
+
+export interface GroupMember {
+  user_id: number;
+  full_name: string;
+  email: string;
+  is_active: boolean;
+  added_at: string;
+}
+
+export interface Invite {
+  id: number;
+  token: string;
+  registration_url: string;
+  expires_at: string;
+  created_at: string;
+  used: boolean;
+}
+
+export interface SyncState {
+  last_sync_at: string | null;
+  last_sync_result: Record<string, unknown> | null;
+  request_count_today: number;
+  quota_remaining: number;
+}

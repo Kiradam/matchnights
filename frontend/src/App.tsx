@@ -1,10 +1,16 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Navigate, BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MainLayout } from "./layouts/MainLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { MatchesPage } from "./pages/MatchesPage";
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
+import { AdminSyncPage } from "./pages/admin/AdminSyncPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
 
 export default function App() {
   return (
@@ -13,14 +19,24 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
-              {/* M8: match list will go here */}
-              <Route index path="/matches" element={<div className="p-8 text-gray-500">Matches coming in M8</div>} />
-              {/* M9: admin routes will go here */}
-              <Route path="/admin/*" element={<div className="p-8 text-gray-500">Admin panel coming in M9</div>} />
+              <Route index element={<Navigate to="/matches" replace />} />
+              <Route path="/matches" element={<MatchesPage />} />
+
+              <Route element={<ProtectedRoute adminOnly />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="/admin/invites" replace />} />
+                  <Route path="invites" element={<AdminInvitesPage />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route path="groups" element={<AdminGroupsPage />} />
+                  <Route path="sync" element={<AdminSyncPage />} />
+                </Route>
+              </Route>
             </Route>
           </Route>
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>
