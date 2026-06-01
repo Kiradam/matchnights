@@ -1,8 +1,7 @@
 import logging
 import sys
-import uuid
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 
 from app.core.config import settings
 
@@ -20,12 +19,11 @@ def setup_logging() -> None:
 
     handler = logging.StreamHandler(sys.stdout)
     handler.addFilter(RequestIdFilter())
-    formatter = jsonlogger.JsonFormatter(
+    formatter = JsonFormatter(
         fmt="%(asctime)s %(levelname)s %(name)s %(request_id)s %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     handler.setFormatter(formatter)
     root.handlers = [handler]
 
-    # Silence noisy libraries
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
