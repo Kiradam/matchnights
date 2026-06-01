@@ -1,9 +1,9 @@
 """Football data client.
 
-Two sources are supported, selected by FOOTBALL_DATA_SOURCE in settings:
-  "openfootball"  — free GitHub JSON, no key required (default)
-  "api_sports"    — api-sports.io v3, requires FOOTBALL_API_KEY and a paid plan
-                    for the current season
+Three sources are supported, selected by FOOTBALL_DATA_SOURCE in settings:
+  "football_data" — football-data.org free API, FOOTBALL_DATA_ORG_KEY required (default)
+  "openfootball"  — free GitHub static JSON, no key required
+  "api_sports"    — api-sports.io v3, requires FOOTBALL_API_KEY + paid plan for 2026
 """
 import hashlib
 import logging
@@ -251,6 +251,83 @@ async def _fetch_api_sports() -> tuple[list[NormalisedMatch], int]:
     return normalised, skipped
 
 
+# ── football-data.org source ─────────────────────────────────────────────────
+
+_FD_URL = "https://api.football-data.org/v4/competitions/WC/matches"
+
+_FD_STATUS_MAP = {
+    "TIMED": "scheduled",
+    "SCHEDULED": "scheduled",
+    "POSTPONED": "scheduled",
+    "IN_PLAY": "live",
+    "PAUSED": "live",       # half-time
+    "FINISHED": "finished",
+    "AWARDED": "finished",
+    "SUSPENDED": "cancelled",
+    "CANCELLED": "cancelled",
+}
+
+_FD_STAGE_MAP = {
+    "GROUP_STAGE": None,        # use group field instead
+    "LAST_32": "Round of 32",
+    "LAST_16": "Round of 16",
+    "QUARTER_FINALS": "Quarter-finals",
+    "SEMI_FINALS": "Semi-finals",
+    "THIRD_PLACE": "Third place",
+    "FINAL": "Final",
+}
+
+
+def _fd_stage(stage: str, group: str | None) -> str:
+    if stage == "GROUP_STAGE" and group:
+        # "GROUP_A" → "Group A"
+        return group.replace("GROUP_", "Group ").replace("_", " ").title()
+    return _FD_STAGE_MAP.get(stage, stage.replace("_", " ").title())
+
+
+async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
+    if not settings.FOOTBALL_DATA_ORG_KEY:
+        raise RuntimeError("FOOTBALL_DATA_ORG_KEY is not configured")
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        logger.info("football_data.org fetch", extra={"url": _FD_URL})
+        response = await client.get(
+            _FD_URL,
+            headers={"X-Auth-Token": settings.FOOTBALL_DATA_ORG_KEY},
+        )
+        response.raise_for_status()
+
+    raw = response.json()
+    matches_raw = raw.get("matches", [])
+
+    normalised: list[NormalisedMatch] = []
+    skipped = 0
+    for m in matches_raw:
+        try:
+            home = (m.get("homeTeam") or {}).get("name") or "TBD"
+            away = (m.get("awayTeam") or {}).get("name") or "TBD"
+            stage = _fd_stage(m.get("stage", ""), m.get("group"))
+            status = _FD_STATUS_MAP.get(m.get("status", ""), "scheduled")
+            match_utc = datetime.fromisoformat(
+                m["utcDate"].replace("Z", "+00:00")
+            ).astimezone(UTC).replace(tzinfo=None)
+
+            normalised.append(NormalisedMatch(
+                external_id=f"fd-{m['id']}",
+                home_team=home,
+                away_team=away,
+                stage=stage,
+                match_datetime=match_utc,
+                venue=None,         # not provided in free plan response
+                status=status,
+            ))
+        except Exception as exc:
+            logger.warning("football_data: skipping match: %s", exc)
+            skipped += 1
+
+    return normalised, skipped
+
+
 # ── Public entry point ───────────────────────────────────────────────────────
 
 async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
@@ -262,4 +339,6 @@ async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
     source = settings.FOOTBALL_DATA_SOURCE
     if source == "api_sports":
         return await _fetch_api_sports()
-    return await _fetch_openfootball()
+    if source == "openfootball":
+        return await _fetch_openfootball()
+    return await _fetch_football_data()
