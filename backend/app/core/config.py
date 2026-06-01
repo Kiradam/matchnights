@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     FOOTBALL_API_KEY: str = ""
-    FOOTBALL_API_HOST: str = "api-football-v3.p.rapidapi.com"
+    FOOTBALL_API_HOST: str = "v3.football.api-sports.io"
     FOOTBALL_WC_LEAGUE_ID: int = 1
     FOOTBALL_WC_SEASON: int = 2026
 

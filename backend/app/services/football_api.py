@@ -110,7 +110,10 @@ async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
         "league": str(settings.FOOTBALL_WC_LEAGUE_ID),
         "season": str(settings.FOOTBALL_WC_SEASON),
     }
+    # api-sports.io direct key uses x-apisports-key; RapidAPI uses X-RapidAPI-Key.
+    # We support both: always send both headers so either provider works.
     headers = {
+        "x-apisports-key": settings.FOOTBALL_API_KEY,
         "X-RapidAPI-Key": settings.FOOTBALL_API_KEY,
         "X-RapidAPI-Host": settings.FOOTBALL_API_HOST,
     }
@@ -122,6 +125,15 @@ async def fetch_wc_fixtures() -> tuple[list[NormalisedMatch], int]:
         response.raise_for_status()
 
     raw = response.json()
+
+    # Surface API-level errors (e.g. plan restrictions) before parsing
+    if raw.get("errors"):
+        err_msg = "; ".join(
+            f"{k}: {v}" for k, v in (raw["errors"].items() if isinstance(raw["errors"], dict)
+                                      else {"error": raw["errors"]}.items())
+        )
+        logger.error("football_api returned errors: %s", err_msg)
+        raise RuntimeError(f"API error: {err_msg}")
 
     try:
         parsed = _ApiResponse.model_validate(raw)
