@@ -28,14 +28,14 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("wc2026-planner starting up")
+    logger.info("WatchMatch starting up")
     async with async_session_maker() as db:
         await seed_admin(db)
     yield
-    logger.info("wc2026-planner shutting down")
+    logger.info("WatchMatch shutting down")
 
 
-app = FastAPI(title="wc2026-planner", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="WatchMatch", version="0.1.0", lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

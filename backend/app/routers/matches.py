@@ -6,26 +6,54 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
+from app.models.group import Group, UserGroup
 from app.models.match import Match
 from app.models.preference import Preference
 from app.models.user import User
-from app.schemas.match import MatchOut
+from app.schemas.match import MatchOut, MyGroupPreference
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
 
-async def _attach_my_preference(
-    match: Match, user: User, db: AsyncSession
-) -> MatchOut:
-    result = await db.execute(
-        select(Preference).where(
-            Preference.match_id == match.id,
-            Preference.user_id == user.id,
-        )
+async def _build_match_out(
+    matches: list[Match],
+    user: User,
+    db: AsyncSession,
+) -> list[MatchOut]:
+    # Load user's groups once
+    groups_result = await db.execute(
+        select(UserGroup, Group)
+        .join(Group, Group.id == UserGroup.group_id)
+        .where(UserGroup.user_id == user.id)
+        .order_by(Group.name)
     )
-    pref = result.scalar_one_or_none()
-    out = MatchOut.model_validate(match)
-    out.my_preference = pref.choice if pref else None
+    user_group_rows = list(groups_result)
+    group_names: dict[int, str] = {ug.group_id: g.name for ug, g in user_group_rows}
+
+    # Load all preferences for these matches in one query
+    match_ids = [m.id for m in matches]
+    pref_map: dict[tuple[int, int], str] = {}
+    if match_ids and group_names:
+        prefs_result = await db.execute(
+            select(Preference).where(
+                Preference.user_id == user.id,
+                Preference.match_id.in_(match_ids),
+            )
+        )
+        pref_map = {(p.match_id, p.group_id): p.choice for p in prefs_result.scalars()}
+
+    out: list[MatchOut] = []
+    for m in matches:
+        mo = MatchOut.model_validate(m)
+        mo.my_preferences = [
+            MyGroupPreference(
+                group_id=gid,
+                group_name=gname,
+                choice=pref_map.get((m.id, gid)),
+            )
+            for gid, gname in group_names.items()
+        ]
+        out.append(mo)
     return out
 
 
@@ -56,7 +84,7 @@ async def list_matches(
     q = q.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(q)
     matches = list(result.scalars())
-    return [await _attach_my_preference(m, user, db) for m in matches]
+    return await _build_match_out(matches, user, db)
 
 
 @router.get("/{match_id}", response_model=MatchOut)
@@ -69,4 +97,5 @@ async def get_match(
     match = result.scalar_one_or_none()
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-    return await _attach_my_preference(match, user, db)
+    built = await _build_match_out([match], user, db)
+    return built[0]

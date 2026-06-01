@@ -6,6 +6,12 @@ from app.models.match import MatchStatus
 from app.models.preference import PreferenceChoice
 
 
+class MyGroupPreference(BaseModel):
+    group_id: int
+    group_name: str
+    choice: PreferenceChoice | None
+
+
 class MatchOut(BaseModel):
     model_config = {"from_attributes": True}
 
@@ -17,7 +23,7 @@ class MatchOut(BaseModel):
     match_datetime: datetime
     venue: str | None
     status: MatchStatus
-    my_preference: PreferenceChoice | None = None
+    my_preferences: list[MyGroupPreference] = []
 
 
 class SyncResultOut(BaseModel):

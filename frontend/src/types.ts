@@ -11,6 +11,12 @@ export interface User {
   created_at: string;
 }
 
+export interface MyGroupPreference {
+  group_id: number;
+  group_name: string;
+  choice: PreferenceChoice | null;
+}
+
 export interface Match {
   id: number;
   external_id: string;
@@ -20,7 +26,7 @@ export interface Match {
   match_datetime: string;
   venue: string | null;
   status: MatchStatus;
-  my_preference: PreferenceChoice | null;
+  my_preferences: MyGroupPreference[];
 }
 
 export interface Paginated<T> {
@@ -37,7 +43,9 @@ export interface GroupMemberPreference {
   choice: PreferenceChoice | null;
 }
 
-export interface MatchPreferenceSummary {
+export interface GroupPreferenceSummary {
+  group_id: number;
+  group_name: string;
   watch: number;
   watch_together: number;
   skip: number;

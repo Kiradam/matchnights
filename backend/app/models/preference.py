@@ -15,11 +15,12 @@ class PreferenceChoice(str, enum.Enum):
 
 class Preference(Base):
     __tablename__ = "preferences"
-    __table_args__ = (UniqueConstraint("user_id", "match_id", name="uq_user_match"),)
+    __table_args__ = (UniqueConstraint("user_id", "match_id", "group_id", name="uq_user_match_group"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"))
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"))
     choice: Mapped[PreferenceChoice] = mapped_column(Enum(PreferenceChoice))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
