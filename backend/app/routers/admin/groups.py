@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,7 +95,7 @@ async def delete_group(
 @router.post("/{group_id}/members", status_code=status.HTTP_204_NO_CONTENT)
 async def add_member(
     group_id: int,
-    user_id: int,
+    user_id: int = Body(..., embed=True),
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:
