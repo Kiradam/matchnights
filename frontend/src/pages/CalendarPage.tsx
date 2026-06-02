@@ -40,11 +40,11 @@ function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-/** 00:01–06:30 is "late night" belonging to the previous display day. */
+/** 00:00–06:30 is "late night" belonging to the previous display day. */
 function assignMatch(m: Match): { displayDate: Date; section: "evening" | "dawn" } {
   const dt = new Date(m.match_datetime);
   const totalMin = dt.getHours() * 60 + dt.getMinutes();
-  if (totalMin >= 1 && totalMin <= 390) {
+  if (totalMin <= 390) {
     const prev = new Date(dt);
     prev.setDate(prev.getDate() - 1);
     prev.setHours(0, 0, 0, 0);
@@ -106,7 +106,7 @@ function MatchPill({ match }: { match: Match }) {
       className={`block text-[11px] px-2 py-1.5 rounded-lg border leading-snug hover:opacity-75 transition-opacity ${PILL[color]}`}
     >
       <div className="font-bold tabular-nums">{fmtTime(match.match_datetime)}</div>
-      <div className="font-medium truncate">{match.home_team}</div>
+      <div className="truncate">{match.home_team}</div>
       <div className="opacity-55 truncate text-[10px]">vs {match.away_team}</div>
     </Link>
   );
