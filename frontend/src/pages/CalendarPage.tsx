@@ -56,8 +56,33 @@ function toICalDate(d: Date): string {
   return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
 
+// RFC 5545 §3.3.11 — escape TEXT property values
+function esc(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+// RFC 5545 §3.1 — fold lines longer than 75 octets (CRLF + space)
+function fold(line: string): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= 75) return line;
+  const chunks: string[] = [];
+  let current = "";
+  for (const char of line) {
+    const next = current + char;
+    if (encoder.encode(next).length > 75) {
+      chunks.push(current);
+      current = " " + char;
+    } else {
+      current = next;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks.join("\r\n");
+}
+
 function downloadICal(matches: Match[]) {
-  const lines: string[] = [
+  const now = toICalDate(new Date());
+  const rawLines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//WatchMatch//WC2026//EN",
@@ -76,23 +101,25 @@ function downloadICal(matches: Match[]) {
       choice === "watch_together" ? "Watching together" : "Watching",
     ]
       .filter(Boolean)
-      .join(" · ");
+      .join(" - ");
 
-    lines.push(
+    rawLines.push(
       "BEGIN:VEVENT",
       `UID:wm-${m.id}@wc2026-planner`,
+      `DTSTAMP:${now}`,
       `DTSTART:${toICalDate(start)}`,
       `DTEND:${toICalDate(end)}`,
-      `SUMMARY:⚽ ${m.home_team} vs ${m.away_team}`,
-      `DESCRIPTION:${desc}`,
-      ...(m.venue ? [`LOCATION:${m.venue}`] : []),
+      `SUMMARY:${esc(`${m.home_team} vs ${m.away_team}`)}`,
+      `DESCRIPTION:${esc(desc)}`,
+      ...(m.venue ? [`LOCATION:${esc(m.venue)}`] : []),
       "END:VEVENT",
     );
   }
 
-  lines.push("END:VCALENDAR");
+  rawLines.push("END:VCALENDAR");
 
-  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+  const content = rawLines.map(fold).join("\r\n");
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
