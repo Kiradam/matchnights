@@ -397,31 +397,53 @@ function Dashboard({
   nextGame: Match | undefined;
   onFilterChange: (f: FilterMode) => void;
 }) {
-  const StatCard = ({
-    label,
-    value,
-    accent,
-    onClick,
-  }: {
+  type StatCardDef = {
     label: string;
     value: number;
-    accent?: string;
+    gradient: string;
+    border: string;
+    valueColor: string;
+    tagLabel?: string;
+    tagColor?: string;
     onClick?: () => void;
-  }) => {
-    const base = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 flex flex-col gap-0.5 shadow-sm";
-    const interactive = "cursor-pointer hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all";
-    return onClick ? (
-      <button onClick={onClick} className={`${base} ${interactive} text-left w-full`}>
-        <span className={`text-2xl font-bold ${accent ?? "text-gray-900 dark:text-gray-100"}`}>{value}</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-      </button>
-    ) : (
-      <div className={base}>
-        <span className={`text-2xl font-bold ${accent ?? "text-gray-900 dark:text-gray-100"}`}>{value}</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-      </div>
-    );
   };
+
+  const statCards: StatCardDef[] = [
+    {
+      label: "Total matches",
+      value: total,
+      gradient: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/60 dark:to-slate-800/20",
+      border: "border-slate-200 dark:border-slate-700",
+      valueColor: "text-slate-800 dark:text-slate-100",
+    },
+    {
+      label: "I'm watching",
+      value: interested,
+      gradient: "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30",
+      border: "border-blue-200 dark:border-blue-800",
+      valueColor: "text-blue-700 dark:text-blue-300",
+      tagLabel: "PLANNED",
+      tagColor: "text-blue-500 dark:text-blue-400",
+      onClick: () => onFilterChange("planned"),
+    },
+    {
+      label: "Potentially together",
+      value: potentiallyTogether,
+      gradient: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/60 dark:to-emerald-900/30",
+      border: "border-green-200 dark:border-green-800",
+      valueColor: "text-green-700 dark:text-green-300",
+      tagLabel: "TOGETHER",
+      tagColor: "text-green-600 dark:text-green-400",
+      onClick: () => onFilterChange("together"),
+    },
+    {
+      label: "Not decided yet",
+      value: undecided,
+      gradient: "bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/60 dark:to-orange-900/30",
+      border: "border-amber-200 dark:border-amber-800",
+      valueColor: "text-amber-600 dark:text-amber-400",
+    },
+  ];
 
   const nextDt = nextGame ? new Date(nextGame.match_datetime) : null;
   const nextDateStr = nextDt?.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -429,24 +451,40 @@ function Dashboard({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-      <StatCard label="Total matches" value={total} />
-      <StatCard
-        label="I'm interested in"
-        value={interested}
-        accent="text-blue-600 dark:text-blue-400"
-        onClick={() => onFilterChange("planned")}
-      />
-      <StatCard
-        label="Potentially together"
-        value={potentiallyTogether}
-        accent="text-green-600 dark:text-green-400"
-        onClick={() => onFilterChange("together")}
-      />
-      <StatCard
-        label="Not decided yet"
-        value={undecided}
-        accent="text-gray-400 dark:text-gray-500"
-      />
+      {statCards.map((card) => {
+        const Comp = card.onClick ? "button" : "div";
+        return (
+          <Comp
+            key={card.label}
+            onClick={card.onClick}
+            className={[
+              card.gradient,
+              "border",
+              card.border,
+              "rounded-xl p-3.5 relative overflow-hidden shadow-sm text-left transition-all duration-150",
+              card.onClick
+                ? "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]"
+                : "",
+            ].join(" ")}
+          >
+            {/* ghost watermark */}
+            <span className="absolute right-1 -bottom-2 text-7xl font-black opacity-[0.06] select-none pointer-events-none leading-none tabIndex={-1}">
+              {card.value}
+            </span>
+            {card.tagLabel && (
+              <span className={`text-[9px] font-bold uppercase tracking-widest ${card.tagColor} mb-1 block`}>
+                {card.tagLabel}
+              </span>
+            )}
+            <span className={`text-3xl font-bold ${card.valueColor} relative z-10 leading-none`}>
+              {card.value}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 relative z-10 mt-1 block leading-snug">
+              {card.label}
+            </span>
+          </Comp>
+        );
+      })}
 
       {nextGame ? (
         <Link
