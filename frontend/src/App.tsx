@@ -9,6 +9,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { MatchesPage } from "./pages/MatchesPage";
 import { MatchDetailPage } from "./pages/MatchDetailPage";
+import { CalendarPage } from "./pages/CalendarPage";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
 import { AdminSyncPage } from "./pages/admin/AdminSyncPage";
@@ -30,6 +31,7 @@ export default function App() {
                 <Route index element={<Navigate to="/matches" replace />} />
                 <Route path="/matches" element={<MatchesPage />} />
                 <Route path="/matches/:id" element={<MatchDetailPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
 
                 <Route element={<ProtectedRoute adminOnly />}>
                   <Route path="/admin" element={<AdminLayout />}>

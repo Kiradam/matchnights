@@ -46,6 +46,9 @@ export function MainLayout() {
               <Link to="/matches" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 Matches
               </Link>
+              <Link to="/calendar" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                Calendar
+              </Link>
               {user?.role === "admin" && (
                 <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                   Admin
@@ -109,6 +112,13 @@ export function MainLayout() {
                 className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Matches
+              </Link>
+              <Link
+                to="/calendar"
+                onClick={closeMenu}
+                className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Calendar
               </Link>
               {user?.role === "admin" && (
                 <Link

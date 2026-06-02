@@ -11,6 +11,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Sort & filter** — sort by date or popularity (total watch+together votes); filter by stage
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
+- **Calendar view** — month/week/day views of your watchlist; click any day to drill down; download as `.ics` for Google Calendar, Apple Calendar, or Outlook
 - **Admin panel** — invite management, user activation/deactivation, group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 
