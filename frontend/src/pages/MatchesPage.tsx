@@ -385,32 +385,68 @@ function MatchCard({
 function Dashboard({
   total,
   interested,
+  undecided,
   potentiallyTogether,
   nextGame,
+  onFilterChange,
 }: {
   total: number;
   interested: number;
+  undecided: number;
   potentiallyTogether: number;
   nextGame: Match | undefined;
+  onFilterChange: (f: FilterMode) => void;
 }) {
-  const StatCard = ({ label, value, accent }: { label: string; value: number; accent?: string }) => (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 flex flex-col gap-0.5 shadow-sm">
-      <span className={`text-2xl font-bold ${accent ?? "text-gray-900 dark:text-gray-100"}`}>
-        {value}
-      </span>
-      <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-    </div>
-  );
+  const StatCard = ({
+    label,
+    value,
+    accent,
+    onClick,
+  }: {
+    label: string;
+    value: number;
+    accent?: string;
+    onClick?: () => void;
+  }) => {
+    const base = "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 flex flex-col gap-0.5 shadow-sm";
+    const interactive = "cursor-pointer hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all";
+    return onClick ? (
+      <button onClick={onClick} className={`${base} ${interactive} text-left w-full`}>
+        <span className={`text-2xl font-bold ${accent ?? "text-gray-900 dark:text-gray-100"}`}>{value}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
+      </button>
+    ) : (
+      <div className={base}>
+        <span className={`text-2xl font-bold ${accent ?? "text-gray-900 dark:text-gray-100"}`}>{value}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
+      </div>
+    );
+  };
 
   const nextDt = nextGame ? new Date(nextGame.match_datetime) : null;
   const nextDateStr = nextDt?.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const nextTimeStr = nextDt?.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
       <StatCard label="Total matches" value={total} />
-      <StatCard label="I'm interested in" value={interested} accent="text-blue-600 dark:text-blue-400" />
-      <StatCard label="Potentially together" value={potentiallyTogether} accent="text-green-600 dark:text-green-400" />
+      <StatCard
+        label="I'm interested in"
+        value={interested}
+        accent="text-blue-600 dark:text-blue-400"
+        onClick={() => onFilterChange("planned")}
+      />
+      <StatCard
+        label="Potentially together"
+        value={potentiallyTogether}
+        accent="text-green-600 dark:text-green-400"
+        onClick={() => onFilterChange("together")}
+      />
+      <StatCard
+        label="Not decided yet"
+        value={undecided}
+        accent="text-gray-400 dark:text-gray-500"
+      />
 
       {nextGame ? (
         <Link
@@ -549,7 +585,8 @@ export function MatchesPage() {
     const nextGame = allMatches
       .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
       .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
-    return { interested, potentiallyTogether, nextGame };
+    const undecided = allMatches.length - interested;
+    return { interested, potentiallyTogether, nextGame, undecided };
   }, [allMatches, summaries]);
 
   const matches = useMemo(() => {
@@ -609,8 +646,10 @@ export function MatchesPage() {
         <Dashboard
           total={allMatches.length}
           interested={dashboardStats.interested}
+          undecided={dashboardStats.undecided}
           potentiallyTogether={dashboardStats.potentiallyTogether}
           nextGame={dashboardStats.nextGame}
+          onFilterChange={setActiveFilter}
         />
       )}
 
