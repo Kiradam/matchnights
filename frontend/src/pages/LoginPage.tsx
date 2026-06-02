@@ -31,7 +31,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
-          WatchMatch
+          MatchNights
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

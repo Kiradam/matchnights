@@ -1,4 +1,4 @@
-# WatchMatch
+# MatchNights
 
 A web application for small groups (~100 users) to coordinate which FIFA World Cup 2026 matches they want to watch — solo, together, or skip. Users belong to admin-managed groups and see each other's preferences within their group(s).
 
@@ -55,8 +55,8 @@ You should see something like `Docker version 27.x.x`. If you get "command not f
 Open a terminal, navigate to wherever you keep your projects, and run:
 
 ```bash
-git clone https://github.com/Kiradam/watchmatch.git
-cd watchmatch
+git clone https://github.com/Kiradam/matchnights.git
+cd matchnights
 ```
 
 > **Don't have git?** Download [Git for Windows](https://git-scm.com/download/win) (Mac/Linux usually have it already).
@@ -131,7 +131,7 @@ That's it — everyone can now mark matches as **Watch**, **Together**, or **Ski
 
 | Variable | Description | Default |
 |---|---|---|
-| `DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./watchmatch.db` |
+| `DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./matchnights.db` |
 | `SECRET_KEY` | JWT signing secret | — |
 | `SECRET_KEY_PREVIOUS` | Previous signing secret (key rotation) | `""` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime | `30` |
@@ -154,7 +154,7 @@ The `VITE_API_BASE_URL` build arg in `docker-compose.yml` controls where the fro
 
 ## Using with another football league
 
-WatchMatch works with any competition available through your chosen data source. To switch from WC 2026 to, for example, the Champions League 2025/26:
+MatchNights works with any competition available through your chosen data source. To switch from WC 2026 to, for example, the Champions League 2025/26:
 
 1. Look up the competition's **league ID** and **season year** in your data source dashboard (e.g. football-data.org or api-sports.io).
 
@@ -219,13 +219,13 @@ The match list endpoint (`GET /matches`) returns each match with `my_preferences
 
 ### HTTPS / TLS setup
 
-WatchMatch ships without TLS termination — expose it behind a reverse proxy that handles certificates.
+MatchNights ships without TLS termination — expose it behind a reverse proxy that handles certificates.
 
 **Option A — Caddy (recommended, automatic cert renewal)**
 
 ```bash
 # Caddyfile
-watchmatch.example.com {
+matchnights.example.com {
     reverse_proxy localhost:8015
 }
 ```
@@ -241,7 +241,7 @@ caddy run --config Caddyfile
 sudo apt install certbot python3-certbot-nginx
 
 # Obtain a certificate and auto-configure nginx
-sudo certbot --nginx -d watchmatch.example.com
+sudo certbot --nginx -d matchnights.example.com
 
 # Certbot adds a server block on :443 and redirects :80 → :443 automatically.
 # Certificates auto-renew via a systemd timer or cron job.
@@ -291,14 +291,14 @@ The database (`wc2026.db`) lives in the `db_data` Docker volume. A snapshot is t
 **Manual backup**
 
 ```bash
-docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/backup.db"
-docker cp wc2026-planner-backend-1:/tmp/backup.db ./wc2026-$(date +%Y%m%d).db
+docker exec matchnights-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/backup.db"
+docker cp matchnights-backend-1:/tmp/backup.db ./wc2026-$(date +%Y%m%d).db
 ```
 
 **Scheduled backup (cron)**
 
 ```cron
-0 3 * * * docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/daily.db" && docker cp wc2026-planner-backend-1:/tmp/daily.db /backups/wc2026-$(date +\%Y\%m\%d).db
+0 3 * * * docker exec matchnights-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/daily.db" && docker cp matchnights-backend-1:/tmp/daily.db /backups/wc2026-$(date +\%Y\%m\%d).db
 ```
 
 SQLite WAL mode is enabled at startup, so reads and writes can happen concurrently while a backup runs.
@@ -313,7 +313,7 @@ SQLite WAL mode is enabled at startup, so reads and writes can happen concurrent
 2. **Copy the backup into the volume**:
    ```bash
    # Replace backup.db with your backup file
-   docker cp backup.db wc2026-planner-backend-1:/app/wc2026.db
+   docker cp backup.db matchnights-backend-1:/app/wc2026.db
    ```
 
 3. **Restart**:
@@ -323,14 +323,14 @@ SQLite WAL mode is enabled at startup, so reads and writes can happen concurrent
 
 4. **Verify** by checking `/api/health` and reviewing `alembic_version` in the database:
    ```bash
-   docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db "SELECT * FROM alembic_version;"
+   docker exec matchnights-backend-1 sqlite3 /app/wc2026.db "SELECT * FROM alembic_version;"
    ```
 
 If migrations fail on startup, `entrypoint.sh` automatically restores the pre-migration backup and exits with a non-zero code — check `docker compose logs backend` for details.
 
 ### JWT secret rotation runbook
 
-WatchMatch supports zero-downtime secret rotation via `SECRET_KEY_PREVIOUS`.
+MatchNights supports zero-downtime secret rotation via `SECRET_KEY_PREVIOUS`.
 
 1. **Generate a new secret**:
    ```bash
@@ -359,7 +359,7 @@ To **force-invalidate all sessions immediately** (e.g., after a suspected compro
 
 ## License
 
-WatchMatch is free software released under the **GNU General Public License v3.0**.
+MatchNights is free software released under the **GNU General Public License v3.0**.
 You may redistribute and/or modify it under the terms of the GPL as published by the Free Software Foundation — either version 3, or (at your option) any later version.
 
 See the [LICENSE](LICENSE) file for the full license text, or visit <https://www.gnu.org/licenses/gpl-3.0.html>.

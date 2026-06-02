@@ -78,7 +78,7 @@ async def download_calendar(
     lines: list[str] = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        f"PRODID:-//WatchMatch//{league_slug}//EN",
+        f"PRODID:-//MatchNights//{league_slug}//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         f"X-WR-CALNAME:{settings.LEAGUE_NAME} Watchlist",
@@ -94,7 +94,7 @@ async def download_calendar(
 
         lines += [
             "BEGIN:VEVENT",
-            f"UID:wm-{m.id}@wc2026-planner",
+            f"UID:mn-{m.id}@matchnights",
             f"DTSTAMP:{now}",
             f"DTSTART:{dtstart}",
             f"DTEND:{dtend}",

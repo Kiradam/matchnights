@@ -8,7 +8,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue>({ dark: false, toggle: () => {} });
 
-const STORAGE_KEY = "watchmatch-theme";
+const STORAGE_KEY = "matchnights-theme";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(() => {

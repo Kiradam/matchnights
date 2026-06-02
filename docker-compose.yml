@@ -7,8 +7,8 @@ services:
     volumes:
       - db_data:/app/data
     environment:
-      DATABASE_URL: sqlite+aiosqlite:////app/data/wc2026.db
-      DB_FILE: /app/data/wc2026.db
+      DATABASE_URL: sqlite+aiosqlite:////app/data/matchnights.db
+      DB_FILE: /app/data/matchnights.db
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
