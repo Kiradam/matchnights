@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { useAuth } from "../../contexts/AuthContext";
 import type { User } from "../../types";
 
 const roleStyle = (role: string) =>
@@ -14,11 +15,14 @@ const statusStyle = (active: boolean) =>
     : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
 
 export function AdminUsersPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<number | null>(null);
+  const [togglingRole, setTogglingRole] = useState<number | null>(null);
   const [resetLinks, setResetLinks] = useState<Record<number, string>>({});
   const [toggleConfirm, setToggleConfirm] = useState<User | null>(null);
+  const [roleConfirm, setRoleConfirm] = useState<User | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +47,16 @@ export function AdminUsersPage() {
       setUsers((prev) => prev.map((u) => (u.id === data.id ? data : u)));
     } finally {
       setToggling(null);
+    }
+  };
+
+  const toggleRole = async (user: User) => {
+    setTogglingRole(user.id);
+    try {
+      const { data } = await api.post<User>(`/admin/users/${user.id}/toggle-role`);
+      setUsers((prev) => prev.map((u) => (u.id === data.id ? data : u)));
+    } finally {
+      setTogglingRole(null);
     }
   };
 
@@ -91,6 +105,15 @@ export function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2 justify-end">
+                        {u.id !== currentUser?.id && (
+                          <button
+                            onClick={() => setRoleConfirm(u)}
+                            disabled={togglingRole === u.id}
+                            className={`${actionBtn} ${u.role === "admin" ? "text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800" : ""}`}
+                          >
+                            {u.role === "admin" ? "Revoke admin" : "Make admin"}
+                          </button>
+                        )}
                         <button
                           onClick={() => u.is_active ? setToggleConfirm(u) : toggleActive(u)}
                           disabled={toggling === u.id}
@@ -137,7 +160,16 @@ export function AdminUsersPage() {
                     {new Date(u.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {u.id !== currentUser?.id && (
+                    <button
+                      onClick={() => setRoleConfirm(u)}
+                      disabled={togglingRole === u.id}
+                      className={`${actionBtn} ${u.role === "admin" ? "text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800" : ""}`}
+                    >
+                      {u.role === "admin" ? "Revoke admin" : "Make admin"}
+                    </button>
+                  )}
                   <button
                     onClick={() => u.is_active ? setToggleConfirm(u) : toggleActive(u)}
                     disabled={toggling === u.id}
@@ -170,6 +202,22 @@ export function AdminUsersPage() {
             setToggleConfirm(null);
           }}
           onCancel={() => setToggleConfirm(null)}
+        />
+      )}
+
+      {roleConfirm && (
+        <ConfirmModal
+          message={
+            roleConfirm.role === "admin"
+              ? `Revoke admin access from ${roleConfirm.full_name}? They will lose all admin privileges.`
+              : `Make ${roleConfirm.full_name} an admin? They will gain full admin access.`
+          }
+          confirmLabel={roleConfirm.role === "admin" ? "Revoke admin" : "Make admin"}
+          onConfirm={() => {
+            toggleRole(roleConfirm);
+            setRoleConfirm(null);
+          }}
+          onCancel={() => setRoleConfirm(null)}
         />
       )}
     </div>

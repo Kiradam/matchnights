@@ -10,7 +10,7 @@ from app.core.deps import require_admin
 from app.db.session import get_db
 from app.models.audit import AuditLog
 from app.models.token import InviteToken, PasswordResetToken, RefreshToken
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.user import CreateInviteRequest, InviteOut, UserOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -60,6 +60,31 @@ async def toggle_user_active(
     db.add(AuditLog(
         actor_id=admin.id,
         action="user.deactivated" if not user.is_active else "user.reactivated",
+        target_type="user",
+        target_id=str(user.id),
+    ))
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.post("/users/{user_id}/toggle-role", response_model=UserOut)
+async def toggle_user_role(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot change your own role")
+    new_role = UserRole.admin if user.role == UserRole.user else UserRole.user
+    user.role = new_role
+    db.add(AuditLog(
+        actor_id=admin.id,
+        action="user.promoted" if new_role == UserRole.admin else "user.demoted",
         target_type="user",
         target_id=str(user.id),
     ))

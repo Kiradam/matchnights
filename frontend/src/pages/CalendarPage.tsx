@@ -213,10 +213,10 @@ function WeekView({
   }, [matches]);
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-      {/* Scrollable on small screens */}
-      <div className="overflow-x-auto">
-        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] min-w-[560px]">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col">
+      {/* Scrollable on small screens; flex-1 so the grid fills parent height */}
+      <div className="overflow-x-auto flex-1 min-h-0">
+        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] grid-rows-[auto_1fr_80px] h-full min-w-[560px]">
 
           {/* ── Row 1: Day headers ── */}
           <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-800" />
@@ -249,7 +249,7 @@ function WeekView({
             );
           })}
 
-          {/* ── Row 2: Evening ── */}
+          {/* ── Row 2: Evening — expands to fill available height via 1fr grid row ── */}
           <SectionLabel label="Evening" />
           {days.map((day, i) => {
             const { evening } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
@@ -263,7 +263,7 @@ function WeekView({
             return (
               <div
                 key={i}
-                className={`p-1.5 space-y-1.5 h-[190px] overflow-y-auto border-l border-b border-gray-100 dark:border-gray-800 ${bgClass}`}
+                className={`p-1.5 space-y-1.5 overflow-y-auto border-l border-b border-gray-100 dark:border-gray-800 ${bgClass}`}
                 style={evening.length === 0 ? dotPattern : undefined}
               >
                 {evening.map((m) => <MatchPill key={m.id} match={m} />)}
@@ -271,7 +271,7 @@ function WeekView({
             );
           })}
 
-          {/* ── Row 3: Late night ── */}
+          {/* ── Row 3: Late night — fixed 80px via grid-rows ── */}
           <SectionLabel label="Late" muted />
           {days.map((day, i) => {
             const { dawn } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
@@ -285,7 +285,7 @@ function WeekView({
             return (
               <div
                 key={i}
-                className={`p-1.5 space-y-1.5 h-[80px] overflow-y-auto border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
+                className={`p-1.5 space-y-1.5 overflow-y-auto border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
                 style={dawn.length === 0 ? dotPattern : undefined}
               >
                 {dawn.map((m) => <MatchPill key={m.id} match={m} />)}
@@ -405,7 +405,8 @@ export function CalendarPage() {
   const isEmpty = !loading && watchMatches.length === 0;
 
   return (
-    <div>
+    // h-[calc(100dvh-6.5rem)]: fill viewport minus sticky nav (3.5rem) and main padding (3rem)
+    <div className="flex flex-col h-[calc(100dvh-6.5rem)]">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
         {/* Navigation */}
@@ -503,10 +504,11 @@ export function CalendarPage() {
         </div>
       )}
 
-      {/* Content */}
+      {/* Content — flex-1 so week grid fills remaining height */}
       {loading ? (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-pulse">
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex-1 min-h-0 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-pulse flex flex-col">
+          {/* header */}
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <div className="h-14 border-r border-gray-200 dark:border-gray-800" />
             {Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="py-3 px-2 border-l border-gray-200 dark:border-gray-800">
@@ -515,23 +517,25 @@ export function CalendarPage() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
-            <div className="bg-gray-50 dark:bg-gray-800/60 border-r border-gray-200 dark:border-gray-800 h-[190px]" />
+          {/* evening — flex-1 */}
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] flex-1 min-h-0">
+            <div className="bg-gray-50 dark:bg-gray-800/60 border-r border-gray-200 dark:border-gray-800" />
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-[190px] bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-800 border-b p-1.5 space-y-1.5">
+              <div key={i} className="bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-800 border-b p-1.5 space-y-1.5">
                 <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-lg" />
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
-            <div className="bg-gray-50/80 dark:bg-gray-900/70 border-r border-gray-200 dark:border-gray-800 h-[80px]" />
+          {/* late night — fixed */}
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] h-[80px] shrink-0">
+            <div className="bg-gray-50/80 dark:bg-gray-900/70 border-r border-gray-200 dark:border-gray-800" />
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-[80px] bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
+              <div key={i} className="bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
             ))}
           </div>
         </div>
       ) : isEmpty ? (
-        <div className="text-center py-24 text-gray-400 dark:text-gray-500">
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
           <div className="text-4xl mb-3">📅</div>
           <div className="font-medium">Your watchlist is empty</div>
           <div className="text-sm mt-1">
@@ -539,7 +543,7 @@ export function CalendarPage() {
           </div>
         </div>
       ) : (
-        <div className="transition-opacity duration-150">
+        <div className="flex-1 min-h-0 transition-opacity duration-150">
           {view === "week" && (
             <WeekView viewDate={viewDate} matches={displayMatches} onDayClick={handleDayClick} />
           )}
