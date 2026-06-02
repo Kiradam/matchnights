@@ -18,11 +18,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
-  // Apply synchronously before paint to prevent flash — intentionally omits dark from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  /* eslint-disable react-hooks/exhaustive-deps */
+  // Intentionally empty deps: runs once on mount to apply dark class before first paint (FOUC prevention)
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
