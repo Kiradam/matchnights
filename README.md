@@ -11,7 +11,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Sort & filter** — sort by date or popularity (total watch+together votes); filter by stage
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
-- **Calendar view** — month/week/day views of your watchlist; click any day to drill down; download as `.ics` for Google Calendar, Apple Calendar, or Outlook
+- **Calendar view** — month/week/day views of your watchlist; click any day to drill down; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
 - **Admin panel** — invite management, user activation/deactivation, group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 
@@ -273,4 +273,7 @@ To **force-invalidate all sessions immediately** (e.g., after a suspected compro
 
 ## License
 
-Private project.
+WatchMatch is free software released under the **GNU General Public License v3.0**.
+You may redistribute and/or modify it under the terms of the GPL as published by the Free Software Foundation — either version 3, or (at your option) any later version.
+
+See the [LICENSE](LICENSE) file for the full license text, or visit <https://www.gnu.org/licenses/gpl-3.0.html>.
