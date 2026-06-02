@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
+import { useTheme } from "../contexts/ThemeContext";
 import type { Match } from "../types";
 
-type ViewMode = "month" | "week" | "day";
+type ViewMode = "week" | "day";
+type CalFilter = "watching" | "all";
+type MatchColor = "together" | "watch" | "grey";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function matchDate(m: Match): Date {
-  return new Date(m.match_datetime);
-}
 
 function sameDay(a: Date, b: Date) {
   return (
@@ -22,7 +21,7 @@ function sameDay(a: Date, b: Date) {
 function startOfWeek(d: Date): Date {
   const copy = new Date(d);
   const day = copy.getDay();
-  copy.setDate(copy.getDate() - ((day + 6) % 7)); // Monday start
+  copy.setDate(copy.getDate() - ((day + 6) % 7));
   copy.setHours(0, 0, 0, 0);
   return copy;
 }
@@ -34,20 +33,36 @@ function addDays(d: Date, n: number): Date {
 }
 
 function fmtTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(dateStr).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-function topChoice(m: Match): "watch_together" | "watch" | null {
-  if (m.my_preferences.some((p) => p.choice === "watch_together")) return "watch_together";
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/** 00:01–06:30 is "late night" belonging to the previous display day. */
+function assignMatch(m: Match): { displayDate: Date; section: "evening" | "dawn" } {
+  const dt = new Date(m.match_datetime);
+  const totalMin = dt.getHours() * 60 + dt.getMinutes();
+  if (totalMin >= 1 && totalMin <= 390) {
+    const prev = new Date(dt);
+    prev.setDate(prev.getDate() - 1);
+    prev.setHours(0, 0, 0, 0);
+    return { displayDate: prev, section: "dawn" };
+  }
+  const d = new Date(dt);
+  d.setHours(0, 0, 0, 0);
+  return { displayDate: d, section: "evening" };
+}
+
+function matchColor(m: Match): MatchColor {
+  if (m.my_preferences.some((p) => p.choice === "watch_together")) return "together";
   if (m.my_preferences.some((p) => p.choice === "watch")) return "watch";
-  return null;
+  return "grey";
 }
 
 function isWatching(m: Match): boolean {
-  return topChoice(m) !== null;
+  return matchColor(m) !== "grey";
 }
 
 // ── iCal download ─────────────────────────────────────────────────────────────
@@ -59,128 +74,99 @@ async function downloadICal() {
 
 // ── Style maps ────────────────────────────────────────────────────────────────
 
-const PILL: Record<"watch" | "watch_together", string> = {
-  watch_together:
-    "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700",
-  watch:
-    "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700",
+const PILL: Record<MatchColor, string> = {
+  together: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700",
+  watch:    "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700",
+  grey:     "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
 };
 
-const CARD: Record<"watch" | "watch_together", string> = {
-  watch_together:
-    "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
-  watch:
-    "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800",
+const CARD: Record<MatchColor, string> = {
+  together: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
+  watch:    "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800",
+  grey:     "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700",
 };
 
-const BADGE: Record<"watch" | "watch_together", string> = {
-  watch_together:
-    "bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300",
-  watch: "bg-blue-100 text-blue-700 dark:bg-blue-800/60 dark:text-blue-300",
+const BADGE_LABEL: Partial<Record<MatchColor, string>> = {
+  together: "Together",
+  watch: "Watching",
 };
 
-// ── Month view ────────────────────────────────────────────────────────────────
+const BADGE_STYLE: Partial<Record<MatchColor, string>> = {
+  together: "bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300",
+  watch:    "bg-blue-100 text-blue-700 dark:bg-blue-800/60 dark:text-blue-300",
+};
 
-function MonthView({
-  viewDate,
-  matches,
-  onDayClick,
-}: {
-  viewDate: Date;
-  matches: Match[];
-  onDayClick: (d: Date) => void;
-}) {
-  const today = new Date();
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
+// ── Shared sub-components ─────────────────────────────────────────────────────
 
-  const firstOfMonth = new Date(year, month, 1);
-  const gridStart = startOfWeek(firstOfMonth);
-
-  const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-
-  const byDay = useMemo(() => {
-    const map = new Map<string, Match[]>();
-    for (const m of matches) {
-      const d = matchDate(m);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(m);
-    }
-    return map;
-  }, [matches]);
-
-  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-
+function MatchPill({ match }: { match: Match }) {
+  const color = matchColor(match);
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-      {/* Day headers */}
-      <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div
-            key={d}
-            className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2.5 tracking-wide uppercase"
-          >
-            {d}
-          </div>
-        ))}
+    <Link
+      to={`/matches/${match.id}`}
+      className={`block text-[11px] px-2 py-1.5 rounded-lg border leading-snug hover:opacity-75 transition-opacity ${PILL[color]}`}
+    >
+      <div className="font-bold tabular-nums">{fmtTime(match.match_datetime)}</div>
+      <div className="font-medium truncate">{match.home_team}</div>
+      <div className="opacity-55 truncate text-[10px]">vs {match.away_team}</div>
+    </Link>
+  );
+}
+
+function DayMatchCard({ match }: { match: Match }) {
+  const color = matchColor(match);
+  const dt = new Date(match.match_datetime);
+  const badge = BADGE_LABEL[color];
+  return (
+    <Link
+      to={`/matches/${match.id}`}
+      className={`block rounded-xl border p-4 hover:opacity-80 transition-all hover:shadow-md ${CARD[color]}`}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xl">⚽</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {match.stage}{match.matchday ? ` · MD${match.matchday}` : ""}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {badge && (
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLE[color]}`}>
+              {badge}
+            </span>
+          )}
+          <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+            {dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </div>
       </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-7 divide-x divide-y divide-gray-100 dark:divide-gray-800">
-        {cells.map((day, i) => {
-          const inMonth = day.getMonth() === month;
-          const isToday = sameDay(day, today);
-          const dayMatches = byDay.get(dayKey(day)) ?? [];
-          const hasMatches = dayMatches.length > 0;
-
-          return (
-            <div
-              key={i}
-              onClick={() => hasMatches && onDayClick(day)}
-              className={`min-h-[88px] p-1.5 transition-colors group
-                ${inMonth ? "bg-white dark:bg-gray-900" : "bg-gray-50/60 dark:bg-gray-900/40"}
-                ${hasMatches ? "cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20" : ""}
-              `}
-            >
-              <div
-                className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-semibold mb-1 mx-auto transition-colors
-                  ${isToday
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : inMonth
-                    ? "text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                    : "text-gray-300 dark:text-gray-600"
-                  }
-                `}
-              >
-                {day.getDate()}
-              </div>
-
-              <div className="space-y-0.5">
-                {dayMatches.slice(0, 2).map((m) => {
-                  const choice = topChoice(m);
-                  return (
-                    <div
-                      key={m.id}
-                      className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate font-medium
-                        ${choice ? PILL[choice] : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"}
-                      `}
-                    >
-                      {fmtTime(m.match_datetime)}{" "}
-                      {m.home_team.slice(0, 3)} v {m.away_team.slice(0, 3)}
-                    </div>
-                  );
-                })}
-                {dayMatches.length > 2 && (
-                  <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1 font-medium">
-                    +{dayMatches.length - 2} more
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="text-center py-2">
+        <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          {match.home_team}
+          <span className="mx-3 font-light text-gray-400 dark:text-gray-500">vs</span>
+          {match.away_team}
+        </div>
+        {match.venue && (
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{match.venue}</div>
+        )}
       </div>
+    </Link>
+  );
+}
+
+// ── Section label cell ────────────────────────────────────────────────────────
+
+function SectionLabel({ label, muted }: { label: string; muted?: boolean }) {
+  return (
+    <div
+      className={`flex items-start justify-center pt-3 border-r border-gray-200 dark:border-gray-800 ${
+        muted
+          ? "bg-gray-50/80 dark:bg-gray-900/70"
+          : "bg-gray-50 dark:bg-gray-800/60"
+      }`}
+    >
+      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600 [writing-mode:vertical-lr]">
+        {label}
+      </span>
     </div>
   );
 }
@@ -196,83 +182,119 @@ function WeekView({
   matches: Match[];
   onDayClick: (d: Date) => void;
 }) {
+  const { dark } = useTheme();
   const today = new Date();
   const monday = startOfWeek(viewDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
+  // Subtle dot-grid texture for empty cells — adapts to dark mode
+  const dotPattern: React.CSSProperties = {
+    backgroundImage: dark
+      ? "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)"
+      : "radial-gradient(circle, rgba(0,0,0,0.055) 1px, transparent 1px)",
+    backgroundSize: "22px 22px",
+  };
+
+  const assigned = useMemo(() => {
+    const map: Record<string, { evening: Match[]; dawn: Match[] }> = {};
+    for (const m of matches) {
+      const { displayDate, section } = assignMatch(m);
+      const k = dayKey(displayDate);
+      if (!map[k]) map[k] = { evening: [], dawn: [] };
+      map[k][section].push(m);
+    }
+    for (const k of Object.keys(map)) {
+      const sort = (a: Match, b: Match) =>
+        new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime();
+      map[k].evening.sort(sort);
+      map[k].dawn.sort(sort);
+    }
+    return map;
+  }, [matches]);
+
   return (
-    <div className="grid grid-cols-7 gap-2">
-      {days.map((day, i) => {
-        const isToday = sameDay(day, today);
-        const dayMatches = matches
-          .filter((m) => sameDay(matchDate(m), day))
-          .sort(
-            (a, b) =>
-              new Date(a.match_datetime).getTime() -
-              new Date(b.match_datetime).getTime()
-          );
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+      {/* Scrollable on small screens */}
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] min-w-[560px]">
 
-        return (
-          <div
-            key={i}
-            className={`rounded-xl border overflow-hidden shadow-sm transition-shadow
-              ${isToday
-                ? "border-blue-300 dark:border-blue-600 shadow-blue-100 dark:shadow-none"
-                : "border-gray-200 dark:border-gray-800"
-              }
-            `}
-          >
-            {/* Day header */}
-            <div
-              onClick={() => onDayClick(day)}
-              className={`px-2 py-2 text-center border-b cursor-pointer transition-colors
-                ${isToday
-                  ? "bg-blue-600 border-blue-600 hover:bg-blue-700"
-                  : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/60"
-                }
-              `}
-            >
-              <div
-                className={`text-[10px] font-semibold uppercase tracking-wide
-                  ${isToday ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}
+          {/* ── Row 1: Day headers ── */}
+          <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-800" />
+          {days.map((day, i) => {
+            const isToday = sameDay(day, today);
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            return (
+              <button
+                key={i}
+                onClick={() => onDayClick(day)}
+                className={[
+                  "w-full px-2 py-2.5 text-center border-b border-l transition-colors",
+                  isToday
+                    ? "bg-blue-600 border-blue-500 hover:bg-blue-700"
+                    : isWeekend
+                    ? "bg-slate-100/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-slate-200/70 dark:hover:bg-gray-700/60"
+                    : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/60",
+                ].join(" ")}
               >
-                {day.toLocaleDateString("en-GB", { weekday: "short" })}
-              </div>
-              <div
-                className={`text-sm font-bold
-                  ${isToday ? "text-white" : "text-gray-900 dark:text-gray-100"}`}
-              >
-                {day.getDate()}
-              </div>
-            </div>
-
-            {/* Matches */}
-            <div className="p-1.5 space-y-1 min-h-[120px] bg-white dark:bg-gray-900">
-              {dayMatches.map((m) => {
-                const choice = topChoice(m);
-                return (
-                  <Link
-                    key={m.id}
-                    to={`/matches/${m.id}`}
-                    className={`block text-[11px] p-1.5 rounded-lg border leading-snug hover:opacity-75 transition-opacity
-                      ${choice ? PILL[choice] : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"}
-                    `}
-                  >
-                    <div className="font-bold">{fmtTime(m.match_datetime)}</div>
-                    <div className="font-medium truncate">{m.home_team}</div>
-                    <div className="opacity-60 truncate text-[10px]">vs {m.away_team}</div>
-                  </Link>
-                );
-              })}
-              {dayMatches.length === 0 && (
-                <div className="flex items-center justify-center h-full min-h-[80px]">
-                  <span className="text-[10px] text-gray-300 dark:text-gray-700">—</span>
+                <div className={`text-[10px] font-semibold uppercase tracking-wide ${isToday ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
+                  {day.toLocaleDateString("en-GB", { weekday: "short" })}
                 </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
+                <div className={`text-base font-bold leading-tight ${isToday ? "text-white" : "text-gray-900 dark:text-gray-100"}`}>
+                  {day.getDate()}
+                </div>
+                <div className={`text-[9px] mt-0.5 ${isToday ? "text-blue-300" : "text-gray-300 dark:text-gray-600"}`}>
+                  {day.toLocaleDateString("en-GB", { month: "short" })}
+                </div>
+              </button>
+            );
+          })}
+
+          {/* ── Row 2: Evening ── */}
+          <SectionLabel label="Evening" />
+          {days.map((day, i) => {
+            const { evening } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
+            const isToday = sameDay(day, today);
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const bgClass = isToday
+              ? "bg-blue-50/60 dark:bg-blue-950/25"
+              : isWeekend
+              ? "bg-slate-50 dark:bg-gray-900/40"
+              : "bg-white dark:bg-gray-900";
+            return (
+              <div
+                key={i}
+                className={`p-1.5 space-y-1.5 h-[190px] overflow-y-auto border-l border-b border-gray-100 dark:border-gray-800 ${bgClass}`}
+                style={evening.length === 0 ? dotPattern : undefined}
+              >
+                {evening.map((m) => <MatchPill key={m.id} match={m} />)}
+              </div>
+            );
+          })}
+
+          {/* ── Row 3: Late night ── */}
+          <SectionLabel label="Late" muted />
+          {days.map((day, i) => {
+            const { dawn } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
+            const isToday = sameDay(day, today);
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const bgClass = isToday
+              ? "bg-blue-50/25 dark:bg-blue-950/10"
+              : isWeekend
+              ? "bg-slate-50/80 dark:bg-gray-900/50"
+              : "bg-gray-50/60 dark:bg-gray-900/60";
+            return (
+              <div
+                key={i}
+                className={`p-1.5 space-y-1.5 h-[80px] overflow-y-auto border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
+                style={dawn.length === 0 ? dotPattern : undefined}
+              >
+                {dawn.map((m) => <MatchPill key={m.id} match={m} />)}
+              </div>
+            );
+          })}
+
+        </div>
+      </div>
     </div>
   );
 }
@@ -280,67 +302,55 @@ function WeekView({
 // ── Day view ──────────────────────────────────────────────────────────────────
 
 function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
-  const dayMatches = matches
-    .filter((m) => sameDay(matchDate(m), viewDate))
-    .sort(
-      (a, b) =>
-        new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime()
-    );
+  const { evening, dawn } = useMemo(() => {
+    const ev: Match[] = [];
+    const dw: Match[] = [];
+    for (const m of matches) {
+      const { displayDate, section } = assignMatch(m);
+      if (sameDay(displayDate, viewDate)) {
+        (section === "dawn" ? dw : ev).push(m);
+      }
+    }
+    const sort = (a: Match, b: Match) =>
+      new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime();
+    ev.sort(sort);
+    dw.sort(sort);
+    return { evening: ev, dawn: dw };
+  }, [matches, viewDate]);
 
-  if (dayMatches.length === 0) {
+  if (evening.length === 0 && dawn.length === 0) {
     return (
       <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">
-        No watched matches on this day.
+        No matches on this day.
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-3">
-      {dayMatches.map((m) => {
-        const choice = topChoice(m);
-        const dt = new Date(m.match_datetime);
-        return (
-          <Link
-            key={m.id}
-            to={`/matches/${m.id}`}
-            className={`block rounded-xl border p-4 hover:opacity-80 transition-all hover:shadow-md
-              ${choice ? CARD[choice] : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"}
-            `}
-          >
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl">⚽</span>
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {m.stage}
-                  {m.matchday ? ` · MD${m.matchday}` : ""}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {choice && (
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE[choice]}`}>
-                    {choice === "watch_together" ? "Together" : "Watching"}
-                  </span>
-                )}
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                  {dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-            </div>
+    <div className="max-w-xl mx-auto space-y-5">
+      {evening.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
+            <span>Evening</span>
+            <div className="flex-1 border-t border-gray-100 dark:border-gray-800" />
+          </div>
+          <div className="space-y-3">
+            {evening.map((m) => <DayMatchCard key={m.id} match={m} />)}
+          </div>
+        </div>
+      )}
 
-            <div className="text-center py-2">
-              <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {m.home_team}
-                <span className="mx-3 font-light text-gray-400 dark:text-gray-500">vs</span>
-                {m.away_team}
-              </div>
-              {m.venue && (
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{m.venue}</div>
-              )}
-            </div>
-          </Link>
-        );
-      })}
+      {dawn.length > 0 && (
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
+            <span>Late night</span>
+            <div className="flex-1 border-t border-dashed border-gray-200 dark:border-gray-700" />
+          </div>
+          <div className="space-y-3">
+            {dawn.map((m) => <DayMatchCard key={m.id} match={m} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -350,7 +360,8 @@ function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
 export function CalendarPage() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<ViewMode>("month");
+  const [view, setView] = useState<ViewMode>("week");
+  const [calFilter, setCalFilter] = useState<CalFilter>("watching");
   const [viewDate, setViewDate] = useState(new Date());
 
   useEffect(() => {
@@ -361,12 +372,12 @@ export function CalendarPage() {
   }, []);
 
   const watchMatches = useMemo(() => allMatches.filter(isWatching), [allMatches]);
+  const displayMatches = calFilter === "all" ? allMatches : watchMatches;
 
   const navigate = (dir: 1 | -1) => {
     setViewDate((prev) => {
       const d = new Date(prev);
-      if (view === "month") d.setMonth(d.getMonth() + dir);
-      else if (view === "week") d.setDate(d.getDate() + dir * 7);
+      if (view === "week") d.setDate(d.getDate() + dir * 7);
       else d.setDate(d.getDate() + dir);
       return d;
     });
@@ -378,9 +389,6 @@ export function CalendarPage() {
   };
 
   const headerLabel = () => {
-    if (view === "month") {
-      return viewDate.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-    }
     if (view === "week") {
       const mon = startOfWeek(viewDate);
       const sun = addDays(mon, 6);
@@ -390,12 +398,11 @@ export function CalendarPage() {
       return `${mon.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${sun.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
     }
     return viewDate.toLocaleDateString("en-GB", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
   };
+
+  const isEmpty = !loading && watchMatches.length === 0;
 
   return (
     <div>
@@ -426,10 +433,26 @@ export function CalendarPage() {
           </button>
         </div>
 
-        {/* View switcher + Download */}
+        {/* Right controls */}
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["month", "week", "day"] as ViewMode[]).map((v) => (
+            {(["watching", "all"] as CalFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setCalFilter(f)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors
+                  ${calFilter === f
+                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+              >
+                {f === "watching" ? "Watching" : "All"}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {(["week", "day"] as ViewMode[]).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -437,8 +460,7 @@ export function CalendarPage() {
                   ${view === v
                     ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }
-                `}
+                  }`}
               >
                 {v}
               </button>
@@ -462,7 +484,7 @@ export function CalendarPage() {
       </div>
 
       {/* Legend */}
-      {!loading && watchMatches.length > 0 && (
+      {!loading && !isEmpty && (
         <div className="flex items-center gap-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-sm bg-green-300 dark:bg-green-700 inline-block" />
@@ -472,28 +494,43 @@ export function CalendarPage() {
             <span className="w-2.5 h-2.5 rounded-sm bg-blue-300 dark:bg-blue-700 inline-block" />
             Watch
           </span>
+          {calFilter === "all" && (
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 dark:bg-gray-600 inline-block" />
+              Skip / undecided
+            </span>
+          )}
         </div>
       )}
 
       {/* Content */}
       {loading ? (
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-pulse">
-          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800">
+            <div className="h-14 border-r border-gray-200 dark:border-gray-800" />
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="py-2.5 px-2">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded mx-auto w-8" />
+              <div key={i} className="py-3 px-2 border-l border-gray-200 dark:border-gray-800">
+                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded mx-auto w-6 mb-1.5" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mx-auto w-5" />
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 divide-x divide-y divide-gray-100 dark:divide-gray-800">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} className="min-h-[88px] bg-white dark:bg-gray-900 p-1.5">
-                <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 mx-auto mb-1" />
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
+            <div className="bg-gray-50 dark:bg-gray-800/60 border-r border-gray-200 dark:border-gray-800 h-[190px]" />
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-[190px] bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-800 border-b p-1.5 space-y-1.5">
+                <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-lg" />
               </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
+            <div className="bg-gray-50/80 dark:bg-gray-900/70 border-r border-gray-200 dark:border-gray-800 h-[80px]" />
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-[80px] bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
             ))}
           </div>
         </div>
-      ) : watchMatches.length === 0 ? (
+      ) : isEmpty ? (
         <div className="text-center py-24 text-gray-400 dark:text-gray-500">
           <div className="text-4xl mb-3">📅</div>
           <div className="font-medium">Your watchlist is empty</div>
@@ -503,14 +540,11 @@ export function CalendarPage() {
         </div>
       ) : (
         <div className="transition-opacity duration-150">
-          {view === "month" && (
-            <MonthView viewDate={viewDate} matches={watchMatches} onDayClick={handleDayClick} />
-          )}
           {view === "week" && (
-            <WeekView viewDate={viewDate} matches={watchMatches} onDayClick={handleDayClick} />
+            <WeekView viewDate={viewDate} matches={displayMatches} onDayClick={handleDayClick} />
           )}
           {view === "day" && (
-            <DayView viewDate={viewDate} matches={watchMatches} />
+            <DayView viewDate={viewDate} matches={displayMatches} />
           )}
         </div>
       )}
