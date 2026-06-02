@@ -22,6 +22,7 @@ class MatchOut(BaseModel):
     home_team_crest: str | None = None
     away_team_crest: str | None = None
     stage: str
+    matchday: int | None = None
     match_datetime: datetime
     venue: str | None
     status: MatchStatus

@@ -25,6 +25,7 @@ export interface Match {
   home_team_crest: string | null;
   away_team_crest: string | null;
   stage: string;
+  matchday: number | null;
   match_datetime: string;
   venue: string | null;
   status: MatchStatus;

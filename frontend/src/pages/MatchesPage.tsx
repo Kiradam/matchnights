@@ -317,6 +317,9 @@ function MatchCard({
           <div className="flex-1 min-w-0">
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1.5">
               {match.stage}
+              {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
+                <span className="text-gray-400 dark:text-gray-500">· MD{match.matchday}</span>
+              )}
               {isHot && (
                 <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
               )}

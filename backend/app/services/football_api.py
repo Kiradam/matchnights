@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class NormalisedMatch:
     __slots__ = ("external_id", "home_team", "away_team", "stage",
                  "match_datetime", "venue", "status",
-                 "home_team_crest", "away_team_crest")
+                 "home_team_crest", "away_team_crest", "matchday")
 
     def __init__(
         self,
@@ -36,6 +36,7 @@ class NormalisedMatch:
         status: str,
         home_team_crest: str | None = None,
         away_team_crest: str | None = None,
+        matchday: int | None = None,
     ) -> None:
         self.external_id = external_id
         self.home_team = home_team
@@ -46,6 +47,7 @@ class NormalisedMatch:
         self.status = status
         self.home_team_crest = home_team_crest
         self.away_team_crest = away_team_crest
+        self.matchday = matchday
 
 
 # ── openfootball source ──────────────────────────────────────────────────────
@@ -331,6 +333,7 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
                 status=status,
                 home_team_crest=home_crest,
                 away_team_crest=away_crest,
+                matchday=m.get("matchday"),
             ))
         except Exception as exc:
             logger.warning("football_data: skipping match: %s", exc)
