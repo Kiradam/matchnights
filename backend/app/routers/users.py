@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_current_user
-from app.core.security import create_calendar_token, decode_access_token, hash_password, verify_password
+from app.core.security import (
+    create_calendar_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.preference import Preference, PreferenceChoice
