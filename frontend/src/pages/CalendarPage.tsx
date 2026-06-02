@@ -50,82 +50,12 @@ function isWatching(m: Match): boolean {
   return topChoice(m) !== null;
 }
 
-// ── iCal export ───────────────────────────────────────────────────────────────
+// ── iCal download ─────────────────────────────────────────────────────────────
 
-function toICalDate(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-}
-
-// RFC 5545 §3.3.11 — escape TEXT property values
-function esc(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-}
-
-// RFC 5545 §3.1 — fold lines longer than 75 octets (CRLF + space)
-function fold(line: string): string {
-  const encoder = new TextEncoder();
-  if (encoder.encode(line).length <= 75) return line;
-  const chunks: string[] = [];
-  let current = "";
-  for (const char of line) {
-    const next = current + char;
-    if (encoder.encode(next).length > 75) {
-      chunks.push(current);
-      current = " " + char;
-    } else {
-      current = next;
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks.join("\r\n");
-}
-
-function downloadICal(matches: Match[]) {
-  const now = toICalDate(new Date());
-  const rawLines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//WatchMatch//WC2026//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "X-WR-CALNAME:WC 2026 Watchlist",
-  ];
-
-  for (const m of matches) {
-    const start = new Date(m.match_datetime);
-    const end = new Date(start.getTime() + 2 * 3600 * 1000);
-    const choice = topChoice(m);
-    const desc = [
-      m.stage,
-      m.matchday ? `MD${m.matchday}` : "",
-      choice === "watch_together" ? "Watching together" : "Watching",
-    ]
-      .filter(Boolean)
-      .join(" - ");
-
-    rawLines.push(
-      "BEGIN:VEVENT",
-      `UID:wm-${m.id}@wc2026-planner`,
-      `DTSTAMP:${now}`,
-      `DTSTART:${toICalDate(start)}`,
-      `DTEND:${toICalDate(end)}`,
-      `SUMMARY:${esc(`${m.home_team} vs ${m.away_team}`)}`,
-      `DESCRIPTION:${esc(desc)}`,
-      ...(m.venue ? [`LOCATION:${esc(m.venue)}`] : []),
-      "END:VEVENT",
-    );
-  }
-
-  rawLines.push("END:VCALENDAR");
-
-  const content = rawLines.map(fold).join("\r\n");
-  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "wc2026-watchlist.ics";
-  a.click();
-  URL.revokeObjectURL(url);
+function downloadICal() {
+  const token = sessionStorage.getItem("access_token");
+  if (!token) return;
+  window.location.href = `/api/users/me/calendar.ics?token=${encodeURIComponent(token)}`;
 }
 
 // ── Style maps ────────────────────────────────────────────────────────────────
@@ -518,7 +448,7 @@ export function CalendarPage() {
 
           {!loading && watchMatches.length > 0 && (
             <button
-              onClick={() => downloadICal(watchMatches)}
+              onClick={() => downloadICal()}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
               title="Download watchlist as calendar file"
             >
