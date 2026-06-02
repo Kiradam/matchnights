@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import type { User } from "../../types";
 
 const roleStyle = (role: string) =>
@@ -17,6 +18,7 @@ export function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<number | null>(null);
   const [resetLinks, setResetLinks] = useState<Record<number, string>>({});
+  const [toggleConfirm, setToggleConfirm] = useState<User | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -89,7 +91,11 @@ export function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2 justify-end">
-                        <button onClick={() => toggleActive(u)} disabled={toggling === u.id} className={actionBtn}>
+                        <button
+                          onClick={() => u.is_active ? setToggleConfirm(u) : toggleActive(u)}
+                          disabled={toggling === u.id}
+                          className={actionBtn}
+                        >
                           {u.is_active ? "Deactivate" : "Activate"}
                         </button>
                         <button onClick={() => resetPassword(u.id)} className={actionBtn}>
@@ -132,7 +138,11 @@ export function AdminUsersPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => toggleActive(u)} disabled={toggling === u.id} className={actionBtn}>
+                  <button
+                    onClick={() => u.is_active ? setToggleConfirm(u) : toggleActive(u)}
+                    disabled={toggling === u.id}
+                    className={actionBtn}
+                  >
                     {u.is_active ? "Deactivate" : "Activate"}
                   </button>
                   <button onClick={() => resetPassword(u.id)} className={actionBtn}>
@@ -149,6 +159,18 @@ export function AdminUsersPage() {
             ))}
           </div>
         </>
+      )}
+
+      {toggleConfirm && (
+        <ConfirmModal
+          message={`Deactivate ${toggleConfirm.full_name}? They will be logged out and unable to log in.`}
+          confirmLabel="Deactivate"
+          onConfirm={() => {
+            toggleActive(toggleConfirm);
+            setToggleConfirm(null);
+          }}
+          onCancel={() => setToggleConfirm(null)}
+        />
       )}
     </div>
   );

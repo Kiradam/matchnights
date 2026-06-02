@@ -145,7 +145,7 @@ async def get_match_preferences(
             choice = pref_by_user.get(member_user.id)
             if choice:
                 counts[choice.value] += 1
-            else:
+            elif member_user.is_active:
                 no_response += 1
             members.append(GroupMemberPreference(
                 user_id=member_user.id,

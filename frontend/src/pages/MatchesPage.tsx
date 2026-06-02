@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
+import { MatchCardSkeleton } from "../components/MatchCardSkeleton";
 import { useAuth } from "../contexts/AuthContext";
 import type {
   Group,
@@ -292,8 +294,8 @@ function MatchCard({
   };
 
   const cardCls = isHot
-    ? "bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700 p-4 shadow-sm shadow-green-100 dark:shadow-none"
-    : "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm";
+    ? "bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700 p-4 shadow-sm shadow-green-100 dark:shadow-none hover:border-green-400 dark:hover:border-green-500 hover:shadow-md transition-all duration-150"
+    : "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all duration-150";
 
   return (
     <>
@@ -307,7 +309,7 @@ function MatchCard({
       )}
 
       <div className={cardCls}>
-        <div className="mb-3">
+        <Link to={`/matches/${match.id}`} className="block mb-3 hover:opacity-80 transition-opacity">
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5">
             {match.stage}
             {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
@@ -348,7 +350,7 @@ function MatchCard({
               ))}
             </div>
           )}
-        </div>
+        </Link>
 
         {userGroups.length > 0 && (
           <div className="flex gap-2 mb-3">
@@ -550,19 +552,7 @@ export function MatchesPage() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 h-28 animate-pulse"
-            >
-              <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/4 mb-2" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-1/2 mb-4" />
-              <div className="flex gap-2">
-                {[0, 1, 2].map((j) => (
-                  <div key={j} className="flex-1 h-7 bg-gray-100 dark:bg-gray-700 rounded" />
-                ))}
-              </div>
-            </div>
+            <MatchCardSkeleton key={i} />
           ))}
         </div>
       ) : matches.length === 0 ? (

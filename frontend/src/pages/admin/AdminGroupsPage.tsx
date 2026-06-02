@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import type { Group, GroupMember, User } from "../../types";
 
 const inputCls = "w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100";
+
+interface RemoveConfirm {
+  userId: number;
+  name: string;
+}
 
 function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) {
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -10,6 +16,7 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
   const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState<RemoveConfirm | null>(null);
 
   const loadMembers = async () => {
     const { data } = await api.get<GroupMember[]>(`/admin/groups/${group.id}/members`);
@@ -89,7 +96,7 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{m.email}</div>
                   </div>
                   <button
-                    onClick={() => removeMember(m.user_id)}
+                    onClick={() => setRemoveConfirm({ userId: m.user_id, name: m.full_name })}
                     className="text-xs px-2 py-1 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0"
                   >
                     Remove
@@ -100,6 +107,18 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
           )}
         </div>
       </div>
+
+      {removeConfirm && (
+        <ConfirmModal
+          message={`Remove ${removeConfirm.name} from ${group.name}?`}
+          confirmLabel="Remove"
+          onConfirm={() => {
+            removeMember(removeConfirm.userId);
+            setRemoveConfirm(null);
+          }}
+          onCancel={() => setRemoveConfirm(null)}
+        />
+      )}
     </div>
   );
 }
@@ -111,6 +130,7 @@ export function AdminGroupsPage() {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [selected, setSelected] = useState<Group | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Group | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -137,7 +157,6 @@ export function AdminGroupsPage() {
   };
 
   const deleteGroup = async (id: number) => {
-    if (!confirm("Delete this group? Members will lose group visibility.")) return;
     await api.delete(`/admin/groups/${id}`);
     setGroups((prev) => prev.filter((g) => g.id !== id));
   };
@@ -188,7 +207,7 @@ export function AdminGroupsPage() {
                   <button onClick={() => setSelected(g)} className="text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
                     Members
                   </button>
-                  <button onClick={() => deleteGroup(g.id)} className="text-xs px-2 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30">
+                  <button onClick={() => setDeleteConfirm(g)} className="text-xs px-2 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30">
                     Delete
                   </button>
                 </div>
@@ -200,6 +219,18 @@ export function AdminGroupsPage() {
 
       {selected && (
         <GroupDetail group={selected} onClose={() => { setSelected(null); load(); }} />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          message={`Delete group "${deleteConfirm.name}"? Members will lose group visibility.`}
+          confirmLabel="Delete"
+          onConfirm={() => {
+            deleteGroup(deleteConfirm.id);
+            setDeleteConfirm(null);
+          }}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   );

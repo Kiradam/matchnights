@@ -47,10 +47,13 @@ async def create_group(
 
 @router.get("", response_model=list[GroupOut])
 async def list_groups(
+    page: int = 1,
+    page_size: int = 50,
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> list[GroupOut]:
-    result = await db.execute(select(Group).order_by(Group.name))
+    offset = (page - 1) * page_size
+    result = await db.execute(select(Group).order_by(Group.name).offset(offset).limit(page_size))
     return [await _group_out(g, db) for g in result.scalars()]
 
 

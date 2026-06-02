@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import type { Invite } from "../../types";
 
 export function AdminInvitesPage() {
@@ -8,6 +9,7 @@ export function AdminInvitesPage() {
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
   const [expiresHours, setExpiresHours] = useState("48");
+  const [revokeConfirm, setRevokeConfirm] = useState<Invite | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -95,7 +97,10 @@ export function AdminInvitesPage() {
                     {copied === inv.id ? "Copied!" : "Copy link"}
                   </button>
                   {!inv.used && !expired && (
-                    <button onClick={() => revokeInvite(inv.token)} className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30">
+                    <button
+                      onClick={() => setRevokeConfirm(inv)}
+                      className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                    >
                       Revoke
                     </button>
                   )}
@@ -104,6 +109,18 @@ export function AdminInvitesPage() {
             );
           })}
         </div>
+      )}
+
+      {revokeConfirm && (
+        <ConfirmModal
+          message="Revoke this invite link? It will no longer be usable."
+          confirmLabel="Revoke"
+          onConfirm={() => {
+            revokeInvite(revokeConfirm.token);
+            setRevokeConfirm(null);
+          }}
+          onCancel={() => setRevokeConfirm(null)}
+        />
       )}
     </div>
   );

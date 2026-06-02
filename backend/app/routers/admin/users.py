@@ -150,6 +150,46 @@ async def list_invites(
     ]
 
 
+@router.post("/cleanup")
+async def cleanup_expired(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    now = datetime.now(UTC)
+
+    expired_invites_result = await db.execute(
+        select(InviteToken).where(
+            InviteToken.expires_at < now,
+            InviteToken.used_by_id.is_(None),
+        )
+    )
+    invite_tokens = list(expired_invites_result.scalars())
+    for t in invite_tokens:
+        await db.delete(t)
+
+    expired_refresh_result = await db.execute(
+        select(RefreshToken).where(RefreshToken.expires_at < now)
+    )
+    refresh_tokens = list(expired_refresh_result.scalars())
+    for t in refresh_tokens:
+        await db.delete(t)
+
+    db.add(AuditLog(
+        actor_id=admin.id,
+        action="admin.cleanup",
+        target_type="system",
+        payload={
+            "invite_tokens_deleted": len(invite_tokens),
+            "refresh_tokens_deleted": len(refresh_tokens),
+        },
+    ))
+    await db.commit()
+    return {
+        "invite_tokens_deleted": len(invite_tokens),
+        "refresh_tokens_deleted": len(refresh_tokens),
+    }
+
+
 @router.delete("/invites/{token}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_invite(
     token: str,

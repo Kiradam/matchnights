@@ -128,6 +128,148 @@ Each preference is scoped to a `(user, match, group)` triple:
 
 The match list endpoint (`GET /matches`) returns each match with `my_preferences` — your choice per group — in a single efficient query.
 
+## Production deployment
+
+### HTTPS / TLS setup
+
+WatchMatch ships without TLS termination — expose it behind a reverse proxy that handles certificates.
+
+**Option A — Caddy (recommended, automatic cert renewal)**
+
+```bash
+# Caddyfile
+watchmatch.example.com {
+    reverse_proxy localhost:8015
+}
+```
+
+```bash
+caddy run --config Caddyfile
+```
+
+**Option B — Nginx + Certbot**
+
+```bash
+# Install certbot and the nginx plugin
+sudo apt install certbot python3-certbot-nginx
+
+# Obtain a certificate and auto-configure nginx
+sudo certbot --nginx -d watchmatch.example.com
+
+# Certbot adds a server block on :443 and redirects :80 → :443 automatically.
+# Certificates auto-renew via a systemd timer or cron job.
+```
+
+Once HTTPS is active, enable HSTS in `nginx/nginx.conf` by uncommenting:
+```nginx
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+```
+
+### Secrets injection
+
+Never commit secrets to source control. Inject them at runtime:
+
+**Docker Compose (recommended for self-hosted)**
+
+Create `.env` from `.env.example`, fill in real values, and keep it out of git (it is already in `.gitignore`):
+
+```bash
+cp .env.example .env
+# Edit .env with your real SECRET_KEY, passwords, API keys
+docker compose up -d --build
+```
+
+**Environment variables only (no .env file)**
+
+Pass secrets directly to the container:
+
+```bash
+docker compose run \
+  -e SECRET_KEY="$(openssl rand -hex 32)" \
+  -e FIRST_ADMIN_EMAIL=admin@example.com \
+  -e FIRST_ADMIN_PASSWORD="$(openssl rand -base64 24)" \
+  backend
+```
+
+**Generate a secure SECRET_KEY**
+
+```bash
+openssl rand -hex 32
+```
+
+### Database backup strategy
+
+The database (`wc2026.db`) lives in the `db_data` Docker volume. A snapshot is taken automatically before each migration run (see `backend/entrypoint.sh`).
+
+**Manual backup**
+
+```bash
+docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/backup.db"
+docker cp wc2026-planner-backend-1:/tmp/backup.db ./wc2026-$(date +%Y%m%d).db
+```
+
+**Scheduled backup (cron)**
+
+```cron
+0 3 * * * docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db ".backup /tmp/daily.db" && docker cp wc2026-planner-backend-1:/tmp/daily.db /backups/wc2026-$(date +\%Y\%m\%d).db
+```
+
+SQLite WAL mode is enabled at startup, so reads and writes can happen concurrently while a backup runs.
+
+### Database restore procedure
+
+1. **Stop the backend** to prevent writes during restore:
+   ```bash
+   docker compose stop backend
+   ```
+
+2. **Copy the backup into the volume**:
+   ```bash
+   # Replace backup.db with your backup file
+   docker cp backup.db wc2026-planner-backend-1:/app/wc2026.db
+   ```
+
+3. **Restart**:
+   ```bash
+   docker compose start backend
+   ```
+
+4. **Verify** by checking `/api/health` and reviewing `alembic_version` in the database:
+   ```bash
+   docker exec wc2026-planner-backend-1 sqlite3 /app/wc2026.db "SELECT * FROM alembic_version;"
+   ```
+
+If migrations fail on startup, `entrypoint.sh` automatically restores the pre-migration backup and exits with a non-zero code — check `docker compose logs backend` for details.
+
+### JWT secret rotation runbook
+
+WatchMatch supports zero-downtime secret rotation via `SECRET_KEY_PREVIOUS`.
+
+1. **Generate a new secret**:
+   ```bash
+   openssl rand -hex 32
+   ```
+
+2. **Update `.env`** — move the current `SECRET_KEY` to `SECRET_KEY_PREVIOUS` and set the new value as `SECRET_KEY`:
+   ```env
+   SECRET_KEY=<new-secret>
+   SECRET_KEY_PREVIOUS=<old-secret>
+   ```
+
+3. **Redeploy** — the backend will accept tokens signed by either key, so existing sessions stay valid:
+   ```bash
+   docker compose up -d backend
+   ```
+
+4. **Wait one refresh cycle** (default: 30 days, `REFRESH_TOKEN_EXPIRE_DAYS`) for all existing refresh tokens to be replaced with new ones signed by the new key.
+
+5. **Clear `SECRET_KEY_PREVIOUS`** once all old tokens have expired:
+   ```env
+   SECRET_KEY_PREVIOUS=
+   ```
+
+To **force-invalidate all sessions immediately** (e.g., after a suspected compromise), clear both variables simultaneously and redeploy. All users will be logged out.
+
 ## License
 
 Private project.
