@@ -18,7 +18,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
-  // Apply synchronously before paint to prevent flash
+  // Apply synchronously before paint to prevent flash — intentionally omits dark from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, []);
@@ -35,4 +36,5 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => useContext(ThemeContext);
