@@ -26,47 +26,105 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 
 ## Getting started
 
-### Prerequisites
+> **No coding experience needed.** Follow these steps top to bottom and you'll have a running app in about 10 minutes.
 
-- Docker and Docker Compose
-- A [football-data.org](https://www.football-data.org) free API key
+### Step 1 — Install Docker
 
-### 1. Clone and configure
+Docker is the only thing you need to install. Everything else (Python, Node.js, the database) runs inside containers.
+
+- **Windows / Mac:** download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Linux:** follow the [official install guide](https://docs.docker.com/engine/install/) for your distro
+
+Verify it works by opening a terminal and running:
 
 ```bash
-git clone https://github.com/Kiradam/wc2026-planner.git
-cd wc2026-planner
-cp .env.example .env   # then edit .env with your values
+docker --version
 ```
 
-Minimum required values in `.env`:
+You should see something like `Docker version 27.x.x`. If you get "command not found", Docker isn't installed yet.
+
+### Step 2 — Get a free football data API key
+
+1. Go to [football-data.org](https://www.football-data.org) and click **Get API Key**
+2. Register with your email — it's free, no credit card needed
+3. Check your inbox and copy the API key (a string of letters and numbers)
+
+### Step 3 — Download the app
+
+Open a terminal, navigate to wherever you keep your projects, and run:
+
+```bash
+git clone https://github.com/Kiradam/watchmatch.git
+cd watchmatch
+```
+
+> **Don't have git?** Download [Git for Windows](https://git-scm.com/download/win) (Mac/Linux usually have it already).
+
+### Step 4 — Configure the app
+
+Copy the example config file and open it in any text editor (Notepad is fine):
+
+```bash
+cp .env.example .env
+```
+
+Fill in these four values — everything else can stay as the defaults:
 
 ```env
-SECRET_KEY=<random 64-char hex>
-FIRST_ADMIN_EMAIL=admin@example.com
-FIRST_ADMIN_PASSWORD=<strong password>
-FOOTBALL_DATA_ORG_KEY=<your football-data.org key>
+# Paste your football-data.org key here
+FOOTBALL_DATA_ORG_KEY=your_key_here
+
+# The email address you'll use to log in as admin
+FIRST_ADMIN_EMAIL=you@example.com
+
+# A strong password for the admin account
+FIRST_ADMIN_PASSWORD=PickSomethingStrong123!
+
+# A random secret — copy the output of this command:
+# python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=paste_64_char_hex_here
 ```
 
-### 2. Build and run
+To generate the `SECRET_KEY` quickly, run this in your terminal:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Copy the output and paste it as the value of `SECRET_KEY` in your `.env` file.
+
+### Step 5 — Start the app
 
 ```bash
 docker compose up -d --build
 ```
 
-The app is served on **port 8015** by default (`http://localhost:8015`).
+This will download all dependencies and start the app. The first run takes 2–5 minutes. When it's done, open your browser and go to:
 
-The first admin account is created automatically on startup from `FIRST_ADMIN_EMAIL` / `FIRST_ADMIN_PASSWORD`.
+```
+http://localhost:8015
+```
 
-### 3. Invite users
+Log in with the email and password you set in Step 4.
 
-1. Log in as admin and go to **Admin → Invites**
-2. Generate an invite link and share it (WhatsApp, email, etc.)
-3. Recipients register at `/register?token=<token>`
+> If you see a "connection refused" error, wait 30 seconds and refresh — the app may still be starting up.
 
-### 4. Sync match data
+### Step 6 — Sync match fixtures
 
-Go to **Admin → Match Sync** and click **Sync matches now**. This fetches all WC 2026 fixtures from football-data.org and stores them locally. Re-sync periodically to pick up reschedules and live status updates (free tier: 100 requests/day).
+1. Click **Admin** in the top navigation bar
+2. Go to the **Match Sync** tab
+3. Click **Sync matches now**
+
+This pulls all fixtures from football-data.org and saves them to the local database. It takes a few seconds. Re-sync periodically to pick up kick-off time changes and live scores (free tier allows 100 requests/day).
+
+### Step 7 — Invite your friends
+
+1. Go to **Admin → Invites**
+2. Click **Generate invite link** and copy the link
+3. Send it via WhatsApp, email, or however you like
+4. Your friends open the link, pick a username and password, and they're in
+
+That's it — everyone can now mark matches as **Watch**, **Together**, or **Skip** and see each other's choices.
 
 ## Environment variables
 
