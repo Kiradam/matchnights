@@ -169,8 +169,6 @@ async def sync_odds(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Fetch 1X2 odds from the-odds-api.com and update stored matches."""
-    from datetime import timedelta
-
     odds_map = await fetch_wc_odds()
     if not odds_map:
         return {"updated": 0, "message": "No odds returned (check ODDS_API_KEY)"}
