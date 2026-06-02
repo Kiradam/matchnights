@@ -16,8 +16,8 @@ async def seed_admin(db: AsyncSession) -> None:
         logger.warning("FIRST_ADMIN_EMAIL/PASSWORD not set; skipping admin seed")
         return
 
-    result = await db.execute(select(User).where(User.role == UserRole.admin))
-    if result.scalar_one_or_none():
+    result = await db.execute(select(User).where(User.role == UserRole.admin).limit(1))
+    if result.scalars().first():
         return  # admin already exists
 
     admin = User(
