@@ -135,6 +135,7 @@ That's it — everyone can now mark matches as **Watch**, **Together**, or **Ski
 | `SECRET_KEY_PREVIOUS` | Previous signing secret (key rotation) | `""` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime | `30` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime | `30` |
+| `COOKIE_SECURE` | Set `False` only for local HTTP dev; must be `True` behind HTTPS | `True` |
 | `FIRST_ADMIN_EMAIL` | Bootstrap admin email (first startup only) | — |
 | `FIRST_ADMIN_PASSWORD` | Bootstrap admin password (first startup only) | — |
 | `FOOTBALL_DATA_SOURCE` | Data source: `football_data` / `openfootball` / `api_sports` | `football_data` |
