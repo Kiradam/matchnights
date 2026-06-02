@@ -111,14 +111,13 @@ function GroupPanel({
           {summary.group_name}
         </span>
         <div className="flex items-center gap-2 text-xs shrink-0">
-          {summary.watch_together > 0 && (
-            <span className="flex items-center gap-0.5 text-green-700 dark:text-green-400">
+          {summary.watch_together > 0 ? (
+            <span className="flex items-center gap-1 text-green-700 dark:text-green-400">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              {summary.watch_together}
+              {summary.watch_together} together
             </span>
-          )}
-          {summary.no_response > 0 && (
-            <span className="text-gray-300 dark:text-gray-600">{summary.no_response}?</span>
+          ) : (
+            <span className="text-gray-300 dark:text-gray-600">no together yet</span>
           )}
           <span className="text-gray-300 dark:text-gray-600 ml-1">{expanded ? "▴" : "▾"}</span>
         </div>
