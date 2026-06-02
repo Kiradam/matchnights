@@ -216,7 +216,7 @@ function WeekView({
     <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col">
       {/* Scrollable on small screens; flex-1 so the grid fills parent height */}
       <div className="overflow-x-auto flex-1 min-h-0">
-        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] grid-rows-[auto_1fr_80px] h-full min-w-[560px]">
+        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] grid-rows-[auto_1fr_auto] h-full min-w-[560px]">
 
           {/* ── Row 1: Day headers ── */}
           <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-800" />
@@ -285,7 +285,7 @@ function WeekView({
             return (
               <div
                 key={i}
-                className={`p-1.5 space-y-1.5 overflow-y-auto border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
+                className={`p-1.5 space-y-1.5 min-h-[80px] border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
                 style={dawn.length === 0 ? dotPattern : undefined}
               >
                 {dawn.map((m) => <MatchPill key={m.id} match={m} />)}
@@ -526,11 +526,11 @@ export function CalendarPage() {
               </div>
             ))}
           </div>
-          {/* late night — fixed */}
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] h-[80px] shrink-0">
+          {/* late night — auto height */}
+          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
             <div className="bg-gray-50/80 dark:bg-gray-900/70 border-r border-gray-200 dark:border-gray-800" />
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
+              <div key={i} className="min-h-[80px] bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
             ))}
           </div>
         </div>
