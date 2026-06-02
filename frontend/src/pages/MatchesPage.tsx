@@ -29,12 +29,6 @@ const CHOICE_DOT: Record<PreferenceChoice, string> = {
   skip: "bg-gray-300 dark:bg-gray-600",
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  scheduled: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
-  live: "bg-red-100 text-red-700 font-semibold animate-pulse dark:bg-red-900/30 dark:text-red-400",
-  finished: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
-  cancelled: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
-};
 
 type SortOrder = "date" | "popularity";
 
@@ -313,36 +307,47 @@ function MatchCard({
       )}
 
       <div className={cardCls}>
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5">
-              {match.stage}
-              {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
-                <span className="text-gray-400 dark:text-gray-500">· MD{match.matchday}</span>
-              )}
-              {isHot && (
-                <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
-              )}
+        <div className="mb-3">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5">
+            {match.stage}
+            {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
+              <span className="text-gray-400 dark:text-gray-500">· MD{match.matchday}</span>
+            )}
+            {isHot && (
+              <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
+            )}
+          </div>
+          <div className="flex items-center justify-center gap-3 font-semibold text-gray-900 dark:text-gray-100 mb-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <CrestImg src={match.home_team_crest} alt={match.home_team} />
+              <span className="truncate">{match.home_team}</span>
             </div>
-            <div className="flex items-center justify-center gap-3 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <CrestImg src={match.home_team_crest} alt={match.home_team} />
-                <span className="truncate">{match.home_team}</span>
-              </div>
-              <span className="text-gray-400 dark:text-gray-500 font-normal shrink-0">vs</span>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="truncate">{match.away_team}</span>
-                <CrestImg src={match.away_team_crest} alt={match.away_team} />
-              </div>
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              {dateStr} · {timeStr}
-              {match.venue && <span className="ml-1">· {match.venue}</span>}
+            <span className="text-gray-400 dark:text-gray-500 font-normal shrink-0">vs</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="truncate">{match.away_team}</span>
+              <CrestImg src={match.away_team_crest} alt={match.away_team} />
             </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[match.status] ?? ""}`}>
-            {match.status}
-          </span>
+          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+            {dateStr} · {timeStr}
+            {match.venue && <span className="ml-1">· {match.venue}</span>}
+          </div>
+          {(match.home_odds || match.draw_odds || match.away_odds) && (
+            <div className="flex justify-center gap-3 mt-2">
+              {[
+                { label: "1", value: match.home_odds },
+                { label: "X", value: match.draw_odds },
+                { label: "2", value: match.away_odds },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex flex-col items-center">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    {value != null ? value.toFixed(2) : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {userGroups.length > 0 && (

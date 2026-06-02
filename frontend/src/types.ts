@@ -26,6 +26,9 @@ export interface Match {
   away_team_crest: string | null;
   stage: string;
   matchday: number | null;
+  home_odds: number | null;
+  draw_odds: number | null;
+  away_odds: number | null;
   match_datetime: string;
   venue: string | null;
   status: MatchStatus;

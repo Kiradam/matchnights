@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Integer, String, func
+from sqlalchemy import DateTime, Enum, Float, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -33,6 +33,9 @@ class Match(Base):
     home_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
     away_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
     matchday: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    home_odds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    draw_odds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    away_odds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     preferences: Mapped[list["Preference"]] = relationship(  # noqa: F821
         "Preference", back_populates="match"

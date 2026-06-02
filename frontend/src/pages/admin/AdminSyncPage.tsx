@@ -17,8 +17,11 @@ interface SyncResult {
 export function AdminSyncPage() {
   const [state, setState] = useState<SyncState | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncingOdds, setSyncingOdds] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [oddsResult, setOddsResult] = useState<{ updated: number; message?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [oddsError, setOddsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadState = async () => {
@@ -46,6 +49,22 @@ export function AdminSyncPage() {
       setError(msg);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const triggerOddsSync = async () => {
+    setSyncingOdds(true);
+    setOddsError(null);
+    setOddsResult(null);
+    try {
+      const { data } = await api.post<{ updated: number; message?: string }>("/admin/matches/sync-odds");
+      setOddsResult(data);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Odds sync failed";
+      setOddsError(msg);
+    } finally {
+      setSyncingOdds(false);
     }
   };
 
@@ -82,13 +101,22 @@ export function AdminSyncPage() {
           </div>
         </div>
 
-        <button
-          onClick={triggerSync}
-          disabled={syncing || quotaExhausted}
-          className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded hover:bg-gray-700 dark:hover:bg-white disabled:opacity-50"
-        >
-          {syncing ? "Syncing…" : "Sync matches now"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={triggerSync}
+            disabled={syncing || quotaExhausted}
+            className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded hover:bg-gray-700 dark:hover:bg-white disabled:opacity-50"
+          >
+            {syncing ? "Syncing…" : "Sync matches now"}
+          </button>
+          <button
+            onClick={triggerOddsSync}
+            disabled={syncingOdds}
+            className="px-5 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+          >
+            {syncingOdds ? "Syncing odds…" : "Sync odds"}
+          </button>
+        </div>
         {quotaExhausted && (
           <p className="mt-2 text-xs text-red-600 dark:text-red-400">Daily API quota exhausted. Try again tomorrow.</p>
         )}
@@ -97,6 +125,20 @@ export function AdminSyncPage() {
       {error && (
         <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-400 mb-4">
           {error}
+        </div>
+      )}
+
+      {oddsError && (
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-400 mb-4">
+          {oddsError}
+        </div>
+      )}
+
+      {oddsResult && (
+        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 mb-4 text-sm text-green-800 dark:text-green-400">
+          {oddsResult.message
+            ? oddsResult.message
+            : `Odds updated for ${oddsResult.updated} match${oddsResult.updated !== 1 ? "es" : ""}.`}
         </div>
       )}
 

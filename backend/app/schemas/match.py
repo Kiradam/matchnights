@@ -23,6 +23,9 @@ class MatchOut(BaseModel):
     away_team_crest: str | None = None
     stage: str
     matchday: int | None = None
+    home_odds: float | None = None
+    draw_odds: float | None = None
+    away_odds: float | None = None
     match_datetime: datetime
     venue: str | None
     status: MatchStatus

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     FIRST_ADMIN_EMAIL: str = ""
     FIRST_ADMIN_PASSWORD: str = ""
 
+    ODDS_API_KEY: str = ""   # the-odds-api.com free key
+
     LOG_LEVEL: str = "INFO"
 
 
