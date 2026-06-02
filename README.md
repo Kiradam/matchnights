@@ -72,7 +72,7 @@ Go to **Admin → Match Sync** and click **Sync matches now**. This fetches all 
 
 | Variable | Description | Default |
 |---|---|---|
-| `DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./wc2026.db` |
+| `DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./watchmatch.db` |
 | `SECRET_KEY` | JWT signing secret | — |
 | `SECRET_KEY_PREVIOUS` | Previous signing secret (key rotation) | `""` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime | `30` |
@@ -83,13 +83,39 @@ Go to **Admin → Match Sync** and click **Sync matches now**. This fetches all 
 | `FOOTBALL_DATA_ORG_KEY` | football-data.org API key | — |
 | `FOOTBALL_API_KEY` | api-sports.io API key (if using `api_sports`) | — |
 | `FOOTBALL_API_HOST` | api-sports.io host | `v3.football.api-sports.io` |
-| `FOOTBALL_WC_LEAGUE_ID` | League ID (api-sports source) | `1` |
-| `FOOTBALL_WC_SEASON` | Season year (api-sports source) | `2026` |
+| `FOOTBALL_WC_LEAGUE_ID` | League ID for the competition to sync | `1` |
+| `FOOTBALL_WC_SEASON` | Season year for the competition to sync | `2026` |
+| `LEAGUE_NAME` | Display name shown in downloaded .ics calendars | `WC 2026` |
 | `CORS_ORIGINS` | Allowed origins, JSON array | `["http://localhost"]` |
 | `INVITE_TOKEN_EXPIRE_HOURS` | Default invite validity | `72` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 
 The `VITE_API_BASE_URL` build arg in `docker-compose.yml` controls where the frontend sends API requests (default: `/api`).
+
+## Using with another football league
+
+WatchMatch works with any competition available through your chosen data source. To switch from WC 2026 to, for example, the Champions League 2025/26:
+
+1. Look up the competition's **league ID** and **season year** in your data source dashboard (e.g. football-data.org or api-sports.io).
+
+2. Update `.env`:
+
+```env
+FOOTBALL_WC_LEAGUE_ID=2001   # UEFA Champions League on football-data.org
+FOOTBALL_WC_SEASON=2025
+LEAGUE_NAME=Champions League 2025/26
+DATABASE_URL=sqlite+aiosqlite:///./cl2526.db   # optional: separate DB per league
+```
+
+3. Rebuild and restart:
+
+```bash
+docker compose up -d --build
+```
+
+4. Go to **Admin → Match Sync** and click **Sync matches now** to fetch the fixtures.
+
+The `LEAGUE_NAME` value appears in the `.ics` calendar name when users download their watchlist. `FOOTBALL_WC_LEAGUE_ID` and `FOOTBALL_WC_SEASON` control which competition's fixtures are synced from the API.
 
 ## Architecture
 

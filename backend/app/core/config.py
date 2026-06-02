@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     FOOTBALL_API_HOST: str = "v3.football.api-sports.io"
     FOOTBALL_WC_LEAGUE_ID: int = 1
     FOOTBALL_WC_SEASON: int = 2026
+    LEAGUE_NAME: str = "WC 2026"  # Display name used in iCal export
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     INVITE_TOKEN_EXPIRE_HOURS: int = 72

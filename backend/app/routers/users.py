@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import get_current_user
 from app.core.security import decode_access_token, hash_password, verify_password
 from app.db.session import get_db
@@ -63,13 +64,14 @@ async def download_calendar(
     matches = match_result.scalars().all()
 
     now = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    league_slug = settings.LEAGUE_NAME.replace(" ", "")
     lines: list[str] = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//WatchMatch//WC2026//EN",
+        f"PRODID:-//WatchMatch//{league_slug}//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        "X-WR-CALNAME:WC 2026 Watchlist",
+        f"X-WR-CALNAME:{settings.LEAGUE_NAME} Watchlist",
     ]
 
     for m in matches:
