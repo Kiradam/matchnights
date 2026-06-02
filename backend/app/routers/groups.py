@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
@@ -16,25 +16,31 @@ async def my_groups(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[GroupOut]:
-    result = await db.execute(
+    groups_result = await db.execute(
         select(Group)
         .join(UserGroup, UserGroup.group_id == Group.id)
         .where(UserGroup.user_id == user.id)
         .order_by(Group.name)
     )
-    groups = list(result.scalars())
+    groups = list(groups_result.scalars())
+    if not groups:
+        return []
 
-    out = []
-    for g in groups:
-        count_result = await db.execute(
-            select(UserGroup).where(UserGroup.group_id == g.id)
-        )
-        count = len(list(count_result.scalars()))
-        out.append(GroupOut(
+    group_ids = [g.id for g in groups]
+    counts_result = await db.execute(
+        select(UserGroup.group_id, func.count().label("cnt"))
+        .where(UserGroup.group_id.in_(group_ids))
+        .group_by(UserGroup.group_id)
+    )
+    counts = {row.group_id: row.cnt for row in counts_result}
+
+    return [
+        GroupOut(
             id=g.id,
             name=g.name,
             description=g.description,
             created_at=g.created_at,
-            member_count=count,
-        ))
-    return out
+            member_count=counts.get(g.id, 0),
+        )
+        for g in groups
+    ]

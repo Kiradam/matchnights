@@ -143,16 +143,18 @@ async def get_match_preferences(
 
         for _, member_user in member_rows:
             choice = pref_by_user.get(member_user.id)
-            if choice:
-                counts[choice.value] += 1
-            elif member_user.is_active:
-                no_response += 1
             members.append(GroupMemberPreference(
                 user_id=member_user.id,
                 full_name=member_user.full_name,
                 is_active=member_user.is_active,
                 choice=choice,
             ))
+            if not member_user.is_active:
+                continue  # inactive users don't affect counts
+            if choice:
+                counts[choice.value] += 1
+            else:
+                no_response += 1
 
         summaries.append(GroupPreferenceSummary(
             group_id=group.id,

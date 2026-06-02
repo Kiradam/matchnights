@@ -35,7 +35,7 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
         REFRESH_COOKIE,
         raw_token,
         httponly=True,
-        secure=False,  # set True behind HTTPS in production
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         path="/api/auth",

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     FOOTBALL_WC_SEASON: int = 2026
     LEAGUE_NAME: str = "WC 2026"  # Display name used in iCal export
 
+    COOKIE_SECURE: bool = True  # Set False only for local HTTP dev
+
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     INVITE_TOKEN_EXPIRE_HOURS: int = 72
 

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +7,7 @@ from app.core.deps import require_admin
 from app.db.session import get_db
 from app.models.audit import AuditLog
 from app.models.group import Group, UserGroup
+from app.models.preference import Preference
 from app.models.user import User
 from app.schemas.group import GroupCreate, GroupMemberOut, GroupOut
 
@@ -86,10 +87,9 @@ async def delete_group(
     group = result.scalar_one_or_none()
     if not group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
-    # Delete memberships first
-    memberships = await db.execute(select(UserGroup).where(UserGroup.group_id == group_id))
-    for m in memberships.scalars():
-        await db.delete(m)
+    # Delete preferences and memberships before removing the group
+    await db.execute(delete(Preference).where(Preference.group_id == group_id))
+    await db.execute(delete(UserGroup).where(UserGroup.group_id == group_id))
     db.add(AuditLog(actor_id=admin.id, action="group.deleted", target_type="group", target_id=str(group_id), payload={"name": group.name}))
     await db.delete(group)
     await db.commit()

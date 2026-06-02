@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import get_current_user
-from app.core.security import decode_access_token, hash_password, verify_password
+from app.core.security import create_calendar_token, decode_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.preference import Preference, PreferenceChoice
@@ -40,13 +40,18 @@ def _ical_fold(line: str) -> str:
     return "\r\n".join(chunks)
 
 
+@router.get("/me/calendar-token")
+async def get_calendar_token(user: User = Depends(get_current_user)) -> dict:
+    return {"token": create_calendar_token(user.id)}
+
+
 @router.get("/me/calendar.ics", response_class=Response)
 async def download_calendar(
     token: str = Query(...),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     payload = decode_access_token(token)
-    if not payload or not payload.get("sub"):
+    if not payload or payload.get("type") != "calendar" or not payload.get("sub"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     user_result = await db.execute(select(User).where(User.id == int(payload["sub"])))

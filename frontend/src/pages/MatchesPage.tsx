@@ -9,26 +9,15 @@ import type {
   Match,
   PreferenceChoice,
 } from "../types";
+import { CHOICE_DOT, CHOICE_LABELS } from "../utils/choices";
 
 // Together is first and green; Watch is second and blue; Skip is last and gray
 const CHOICE_ORDER: PreferenceChoice[] = ["watch_together", "watch", "skip"];
-
-const CHOICE_LABELS: Record<PreferenceChoice, string> = {
-  watch_together: "Together",
-  watch: "Watch",
-  skip: "Skip",
-};
 
 const CHOICE_STYLES: Record<PreferenceChoice, string> = {
   watch_together: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700",
   watch: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700",
   skip: "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600",
-};
-
-const CHOICE_DOT: Record<PreferenceChoice, string> = {
-  watch_together: "bg-green-400",
-  watch: "bg-blue-400",
-  skip: "bg-gray-300 dark:bg-gray-600",
 };
 
 

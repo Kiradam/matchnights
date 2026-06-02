@@ -25,6 +25,16 @@ def create_access_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
+def create_calendar_token(user_id: int) -> str:
+    """Short-lived (5 min) single-purpose token for .ics downloads."""
+    payload = {
+        "sub": str(user_id),
+        "type": "calendar",
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+
 def decode_access_token(token: str) -> dict | None:
     for secret in filter(None, [settings.SECRET_KEY, settings.SECRET_KEY_PREVIOUS]):
         try:

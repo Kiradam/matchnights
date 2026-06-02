@@ -52,10 +52,9 @@ function isWatching(m: Match): boolean {
 
 // ── iCal download ─────────────────────────────────────────────────────────────
 
-function downloadICal() {
-  const token = sessionStorage.getItem("access_token");
-  if (!token) return;
-  window.location.href = `/api/users/me/calendar.ics?token=${encodeURIComponent(token)}`;
+async function downloadICal() {
+  const res = await api.get<{ token: string }>("/users/me/calendar-token");
+  window.location.href = `/api/users/me/calendar.ics?token=${encodeURIComponent(res.data.token)}`;
 }
 
 // ── Style maps ────────────────────────────────────────────────────────────────
@@ -448,7 +447,7 @@ export function CalendarPage() {
 
           {!loading && watchMatches.length > 0 && (
             <button
-              onClick={() => downloadICal()}
+              onClick={() => { void downloadICal(); }}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
               title="Download watchlist as calendar file"
             >

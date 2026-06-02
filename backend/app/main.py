@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.SECRET_KEY == "change-me-in-production":
+        logger.warning("SECRET_KEY is set to the default insecure value — change it before deploying!")
     logger.info("WatchMatch starting up")
     async with async_session_maker() as db:
         await seed_admin(db)
@@ -44,8 +46,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 

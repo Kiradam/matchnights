@@ -3,19 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import type { GroupPreferenceSummary, Match } from "../types";
-import type { PreferenceChoice } from "../types";
-
-const CHOICE_LABELS: Record<PreferenceChoice, string> = {
-  watch_together: "Together",
-  watch: "Watch",
-  skip: "Skip",
-};
-
-const CHOICE_DOT: Record<PreferenceChoice, string> = {
-  watch_together: "bg-green-400",
-  watch: "bg-blue-400",
-  skip: "bg-gray-300 dark:bg-gray-600",
-};
+import { CHOICE_DOT, CHOICE_LABELS } from "../utils/choices";
 
 function CrestImg({ src, alt }: { src: string | null; alt: string }) {
   const [failed, setFailed] = useState(false);
