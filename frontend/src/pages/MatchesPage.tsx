@@ -177,7 +177,7 @@ function CrestImg({ src, alt }: { src: string | null; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className="w-5 h-5 object-contain shrink-0"
+      className="w-7 h-7 object-contain shrink-0"
       onError={() => setFailed(true)}
     />
   );
@@ -315,7 +315,7 @@ function MatchCard({
       <div className={cardCls}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1.5">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5">
               {match.stage}
               {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
                 <span className="text-gray-400 dark:text-gray-500">· MD{match.matchday}</span>
@@ -324,14 +324,18 @@ function MatchCard({
                 <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 font-semibold text-gray-900 dark:text-gray-100">
-              <CrestImg src={match.home_team_crest} alt={match.home_team} />
-              <span className="truncate min-w-0">{match.home_team}</span>
+            <div className="flex items-center justify-center gap-3 font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <CrestImg src={match.home_team_crest} alt={match.home_team} />
+                <span className="truncate">{match.home_team}</span>
+              </div>
               <span className="text-gray-400 dark:text-gray-500 font-normal shrink-0">vs</span>
-              <span className="truncate min-w-0">{match.away_team}</span>
-              <CrestImg src={match.away_team_crest} alt={match.away_team} />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="truncate">{match.away_team}</span>
+                <CrestImg src={match.away_team_crest} alt={match.away_team} />
+              </div>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
               {dateStr} · {timeStr}
               {match.venue && <span className="ml-1">· {match.venue}</span>}
             </div>
