@@ -10,7 +10,12 @@ from app.models.group import Group, UserGroup
 from app.models.match import Match, MatchStatus
 from app.models.preference import Preference, PreferenceChoice
 from app.models.user import User
-from app.schemas.preference import GroupMemberPreference, GroupPreferenceSummary, PreferenceIn, PreferenceOut
+from app.schemas.preference import (
+    GroupMemberPreference,
+    GroupPreferenceSummary,
+    PreferenceIn,
+    PreferenceOut,
+)
 
 router = APIRouter(tags=["preferences"])
 

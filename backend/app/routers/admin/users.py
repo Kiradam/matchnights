@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import require_admin
-from app.core.security import hash_password
 from app.db.session import get_db
 from app.models.audit import AuditLog
 from app.models.token import InviteToken, PasswordResetToken, RefreshToken

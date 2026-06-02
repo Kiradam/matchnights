@@ -91,7 +91,7 @@ async def test_group_visibility(client: AsyncClient, db: AsyncSession):
     """User in same group sees group-mate's preference; outsider does not."""
     u1 = await _user(db, "u1@t.com")
     u2 = await _user(db, "u2@t.com")
-    u3 = await _user(db, "u3@t.com")
+    await _user(db, "u3@t.com")  # outsider — not in the group
     m = await _match(db)
 
     grp = Group(name="TestGroup")

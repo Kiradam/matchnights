@@ -1,6 +1,6 @@
 """Admin match sync endpoint (M4)."""
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -169,6 +169,7 @@ async def sync_odds(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Fetch 1X2 odds from the-odds-api.com and update stored matches."""
+
     odds_map = await fetch_wc_odds()
     if not odds_map:
         return {"updated": 0, "message": "No odds returned (check ODDS_API_KEY)"}
