@@ -6,12 +6,13 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 
 - **Invite-only** — admin generates one-time invite links; no self-registration
 - **Per-group preferences** — Watch and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
-- **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card
+- **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing "X/Y together"
 - **Match highlighting** — cards where ≥50% of group responses are "Together" are highlighted green
-- **Sort & filter** — sort by date or popularity (total watch+together votes); filter by stage
+- **Mini dashboard** — stat cards above the match grid show total matches, how many you're watching, how many are potentially together (clickable to filter), and how many you haven't decided on yet
+- **Filter pills** — quickly switch between All, Today, Together, and Planned views
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
-- **Calendar view** — month/week/day views of your watchlist; click any day to drill down; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
+- **Calendar view** — week/day views of your watchlist with evening and late-night sections; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
 - **Admin panel** — invite management, user activation/deactivation, group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 
