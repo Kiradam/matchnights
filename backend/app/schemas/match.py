@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 from app.models.match import MatchStatus
 from app.models.preference import PreferenceChoice
@@ -30,6 +30,10 @@ class MatchOut(BaseModel):
     venue: str | None
     status: MatchStatus
     my_preferences: list[MyGroupPreference] = []
+
+    @field_serializer("match_datetime", mode="plain")
+    def serialize_match_datetime(self, v: datetime) -> str:
+        return v.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class SyncResultOut(BaseModel):

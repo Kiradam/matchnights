@@ -164,7 +164,7 @@ function SectionLabel({ label, muted }: { label: string; muted?: boolean }) {
           : "bg-gray-50 dark:bg-gray-800/60"
       }`}
     >
-      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600 [writing-mode:vertical-lr]">
+      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600 [writing-mode:vertical-lr] rotate-180">
         {label}
       </span>
     </div>

@@ -12,7 +12,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Filter pills** — quickly switch between All, Today, Together, and Planned views
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
-- **Calendar view** — full-height week/day views with evening and late-night sections that adjust to content; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
+- **Calendar view** — full-height week/day views with evening and late-night sections that adjust to content; match times displayed in each viewer's local timezone; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
 - **Admin panel** — invite management, user activation/deactivation, role promotion (make/revoke admin), group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 
