@@ -79,7 +79,9 @@ export function MainLayout() {
 
         {/* Brand */}
         <Link to="/matches" className="mn-brand" onClick={closeMenu}>
-          <img src="/logo.png" alt="MatchNights logo" className="mn-mark" />
+          <span className="mn-mark">
+            <img src="/logo.png" alt="MatchNights logo" />
+          </span>
           <span className="mn-wordmark">
             Match<em>Nights</em>
           </span>
