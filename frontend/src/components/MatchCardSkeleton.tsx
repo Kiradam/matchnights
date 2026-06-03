@@ -6,7 +6,7 @@ export function MatchCardSkeleton() {
         border: "1px solid var(--border)",
         borderRadius: "var(--radius)",
         padding: "var(--card-pad)",
-        animation: "pulse 1.5s ease-in-out infinite",
+        animation: "skeleton-pulse 2s ease-in-out infinite",
         display: "flex",
         flexDirection: "column",
         gap: 14,

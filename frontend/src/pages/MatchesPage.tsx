@@ -613,6 +613,7 @@ function StatTile({
       onClick={clickable ? onClick : undefined}
       style={clickable ? undefined : { cursor: "default" }}
     >
+      <span className="stat-ghost" aria-hidden="true">{value}</span>
       <span className="stat-label">{label}</span>
       <span className="stat-num tnum">{value}</span>
       <span className="stat-sub">{sub}</span>

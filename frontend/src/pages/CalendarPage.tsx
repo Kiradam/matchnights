@@ -540,7 +540,7 @@ export function CalendarPage() {
             borderRadius: "var(--radius)",
             border: "1px solid var(--border)",
             background: "var(--surface)",
-            animation: "pulse 1.5s ease-in-out infinite",
+            animation: "skeleton-pulse 2s ease-in-out infinite",
           }}
         />
       ) : isEmpty ? (

@@ -78,7 +78,7 @@ export function MainLayout() {
       <header className="mn-nav" style={{ position: "relative" }}>
         {/* Hamburger — mobile only */}
         <button
-          className="mn-icon-btn sm:hidden"
+          className="mn-icon-btn mn-hamburger"
           onClick={() => setMenuOpen((o) => !o)}
           aria-label="Toggle menu"
         >
@@ -96,7 +96,7 @@ export function MainLayout() {
         </Link>
 
         {/* Desktop nav links */}
-        <nav className="mn-nav-links hidden sm:flex">
+        <nav className="mn-nav-links">
           {navLinks.map((l) => (
             <NavLink
               key={l.to}
