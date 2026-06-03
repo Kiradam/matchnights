@@ -16,6 +16,7 @@ import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
 import { AdminSyncPage } from "./pages/admin/AdminSyncPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>

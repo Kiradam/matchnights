@@ -6,7 +6,9 @@ export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: Location })?.from?.pathname ?? "/matches";
+  const state = location.state as { from?: Location; notice?: string } | null;
+  const from = state?.from?.pathname ?? "/matches";
+  const notice = state?.notice ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,10 +32,13 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
           MatchNights
         </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {notice && (
+          <p className="text-sm text-green-600 dark:text-green-400 mb-4">{notice}</p>
+        )}
+        <form onSubmit={handleSubmit} className={notice ? "space-y-4" : "space-y-4 mt-6"}>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email
