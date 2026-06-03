@@ -390,6 +390,7 @@ function Dashboard({
   skipped,
   notAnswered,
   nextGame,
+  nextGameSummaries,
   onFilterChange,
 }: {
   together: number;
@@ -397,6 +398,7 @@ function Dashboard({
   skipped: number;
   notAnswered: number;
   nextGame: Match | undefined;
+  nextGameSummaries: GroupPreferenceSummary[];
   onFilterChange: (f: FilterMode) => void;
 }) {
   type StatCardDef = {
@@ -449,6 +451,17 @@ function Dashboard({
   const nextDt = nextGame ? new Date(nextGame.match_datetime) : null;
   const nextDateStr = nextDt?.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const nextTimeStr = nextDt?.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const nextIsTogether = nextGame?.my_preferences.some((p) => p.choice === "watch_together") ?? false;
+  const nextTogetherGroupIds = new Set(
+    (nextGame?.my_preferences ?? []).filter((p) => p.choice === "watch_together").map((p) => p.group_id)
+  );
+  const nextTogetherSummaries = nextGameSummaries.filter((g) => nextTogetherGroupIds.has(g.group_id));
+  const nextTogetherCount = nextTogetherSummaries.reduce((s, g) => s + g.watch_together, 0);
+  const nextTotalCount = nextTogetherSummaries.reduce((s, g) => s + g.watch + g.watch_together + g.skip + g.no_response, 0);
+  const nextGradient = nextIsTogether
+    ? "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/60 dark:to-emerald-900/30 border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-700"
+    : "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700";
+  const nextLabelColor = nextIsTogether ? "text-green-600 dark:text-green-400" : "text-blue-500 dark:text-blue-400";
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
@@ -482,9 +495,9 @@ function Dashboard({
       {nextGame ? (
         <Link
           to={`/matches/${nextGame.id}`}
-          className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3.5 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all col-span-2 sm:col-span-1"
+          className={`${nextGradient} border rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all col-span-2 sm:col-span-1`}
         >
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-500 dark:text-blue-400 mb-1">
+          <div className={`text-[9px] font-bold uppercase tracking-widest ${nextLabelColor} mb-1`}>
             Your next game
           </div>
           <div className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug">
@@ -492,6 +505,9 @@ function Dashboard({
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {nextDateStr} · {nextTimeStr}
+          </div>
+          <div className={`text-[10px] font-semibold mt-1.5 ${nextLabelColor}`}>
+            {nextIsTogether ? `Together · ${nextTogetherCount}/${nextTotalCount}` : "At Home"}
           </div>
         </Link>
       ) : (
@@ -616,7 +632,8 @@ export function MatchesPage() {
     const nextGame = allMatches
       .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
       .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
-    return { together, atHome, skipped, notAnswered, nextGame };
+    const nextGameSummaries = nextGame ? (summaries[nextGame.id] ?? []) : [];
+    return { together, atHome, skipped, notAnswered, nextGame, nextGameSummaries };
   }, [allMatches, summaries]);
 
   const matches = useMemo(() => {
@@ -679,6 +696,7 @@ export function MatchesPage() {
           skipped={dashboardStats.skipped}
           notAnswered={dashboardStats.notAnswered}
           nextGame={dashboardStats.nextGame}
+          nextGameSummaries={dashboardStats.nextGameSummaries}
           onFilterChange={setActiveFilter}
         />
       )}
