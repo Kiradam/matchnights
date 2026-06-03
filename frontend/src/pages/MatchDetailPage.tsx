@@ -165,7 +165,9 @@ export function MatchDetailPage() {
 
   const isButtonActive = (choice: PreferenceChoice): boolean => {
     if (!match || userGroups.length === 0) return false;
-    if (choice === "watch_together" && userGroups.length > 1) return false;
+    if (choice === "watch_together") {
+      return match.my_preferences.some((p) => p.choice === "watch_together");
+    }
     return userGroups.every(
       (g) => match.my_preferences.find((p) => p.group_id === g.id)?.choice === choice
     );
