@@ -5,16 +5,19 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 ## Features
 
 - **Invite-only** — admin generates one-time invite links; no self-registration
-- **Per-group preferences** — Watch and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
-- **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing "X/Y together"
-- **Match highlighting** — cards where ≥50% of group responses are "Together" are highlighted green
-- **Mini dashboard** — stat cards (Together, At Home, Skip, Not Answered) above the match grid; Together and At Home are clickable to filter the list; skipped cards are visually dimmed
-- **Match detail page** — full preference controls (Together / Watch / Skip) accessible from both the matches list and the calendar
-- **Filter pills** — quickly switch between All, Today, Together, and Planned views
-- **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
-- **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
-- **Calendar view** — full-height week/day views with evening and late-night sections that adjust to content; week view shows official 3-letter country codes (TLA); match times displayed in each viewer's local timezone; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
-- **Admin panel** — invite management, user activation/deactivation, role promotion (make/revoke admin), group CRUD with member management, one-click match sync
+- **Per-group preferences** — At home and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
+- **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing a progress bar and "X/Y together" count
+- **Match highlighting** — cards where ≥50% of group responses are "Together" get a green "Match on" border and glow
+- **Broadcast-style UI** — bold scoreboard layout with flag chips, 3-letter country codes (TLA), odds strip with gold favourite highlight, and oklch-based semantic colour tokens (Together green, At home blue, Skip red, gold accent)
+- **Mini dashboard** — stat tiles (Together, At Home, Skip, Not Answered) with large ghost watermark numbers; Together and At Home are clickable filters; skipped cards are visually dimmed; next-game hero tile with pulsing gold dot
+- **3-way segmented preference control** — connected Together / At home / Skip control with semantic colour fill and drop-shadow; replaces three separate buttons
+- **Toast notifications** — slide-up confirmation for every preference change
+- **Match detail page** — full preference controls and group panels accessible from both the matches list and the calendar
+- **Filter pills** — quickly switch between All, Today, Together, and At Home views
+- **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button; oklch colour tokens adapt for both themes
+- **Mobile-friendly** — hamburger nav with fixed dropdown sheet, single-column match grid, horizontally scrollable filter pills, responsive dashboard grid
+- **Calendar view** — full-height week/day views with evening and late-night sections; week view uses TLA country codes with semantic left-border colour chips; today column highlighted in gold; fixed-width date range label so navigation buttons never shift; match times in local timezone; download as `.ics` (works on iOS Safari via backend endpoint)
+- **Admin panel** — invite management, user activation/deactivation, role promotion, group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 
 ## Tech stack
@@ -22,7 +25,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Alembic, SQLite |
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Archivo + Hanken Grotesk (Google Fonts) |
 | Infrastructure | Docker, Docker Compose, Nginx |
 | Football data | [football-data.org](https://www.football-data.org) free tier (default) |
 
