@@ -1,6 +1,7 @@
 import { Navigate, BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ToastProvider } from "./contexts/ToastContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MainLayout } from "./layouts/MainLayout";
@@ -19,6 +20,7 @@ import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
 export default function App() {
   return (
     <ThemeProvider>
+    <ToastProvider>
     <BrowserRouter>
       <AuthProvider>
         <ErrorBoundary>
@@ -50,6 +52,7 @@ export default function App() {
         </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
+    </ToastProvider>
     </ThemeProvider>
   );
 }

@@ -1,23 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { MatchCardSkeleton } from "../components/MatchCardSkeleton";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import type {
   Group,
+  GroupMemberPreference,
   GroupPreferenceSummary,
   Match,
   PreferenceChoice,
 } from "../types";
-import { CHOICE_DOT, CHOICE_LABELS } from "../utils/choices";
 
 const CHOICE_ORDER: PreferenceChoice[] = ["watch_together", "watch", "skip"];
-
-const CHOICE_STYLES: Record<PreferenceChoice, string> = {
-  watch_together: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700",
-  watch: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700",
-  skip: "bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-600 dark:text-slate-100 dark:border-slate-500",
-};
 
 type FilterMode = "all" | "today" | "together" | "planned";
 
@@ -26,164 +21,294 @@ type FilterMode = "all" | "today" | "together" | "planned";
 function isToday(m: Match): boolean {
   const d = new Date(m.match_datetime);
   const t = new Date();
-  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+  return (
+    d.getFullYear() === t.getFullYear() &&
+    d.getMonth() === t.getMonth() &&
+    d.getDate() === t.getDate()
+  );
 }
 
 function hasMyChoice(m: Match, choices: PreferenceChoice[]): boolean {
-  return m.my_preferences.some((p) => p.choice !== null && choices.includes(p.choice as PreferenceChoice));
+  return m.my_preferences.some(
+    (p) => p.choice !== null && choices.includes(p.choice as PreferenceChoice)
+  );
+}
+
+function relativeKick(dt: Date): string {
+  const now = new Date();
+  const diffMs = dt.getTime() - now.getTime();
+  const diffH = diffMs / 3_600_000;
+  if (diffH < 0) return "Live / done";
+  if (diffH < 1) return `in ${Math.round(diffMs / 60_000)} min`;
+  if (diffH < 24 && isToday({ match_datetime: dt.toISOString() } as Match))
+    return "Today";
+  if (diffH < 48) return "Tomorrow";
+  return `in ${Math.round(diffH / 24)} days`;
+}
+
+function avatarColor(name: string): string {
+  const colors = [
+    "#6C63FF", "#2FC08A", "#F2B441", "#5B8DEF", "#F2685E",
+    "#9DC23B", "#19B5A6", "#C77DFF", "#FF8A00", "#00B4D8",
+  ];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return colors[h % colors.length];
+}
+
+function initials(name: string): string {
+  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+function TogetherIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="16" cy="9.5" r="2.6" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M4 19c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M15.5 19c0-1.9 1-3.3 2.6-3.9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function WatchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <rect x="3" y="5.5" width="18" height="12" rx="2.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 20.5h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M10.3 9.6l4 2.4-4 2.4z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SkipIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <path d="M6 5.5v13M18 5.5v13M16.5 6.5L9 12l7.5 5.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ── Flag chip ─────────────────────────────────────────────────────────────────
+
+function FlagChip({ src, alt, tla }: { src: string | null; alt: string; tla: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const label = tla ?? alt.slice(0, 3).toUpperCase();
+  return (
+    <div className="flag-chip">
+      {src && !failed ? (
+        <img src={src} alt={alt} onError={() => setFailed(true)} />
+      ) : (
+        <span className="flag-initials">{label}</span>
+      )}
+    </div>
+  );
+}
+
+// ── Segmented preference control ──────────────────────────────────────────────
+
+function PrefControl({
+  match,
+  userGroups,
+  locked,
+  saving,
+  onChoice,
+}: {
+  match: Match;
+  userGroups: Group[];
+  locked: boolean;
+  saving: boolean;
+  onChoice: (choice: PreferenceChoice) => void;
+}) {
+  const isActive = (choice: PreferenceChoice): boolean => {
+    if (userGroups.length === 0) return false;
+    if (choice === "watch_together") {
+      return match.my_preferences.some((p) => p.choice === "watch_together");
+    }
+    return userGroups.every(
+      (g) => match.my_preferences.find((p) => p.group_id === g.id)?.choice === choice
+    );
+  };
+
+  const opts = [
+    { choice: "watch_together" as const, label: "Together", Icon: TogetherIcon },
+    { choice: "watch" as const, label: "At home", Icon: WatchIcon },
+    { choice: "skip" as const, label: "Skip", Icon: SkipIcon },
+  ];
+
+  return (
+    <div className="pref-seg" role="group">
+      {opts.map(({ choice, label, Icon }) => {
+        const on = isActive(choice);
+        return (
+          <button
+            key={choice}
+            className={`seg-btn ${choice}${on ? " on" : ""}`}
+            disabled={locked || saving}
+            aria-pressed={on}
+            onClick={() => onChoice(choice)}
+          >
+            <Icon />
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Group selector modal ──────────────────────────────────────────────────────
 
 function GroupSelectorModal({
+  match,
   groups,
-  pendingChoice,
   onSelect,
   onCancel,
 }: {
+  match: Match;
   groups: Group[];
-  pendingChoice: PreferenceChoice;
   onSelect: (groupId: number) => void;
   onCancel: () => void;
 }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onCancel]);
+
+  const homeTla = match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase();
+  const awayTla = match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
+
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl w-full max-w-xs p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Set "{CHOICE_LABELS[pendingChoice]}" for…
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Which group should this preference apply to?
-        </div>
-        <div className="space-y-2">
-          {groups.map((g) => (
+    <div className="popover-scrim" onClick={onCancel}>
+      <div className="popover" onClick={(e) => e.stopPropagation()}>
+        <h3>Who are you watching with?</h3>
+        <p>
+          {homeTla} vs {awayTla} — pick the group you'll be Together with. The rest see you're watching at home.
+        </p>
+        {groups.map((g) => {
+          const sel = match.my_preferences.some(
+            (p) => p.group_id === g.id && p.choice === "watch_together"
+          );
+          return (
             <button
               key={g.id}
+              className="gopt"
+              style={sel ? { borderColor: "var(--together)" } : undefined}
               onClick={() => onSelect(g.id)}
-              className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
             >
-              {g.name}
+              <span className="go-ic">{g.name.slice(0, 2).toUpperCase()}</span>
+              <span style={{ flex: 1 }}>
+                <span className="go-name">{g.name}</span>
+                <span className="go-sub">{g.member_count} members</span>
+              </span>
+              {sel && (
+                <span style={{ color: "var(--together)", fontWeight: 800, fontSize: 13 }}>
+                  ✓
+                </span>
+              )}
             </button>
-          ))}
-        </div>
-        <button
-          onClick={onCancel}
-          className="mt-3 w-full text-center text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 py-1"
-        >
-          Cancel
-        </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ── Per-group collapsible panel ───────────────────────────────────────────────
+// ── Group panel ───────────────────────────────────────────────────────────────
 
 function GroupPanel({
   summary,
   currentUserId,
-  expanded,
-  onToggle,
 }: {
   summary: GroupPreferenceSummary;
   currentUserId: number;
-  expanded: boolean;
-  onToggle: () => void;
 }) {
-  // Only members who said Together, plus the current user (regardless of choice)
-  const visibleMembers = summary.members.filter(
-    (m) => m.user_id === currentUserId || m.choice === "watch_together"
-  );
+  const [open, setOpen] = useState(false);
+
+  const total =
+    summary.watch_together + summary.watch + summary.skip + summary.no_response;
+  const pct = total > 0 ? Math.round((summary.watch_together / total) * 100) : 0;
+
+  const STATUS_LABEL: Record<string, string> = {
+    watch_together: "Together",
+    watch: "At home",
+    skip: "Skip",
+  };
 
   return (
-    <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors text-left"
-      >
-        <span className="text-xs font-medium text-gray-600 dark:text-gray-400 truncate max-w-[55%]">
-          {summary.group_name}
+    <div className={`gpanel${open ? " open" : ""}`}>
+      <button className="gpanel-head" onClick={() => setOpen((o) => !o)}>
+        <span className="gp-name">{summary.group_name}</span>
+        <span className="gp-bar">
+          <i style={{ width: `${pct}%` }} />
         </span>
-        <div className="flex items-center gap-2 text-xs shrink-0">
-          {(() => {
-            const total = summary.watch_together + summary.watch + summary.skip + summary.no_response;
-            return summary.watch_together > 0 ? (
-              <span className="flex items-center gap-1 text-green-700 dark:text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                {summary.watch_together}/{total} together
-              </span>
-            ) : (
-              <span className="text-gray-300 dark:text-gray-600">0/{total} together</span>
-            );
-          })()}
-          <span className="text-gray-300 dark:text-gray-600 ml-1">{expanded ? "▴" : "▾"}</span>
-        </div>
+        <span className={`gp-count${summary.watch_together > 0 ? " has" : ""}`}>
+          <span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>
+              {summary.watch_together}/{total}
+            </span>{" "}
+            together
+          </span>
+          <span className="chev">
+            <ChevronIcon />
+          </span>
+        </span>
       </button>
 
-      {expanded && (
-        <div className="px-3 py-2 space-y-1.5 bg-white dark:bg-gray-800">
-          {visibleMembers.length === 0 ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 py-1">No one has said Together yet.</p>
-          ) : (
-            visibleMembers.map((m) => (
-              <div key={m.user_id} className="flex items-center justify-between">
-                <span
-                  className={`text-xs truncate max-w-[65%] ${
-                    m.user_id === currentUserId
-                      ? "font-medium text-gray-800 dark:text-gray-200"
-                      : "text-gray-600 dark:text-gray-400"
-                  }`}
-                >
+      {open && (
+        <div className="gpanel-body">
+          {summary.members.map((m: GroupMemberPreference) => {
+            const color = avatarColor(m.full_name);
+            const isMe = m.user_id === currentUserId;
+            const statusKey = m.choice ?? "none";
+            return (
+              <div className="member" key={m.user_id}>
+                <span className="av" style={{ background: color }}>
+                  {initials(m.full_name)}
+                </span>
+                <span className={`mname${isMe ? " me" : ""}`}>
                   {m.full_name}
-                  {m.user_id === currentUserId && (
-                    <span className="ml-1 text-gray-400 dark:text-gray-500 font-normal">(you)</span>
+                  {isMe && (
+                    <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4 }}>
+                      (you)
+                    </span>
                   )}
                 </span>
-                {m.choice ? (
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className={`w-1.5 h-1.5 rounded-full ${CHOICE_DOT[m.choice]}`} />
-                    <span className="text-gray-600 dark:text-gray-400">{CHOICE_LABELS[m.choice]}</span>
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
-                )}
+                <span className={`mstatus ${statusKey}`}>
+                  {m.choice ? STATUS_LABEL[m.choice] ?? m.choice : "Not set"}
+                </span>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-// ── Crest image ───────────────────────────────────────────────────────────────
-
-function CrestImg({ src, alt }: { src: string | null; alt: string }) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) return null;
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className="w-7 h-7 object-contain shrink-0"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
 // ── Match card ────────────────────────────────────────────────────────────────
 
 function togetherPct(summaries: GroupPreferenceSummary[]): number {
-  const total = summaries.reduce((s, g) => s + g.watch + g.watch_together + g.skip, 0);
-  if (total < 2) return 0;
+  const responded = summaries.reduce(
+    (s, g) => s + g.watch + g.watch_together + g.skip,
+    0
+  );
+  if (responded < 2) return 0;
   const together = summaries.reduce((s, g) => s + g.watch_together, 0);
-  return together / total;
+  return together / responded;
 }
 
 function MatchCard({
@@ -197,10 +322,16 @@ function MatchCard({
   groupSummaries: GroupPreferenceSummary[] | undefined;
   userGroups: Group[];
   currentUserId: number;
-  onPreferenceChange: (matchId: number, groupId: number, choice: PreferenceChoice | null) => void;
+  onPreferenceChange: (
+    matchId: number,
+    groupId: number,
+    choice: PreferenceChoice | null,
+    prevChoice: PreferenceChoice | null
+  ) => void;
 }) {
+  const { showToast } = useToast();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const [pendingChoice, setPendingChoice] = useState<PreferenceChoice | null>(null);
 
   const locked =
@@ -209,23 +340,58 @@ function MatchCard({
     match.status === "cancelled";
 
   const isHot = groupSummaries ? togetherPct(groupSummaries) >= 0.5 : false;
+  const isSkipped =
+    hasMyChoice(match, ["skip"]) &&
+    !hasMyChoice(match, ["watch", "watch_together"]);
 
   const dt = new Date(match.match_datetime);
-  const dateStr = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const timeStr = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = dt.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const timeStr = dt.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const homeTla =
+    match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase();
+  const awayTla =
+    match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
+
+  // Preference for status tag
+  const myPref = (() => {
+    if (hasMyChoice(match, ["watch_together"])) return "watch_together";
+    if (hasMyChoice(match, ["watch"])) return "watch";
+    if (hasMyChoice(match, ["skip"])) return "skip";
+    return null;
+  })();
+
+  const STATUS_LABEL: Record<string, string> = {
+    watch_together: "Together",
+    watch: "At home",
+    skip: "Skip",
+  };
 
   const applyChoice = async (choice: PreferenceChoice, groupId: number) => {
-    if (locked || saving) return;
-    const currentChoice = match.my_preferences.find((p) => p.group_id === groupId)?.choice;
-    const isDeselect = currentChoice === choice;
+    const prevChoice =
+      (match.my_preferences.find((p) => p.group_id === groupId)
+        ?.choice as PreferenceChoice | null) ?? null;
+    const isDeselect = prevChoice === choice;
     setSaving(true);
     try {
       if (isDeselect) {
-        await api.delete(`/matches/${match.id}/preference`, { params: { group_id: groupId } });
-        onPreferenceChange(match.id, groupId, null);
+        await api.delete(`/matches/${match.id}/preference`, {
+          params: { group_id: groupId },
+        });
+        onPreferenceChange(match.id, groupId, null, prevChoice);
       } else {
-        await api.put(`/matches/${match.id}/preference`, { choice, group_id: groupId });
-        onPreferenceChange(match.id, groupId, choice);
+        await api.put(`/matches/${match.id}/preference`, {
+          choice,
+          group_id: groupId,
+        });
+        onPreferenceChange(match.id, groupId, choice, prevChoice);
       }
     } finally {
       setSaving(false);
@@ -233,7 +399,6 @@ function MatchCard({
   };
 
   const applyChoiceAllGroups = async (choice: PreferenceChoice) => {
-    if (locked || saving) return;
     const allHaveChoice = userGroups.every(
       (g) => match.my_preferences.find((p) => p.group_id === g.id)?.choice === choice
     );
@@ -241,12 +406,20 @@ function MatchCard({
     try {
       await Promise.all(
         userGroups.map(async (g) => {
+          const prevChoice =
+            (match.my_preferences.find((p) => p.group_id === g.id)
+              ?.choice as PreferenceChoice | null) ?? null;
           if (allHaveChoice) {
-            await api.delete(`/matches/${match.id}/preference`, { params: { group_id: g.id } });
-            onPreferenceChange(match.id, g.id, null);
+            await api.delete(`/matches/${match.id}/preference`, {
+              params: { group_id: g.id },
+            });
+            onPreferenceChange(match.id, g.id, null, prevChoice);
           } else {
-            await api.put(`/matches/${match.id}/preference`, { choice, group_id: g.id });
-            onPreferenceChange(match.id, g.id, choice);
+            await api.put(`/matches/${match.id}/preference`, {
+              choice,
+              group_id: g.id,
+            });
+            onPreferenceChange(match.id, g.id, choice, prevChoice);
           }
         })
       );
@@ -256,281 +429,307 @@ function MatchCard({
   };
 
   const handleChoice = (choice: PreferenceChoice) => {
-    if (locked || saving) return;
-    if (userGroups.length === 0) return;
-    if (userGroups.length === 1) {
-      applyChoice(choice, userGroups[0].id);
-    } else if (choice === "watch_together") {
-      setPendingChoice(choice);
-    } else {
-      applyChoiceAllGroups(choice);
+    if (locked || saving || userGroups.length === 0) return;
+    if (choice === "watch_together") {
+      if (userGroups.length === 1) {
+        applyChoice(choice, userGroups[0].id).then(() => {
+          const alreadyOn = match.my_preferences.some(
+            (p) => p.choice === "watch_together"
+          );
+          if (!alreadyOn)
+            showToast(`You're watching with ${userGroups[0].name}`);
+        });
+      } else {
+        setPendingChoice(choice);
+      }
+      return;
     }
+    const alreadyAll = userGroups.every(
+      (g) => match.my_preferences.find((p) => p.group_id === g.id)?.choice === choice
+    );
+    applyChoiceAllGroups(choice).then(() => {
+      if (!alreadyAll) {
+        if (choice === "watch") showToast("Marked as watching at home");
+        if (choice === "skip") showToast("Marked as skip");
+      }
+    });
   };
 
   const handleModalSelect = (groupId: number) => {
-    if (pendingChoice) applyChoice(pendingChoice, groupId);
+    if (pendingChoice) {
+      const groupName =
+        userGroups.find((g) => g.id === groupId)?.name ?? "group";
+      applyChoice(pendingChoice, groupId).then(() => {
+        showToast(`You're watching with ${groupName}`);
+      });
+    }
     setPendingChoice(null);
   };
 
-  const isButtonActive = (choice: PreferenceChoice): boolean => {
-    if (userGroups.length === 0) return false;
-    if (choice === "watch_together") {
-      return match.my_preferences.some((p) => p.choice === "watch_together");
-    }
-    return userGroups.every(
-      (g) => match.my_preferences.find((p) => p.group_id === g.id)?.choice === choice
-    );
-  };
-
-  const isSkipped = hasMyChoice(match, ["skip"]) && !hasMyChoice(match, ["watch", "watch_together"]);
-  const cardCls = [
-    isSkipped ? "opacity-40" : "",
-    isHot
-      ? "bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700 p-4 shadow-sm shadow-green-100 dark:shadow-none hover:border-green-400 dark:hover:border-green-500 hover:shadow-md transition-all duration-150"
-      : "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all duration-150",
-  ].join(" ");
+  const odds = [
+    { k: "1", v: match.home_odds },
+    { k: "X", v: match.draw_odds },
+    { k: "2", v: match.away_odds },
+  ];
+  const hasOdds = odds.some((o) => o.v != null);
+  const minOdds = hasOdds
+    ? Math.min(...odds.filter((o) => o.v != null).map((o) => o.v!))
+    : null;
 
   return (
     <>
       {pendingChoice && (
         <GroupSelectorModal
+          match={match}
           groups={userGroups}
-          pendingChoice={pendingChoice}
           onSelect={handleModalSelect}
           onCancel={() => setPendingChoice(null)}
         />
       )}
 
-      <div className={cardCls}>
-        <Link to={`/matches/${match.id}`} className="block mb-3 hover:opacity-80 transition-opacity">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-1.5">
+      <article
+        className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}`}
+      >
+        {/* Card head */}
+        <div className="card-head">
+          <span className="group-chip">
             {match.stage}
-            {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
-              <span className="text-gray-400 dark:text-gray-500">· MD{match.matchday}</span>
-            )}
-            {isHot && (
-              <span className="text-green-600 dark:text-green-500 font-medium">· Together</span>
-            )}
-          </div>
-          <div className="flex items-center justify-center gap-3 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <CrestImg src={match.home_team_crest} alt={match.home_team} />
-              <span className="truncate">{match.home_team}</span>
+            {match.matchday != null &&
+              match.stage.toLowerCase().startsWith("group") && (
+                <> · MD {match.matchday}</>
+              )}
+          </span>
+          {isHot ? (
+            <span className="status-tag matchon-tag">
+              <span className="dot" />
+              Match on
+            </span>
+          ) : myPref ? (
+            <span className={`status-tag ${myPref}`}>
+              <span className="dot" />
+              {STATUS_LABEL[myPref]}
+            </span>
+          ) : null}
+        </div>
+
+        {/* Scoreboard — links to detail page */}
+        <Link
+          to={`/matches/${match.id}`}
+          style={{ textDecoration: "none" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="score">
+            <div className="team">
+              <FlagChip
+                src={match.home_team_crest}
+                alt={match.home_team}
+                tla={match.home_team_tla}
+              />
+              <div className="tla">{homeTla}</div>
+              <div className="tname">{match.home_team}</div>
             </div>
-            <span className="text-gray-400 dark:text-gray-500 font-normal shrink-0">vs</span>
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="truncate">{match.away_team}</span>
-              <CrestImg src={match.away_team_crest} alt={match.away_team} />
+            <div className="score-mid">VS</div>
+            <div className="team">
+              <FlagChip
+                src={match.away_team_crest}
+                alt={match.away_team}
+                tla={match.away_team_tla}
+              />
+              <div className="tla">{awayTla}</div>
+              <div className="tname">{match.away_team}</div>
             </div>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-            {dateStr} · {timeStr}
-            {match.venue && <span className="ml-1">· {match.venue}</span>}
-          </div>
-          {(match.home_odds || match.draw_odds || match.away_odds) && (
-            <div className="flex justify-center gap-3 mt-2">
-              {[
-                { label: "1", value: match.home_odds },
-                { label: "X", value: match.draw_odds },
-                { label: "2", value: match.away_odds },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex flex-col items-center">
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {value != null ? value.toFixed(2) : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </Link>
 
-        {userGroups.length > 0 && (
-          <div className="flex gap-2 mb-3">
-            {CHOICE_ORDER.map((choice) => {
-              const active = isButtonActive(choice);
-              return (
-                <button
-                  key={choice}
-                  disabled={locked || saving}
-                  onClick={() => handleChoice(choice)}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded border transition-colors
-                    ${locked ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:opacity-80"}
-                    ${active
-                      ? CHOICE_STYLES[choice]
-                      : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
-                    }`}
-                >
-                  {CHOICE_LABELS[choice]}
-                </button>
-              );
-            })}
+        {/* Kickoff */}
+        <div className="kickoff-line">
+          <span className="ko-time">
+            {dateStr} · {timeStr}
+          </span>
+          <span>·</span>
+          <span className="ko-rel">{relativeKick(dt)}</span>
+        </div>
+
+        {/* Odds */}
+        {hasOdds && (
+          <div className="odds">
+            {odds.map(({ k, v }) => (
+              <div key={k} className={`odd${v === minOdds && v != null ? " fav" : ""}`}>
+                <span className="ok">{k}</span>
+                <span className="ov">{v != null ? v.toFixed(2) : "—"}</span>
+              </div>
+            ))}
           </div>
         )}
 
+        {/* Preference control */}
+        {userGroups.length > 0 && (
+          <PrefControl
+            match={match}
+            userGroups={userGroups}
+            locked={locked}
+            saving={saving}
+            onChoice={handleChoice}
+          />
+        )}
+
+        {/* Group panels */}
         {groupSummaries && groupSummaries.length > 0 && (
-          <div className="space-y-1.5 mt-1">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {groupSummaries.map((gs) => (
               <GroupPanel
                 key={gs.group_id}
                 summary={gs}
                 currentUserId={currentUserId}
-                expanded={expandedGroup === gs.group_id}
-                onToggle={() =>
-                  setExpandedGroup((prev) => (prev === gs.group_id ? null : gs.group_id))
-                }
               />
             ))}
           </div>
         )}
-      </div>
+      </article>
     </>
   );
 }
 
-// ── Mini dashboard ────────────────────────────────────────────────────────────
+// ── Stat tile ─────────────────────────────────────────────────────────────────
 
-function Dashboard({
-  together,
-  atHome,
-  skipped,
-  notAnswered,
-  nextGame,
-  nextGameSummaries,
-  onFilterChange,
+function StatTile({
+  kind,
+  label,
+  value,
+  sub,
+  clickable,
+  active,
+  onClick,
 }: {
-  together: number;
-  atHome: number;
-  skipped: number;
-  notAnswered: number;
-  nextGame: Match | undefined;
-  nextGameSummaries: GroupPreferenceSummary[];
-  onFilterChange: (f: FilterMode) => void;
+  kind: string;
+  label: string;
+  value: number;
+  sub: string;
+  clickable?: boolean;
+  active?: boolean;
+  onClick?: () => void;
 }) {
-  type StatCardDef = {
-    label: string;
-    value: number;
-    gradient: string;
-    border: string;
-    valueColor: string;
-    labelColor: string;
-    onClick?: () => void;
-  };
-
-  const statCards: StatCardDef[] = [
-    {
-      label: "Together",
-      value: together,
-      gradient: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/60 dark:to-emerald-900/30",
-      border: "border-green-200 dark:border-green-800",
-      valueColor: "text-green-700 dark:text-green-300",
-      labelColor: "text-green-600 dark:text-green-400",
-      onClick: () => onFilterChange("together"),
-    },
-    {
-      label: "At Home",
-      value: atHome,
-      gradient: "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30",
-      border: "border-blue-200 dark:border-blue-800",
-      valueColor: "text-blue-700 dark:text-blue-300",
-      labelColor: "text-blue-500 dark:text-blue-400",
-      onClick: () => onFilterChange("planned"),
-    },
-    {
-      label: "Skip",
-      value: skipped,
-      gradient: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/60 dark:to-slate-800/20",
-      border: "border-slate-200 dark:border-slate-700",
-      valueColor: "text-slate-600 dark:text-slate-400",
-      labelColor: "text-slate-500 dark:text-slate-400",
-    },
-    {
-      label: "Not Answered",
-      value: notAnswered,
-      gradient: "bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/60 dark:to-orange-900/30",
-      border: "border-amber-200 dark:border-amber-800",
-      valueColor: "text-amber-600 dark:text-amber-400",
-      labelColor: "text-amber-500 dark:text-amber-400",
-    },
-  ];
-
-  const nextDt = nextGame ? new Date(nextGame.match_datetime) : null;
-  const nextDateStr = nextDt?.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const nextTimeStr = nextDt?.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const nextIsTogether = nextGame?.my_preferences.some((p) => p.choice === "watch_together") ?? false;
-  const nextTogetherGroupIds = new Set(
-    (nextGame?.my_preferences ?? []).filter((p) => p.choice === "watch_together").map((p) => p.group_id)
+  const Comp = clickable ? "button" : "div";
+  return (
+    <Comp
+      className={`stat ${kind}${clickable ? " clickable" : ""}${active ? " active" : ""}`}
+      onClick={clickable ? onClick : undefined}
+      style={clickable ? undefined : { cursor: "default" }}
+    >
+      <span className="stat-label">{label}</span>
+      <span className="stat-num tnum">{value}</span>
+      <span className="stat-sub">{sub}</span>
+    </Comp>
   );
-  const nextTogetherSummaries = nextGameSummaries.filter((g) => nextTogetherGroupIds.has(g.group_id));
-  const nextTogetherCount = nextTogetherSummaries.reduce((s, g) => s + g.watch_together, 0);
-  const nextTotalCount = nextTogetherSummaries.reduce((s, g) => s + g.watch + g.watch_together + g.skip + g.no_response, 0);
-  const nextGradient = nextIsTogether
-    ? "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/60 dark:to-emerald-900/30 border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-700"
-    : "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700";
-  const nextLabelColor = nextIsTogether ? "text-green-600 dark:text-green-400" : "text-blue-500 dark:text-blue-400";
+}
+
+// ── Next game hero ────────────────────────────────────────────────────────────
+
+function NextGame({
+  match,
+  summaries,
+}: {
+  match: Match | undefined;
+  summaries: GroupPreferenceSummary[];
+}) {
+  if (!match) {
+    return (
+      <div
+        className="stat next-game"
+        style={{
+          cursor: "default",
+          border: "1px dashed var(--border)",
+          background: "var(--surface)",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <span className="stat-sub">No upcoming games on your watchlist</span>
+      </div>
+    );
+  }
+
+  const dt = new Date(match.match_datetime);
+  const dateStr = dt.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const timeStr = dt.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const homeTla =
+    match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase();
+  const awayTla =
+    match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
+
+  const isTogether = match.my_preferences.some(
+    (p) => p.choice === "watch_together"
+  );
+  const togetherGroupIds = new Set(
+    match.my_preferences
+      .filter((p) => p.choice === "watch_together")
+      .map((p) => p.group_id)
+  );
+  const togetherSummaries = summaries.filter((g) =>
+    togetherGroupIds.has(g.group_id)
+  );
+  const togetherCount = togetherSummaries.reduce(
+    (s, g) => s + g.watch_together,
+    0
+  );
+  const totalCount = togetherSummaries.reduce(
+    (s, g) => s + g.watch + g.watch_together + g.skip + g.no_response,
+    0
+  );
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-      {statCards.map((card) => {
-        const Comp = card.onClick ? "button" : "div";
-        return (
-          <Comp
-            key={card.label}
-            onClick={card.onClick}
-            className={[
-              card.gradient,
-              "border",
-              card.border,
-              "rounded-xl p-3.5 relative overflow-hidden shadow-sm text-left flex flex-col justify-center transition-all duration-150",
-              card.onClick ? "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]" : "",
-            ].join(" ")}
-          >
-            <span className="absolute right-1 -bottom-2 text-7xl font-black opacity-[0.06] select-none pointer-events-none leading-none">
-              {card.value}
-            </span>
-            <span className={`text-[9px] font-bold uppercase tracking-widest ${card.labelColor} mb-1 block`}>
-              {card.label}
-            </span>
-            <span className={`text-3xl font-bold ${card.valueColor} relative z-10 leading-none`}>
-              {card.value}
-            </span>
-          </Comp>
-        );
-      })}
-
-      {nextGame ? (
-        <Link
-          to={`/matches/${nextGame.id}`}
-          className={`${nextGradient} border rounded-xl p-3.5 shadow-sm hover:shadow-md transition-all col-span-2 sm:col-span-1`}
-        >
-          <div className={`text-[9px] font-bold uppercase tracking-widest ${nextLabelColor} mb-1`}>
-            Your next game
-          </div>
-          <div className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug">
-            {nextGame.home_team} <span className="font-normal text-gray-400">vs</span> {nextGame.away_team}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {nextDateStr} · {nextTimeStr}
-          </div>
-          <div className={`text-[10px] font-semibold mt-1.5 ${nextLabelColor}`}>
-            {nextIsTogether ? `Together · ${nextTogetherCount}/${nextTotalCount}` : "At Home"}
-          </div>
-        </Link>
-      ) : (
-        <div className="bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-3.5 col-span-2 sm:col-span-1 flex items-center justify-center">
-          <span className="text-xs text-gray-400 dark:text-gray-500 text-center">No upcoming games on your watchlist</span>
+    <Link to={`/matches/${match.id}`} style={{ textDecoration: "none" }}>
+      <div className="stat next-game">
+        <div className="ng-label">
+          <span className="ng-live" />
+          Your next game
         </div>
-      )}
-    </div>
+        <div className="ng-teams">
+          {homeTla}
+          <span className="vs">vs</span>
+          {awayTla}
+        </div>
+        <div className="ng-meta">
+          <span>
+            {dateStr} · {timeStr}
+          </span>
+          <span>·</span>
+          <span>{relativeKick(dt)}</span>
+          {isTogether && (
+            <>
+              <span>·</span>
+              <span className="ng-badge">
+                Together · {togetherCount}/{totalCount}
+              </span>
+            </>
+          )}
+          {!isTogether && (
+            <>
+              <span>·</span>
+              <span className="ng-badge">At home</span>
+            </>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const FILTERS: { key: FilterMode; label: string }[] = [
+const FILTERS: { key: FilterMode; label: string; dot?: boolean }[] = [
   { key: "all", label: "All" },
   { key: "today", label: "Today" },
-  { key: "together", label: "Together" },
+  { key: "together", label: "Together", dot: true },
   { key: "planned", label: "At Home" },
 ];
 
@@ -540,7 +739,9 @@ export function MatchesPage() {
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterMode>("all");
-  const [summaries, setSummaries] = useState<Record<number, GroupPreferenceSummary[]>>({});
+  const [summaries, setSummaries] = useState<
+    Record<number, GroupPreferenceSummary[]>
+  >({});
   const fetchRef = useRef(0);
 
   const load = useCallback(async () => {
@@ -578,12 +779,15 @@ export function MatchesPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handlePreferenceChange = (
     matchId: number,
     groupId: number,
-    choice: PreferenceChoice | null
+    choice: PreferenceChoice | null,
+    prevChoice: PreferenceChoice | null
   ) => {
     setAllMatches((prev) =>
       prev.map((m) =>
@@ -605,7 +809,6 @@ export function MatchesPage() {
         ...prev,
         [matchId]: matchSummaries.map((gs) => {
           if (gs.group_id !== groupId) return gs;
-          const prevChoice = gs.members.find((m) => m.user_id === user?.id)?.choice ?? null;
           const delta = (c: string) => {
             let n = gs[c as keyof GroupPreferenceSummary] as number;
             if (prevChoice === c) n--;
@@ -617,7 +820,10 @@ export function MatchesPage() {
             watch_together: delta("watch_together"),
             watch: delta("watch"),
             skip: delta("skip"),
-            no_response: Math.max(0, gs.no_response + (!choice ? 1 : 0) - (!prevChoice ? 1 : 0)),
+            no_response: Math.max(
+              0,
+              gs.no_response + (!choice ? 1 : 0) - (!prevChoice ? 1 : 0)
+            ),
             members: gs.members.map((m) =>
               m.user_id !== user?.id ? m : { ...m, choice }
             ),
@@ -631,103 +837,158 @@ export function MatchesPage() {
 
   const dashboardStats = useMemo(() => {
     const now = new Date();
-    const together = allMatches.filter((m) => hasMyChoice(m, ["watch_together"])).length;
-    const atHome = allMatches.filter((m) => hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])).length;
-    const skipped = allMatches.filter((m) => hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])).length;
-    const notAnswered = allMatches.filter((m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])).length;
+    const together = allMatches.filter((m) =>
+      hasMyChoice(m, ["watch_together"])
+    ).length;
+    const atHome = allMatches.filter(
+      (m) =>
+        hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
+    ).length;
+    const skipped = allMatches.filter(
+      (m) =>
+        hasMyChoice(m, ["skip"]) &&
+        !hasMyChoice(m, ["watch", "watch_together"])
+    ).length;
+    const notAnswered = allMatches.filter(
+      (m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])
+    ).length;
     const nextGame = allMatches
-      .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
-      .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
+      .filter(
+        (m) =>
+          new Date(m.match_datetime) > now &&
+          hasMyChoice(m, ["watch", "watch_together"])
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.match_datetime).getTime() -
+          new Date(b.match_datetime).getTime()
+      )[0];
     const nextGameSummaries = nextGame ? (summaries[nextGame.id] ?? []) : [];
     return { together, atHome, skipped, notAnswered, nextGame, nextGameSummaries };
   }, [allMatches, summaries]);
 
   const matches = useMemo(() => {
-    if (activeFilter === "today") {
-      return allMatches.filter(isToday);
-    }
-    if (activeFilter === "together") {
+    if (activeFilter === "today") return allMatches.filter(isToday);
+    if (activeFilter === "together")
       return allMatches
         .filter((m) => hasMyChoice(m, ["watch_together"]))
         .sort((a, b) => {
-          const scoreA = (summaries[a.id] ?? []).reduce((s, g) => s + g.watch_together, 0);
-          const scoreB = (summaries[b.id] ?? []).reduce((s, g) => s + g.watch_together, 0);
-          return scoreB - scoreA || new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime();
+          const scoreA = (summaries[a.id] ?? []).reduce(
+            (s, g) => s + g.watch_together,
+            0
+          );
+          const scoreB = (summaries[b.id] ?? []).reduce(
+            (s, g) => s + g.watch_together,
+            0
+          );
+          return (
+            scoreB - scoreA ||
+            new Date(a.match_datetime).getTime() -
+              new Date(b.match_datetime).getTime()
+          );
         });
-    }
-    if (activeFilter === "planned") {
+    if (activeFilter === "planned")
       return allMatches.filter(
-        (m) => hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
+        (m) =>
+          hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
       );
-    }
     return allMatches;
   }, [allMatches, activeFilter, summaries]);
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          Matches{" "}
+      {/* Screen head */}
+      <div className="screen-head">
+        <div className="screen-title">
+          <h1>Matches</h1>
           {!loading && (
-            <span className="text-sm font-normal text-gray-400 dark:text-gray-500">
-              ({matches.length})
-            </span>
+            <span className="count-pill">{allMatches.length}</span>
           )}
-        </h1>
-
-        {/* Filter pills */}
-        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          {FILTERS.map(({ key, label }) => (
+        </div>
+        <div className="filter-pills">
+          {FILTERS.map(({ key, label, dot }) => (
             <button
               key={key}
+              className={`filter-pill${activeFilter === key ? " active" : ""}`}
               onClick={() => setActiveFilter(key)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors
-                ${activeFilter === key
-                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
             >
+              {dot && activeFilter !== key && (
+                <span className="dot" />
+              )}
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Mini dashboard */}
+      {/* Dashboard */}
       {!loading && allMatches.length > 0 && (
-        <Dashboard
-          together={dashboardStats.together}
-          atHome={dashboardStats.atHome}
-          skipped={dashboardStats.skipped}
-          notAnswered={dashboardStats.notAnswered}
-          nextGame={dashboardStats.nextGame}
-          nextGameSummaries={dashboardStats.nextGameSummaries}
-          onFilterChange={setActiveFilter}
-        />
+        <div className="dash">
+          <StatTile
+            kind="together"
+            label="Together"
+            value={dashboardStats.together}
+            sub="watching as a group"
+            clickable
+            active={activeFilter === "together"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "together" ? "all" : "together"))
+            }
+          />
+          <StatTile
+            kind="watch"
+            label="At Home"
+            value={dashboardStats.atHome}
+            sub="watching solo"
+            clickable
+            active={activeFilter === "planned"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "planned" ? "all" : "planned"))
+            }
+          />
+          <StatTile
+            kind="skip"
+            label="Skip"
+            value={dashboardStats.skipped}
+            sub="sitting out"
+          />
+          <StatTile
+            kind="none"
+            label="Not Answered"
+            value={dashboardStats.notAnswered}
+            sub="waiting on you"
+          />
+          <NextGame
+            match={dashboardStats.nextGame}
+            summaries={dashboardStats.nextGameSummaries}
+          />
+        </div>
       )}
 
       {/* Match grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="match-grid">
           {Array.from({ length: 6 }).map((_, i) => (
             <MatchCardSkeleton key={i} />
           ))}
         </div>
       ) : matches.length === 0 ? (
-        <div className="text-center py-20 text-gray-400 dark:text-gray-500">
+        <div className="empty-day">
           {activeFilter === "today" && "No matches today."}
-          {activeFilter === "together" && "You haven't marked any matches as Together yet."}
-          {activeFilter === "planned" && "No matches marked as Watch (without Together)."}
+          {activeFilter === "together" &&
+            "You haven't marked any matches as Together yet."}
+          {activeFilter === "planned" &&
+            "No matches marked as At Home."}
           {activeFilter === "all" && (
             <>
               No matches found.
-              {allMatches.length === 0 && " An admin can sync match data from the Admin panel."}
+              {allMatches.length === 0 &&
+                " An admin can sync match data from the Admin panel."}
             </>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="match-grid">
           {matches.map((m) => (
             <MatchCard
               key={m.id}

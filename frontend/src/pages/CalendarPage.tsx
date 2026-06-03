@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { useTheme } from "../contexts/ThemeContext";
@@ -6,7 +6,7 @@ import type { Match } from "../types";
 
 type ViewMode = "week" | "day";
 type CalFilter = "watching" | "all";
-type MatchColor = "together" | "watch" | "grey";
+type MatchColor = "watch_together" | "watch" | "skip" | "none";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,14 +33,16 @@ function addDays(d: Date, n: number): Date {
 }
 
 function fmtTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return new Date(dateStr).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-/** 00:00–06:30 is "late night" belonging to the previous display day. */
 function assignMatch(m: Match): { displayDate: Date; section: "evening" | "dawn" } {
   const dt = new Date(m.match_datetime);
   const totalMin = dt.getHours() * 60 + dt.getMinutes();
@@ -55,14 +57,15 @@ function assignMatch(m: Match): { displayDate: Date; section: "evening" | "dawn"
   return { displayDate: d, section: "evening" };
 }
 
-function matchColor(m: Match): MatchColor {
-  if (m.my_preferences.some((p) => p.choice === "watch_together")) return "together";
+function matchPrefClass(m: Match): MatchColor {
+  if (m.my_preferences.some((p) => p.choice === "watch_together")) return "watch_together";
   if (m.my_preferences.some((p) => p.choice === "watch")) return "watch";
-  return "grey";
+  if (m.my_preferences.some((p) => p.choice === "skip")) return "skip";
+  return "none";
 }
 
 function isWatching(m: Match): boolean {
-  return matchColor(m) !== "grey";
+  return matchPrefClass(m) !== "none" && matchPrefClass(m) !== "skip";
 }
 
 // ── iCal download ─────────────────────────────────────────────────────────────
@@ -72,98 +75,104 @@ async function downloadICal() {
   window.location.href = `/api/users/me/calendar.ics?token=${encodeURIComponent(res.data.token)}`;
 }
 
-// ── Style maps ────────────────────────────────────────────────────────────────
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
-const PILL: Record<MatchColor, string> = {
-  together: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700",
-  watch:    "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700",
-  grey:     "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
-};
+function ChevL() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17">
+      <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-const CARD: Record<MatchColor, string> = {
-  together: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
-  watch:    "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800",
-  grey:     "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700",
-};
+function ChevR() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="17" height="17">
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-const BADGE_LABEL: Partial<Record<MatchColor, string>> = {
-  together: "Together",
-  watch: "Watching",
-};
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="15" height="15">
+      <path d="M12 3v11m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-const BADGE_STYLE: Partial<Record<MatchColor, string>> = {
-  together: "bg-green-100 text-green-700 dark:bg-green-800/60 dark:text-green-300",
-  watch:    "bg-blue-100 text-blue-700 dark:bg-blue-800/60 dark:text-blue-300",
-};
-
-// ── Shared sub-components ─────────────────────────────────────────────────────
+// ── Match pill (week view) ────────────────────────────────────────────────────
 
 function MatchPill({ match }: { match: Match }) {
-  const color = matchColor(match);
+  const prefClass = matchPrefClass(match);
   return (
-    <Link
-      to={`/matches/${match.id}`}
-      className={`block text-[11px] px-2 py-1.5 rounded-lg border leading-snug hover:opacity-75 transition-opacity ${PILL[color]}`}
-    >
-      <div className="font-bold tabular-nums">{fmtTime(match.match_datetime)}</div>
-      <div className="truncate">{match.home_team_tla ?? match.home_team} vs {match.away_team_tla ?? match.away_team}</div>
+    <Link to={`/matches/${match.id}`} style={{ textDecoration: "none", display: "block" }}>
+      <div className={`cal-match ${prefClass}`}>
+        <div className="cm-time tnum">{fmtTime(match.match_datetime)}</div>
+        <div className="cm-teams">
+          {match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}
+          <span className="cm-vs">v</span>
+          {match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase()}
+        </div>
+        <div className="cm-grp">
+          {match.stage}
+          {match.matchday ? ` · MD${match.matchday}` : ""}
+        </div>
+      </div>
     </Link>
   );
 }
+
+// ── Day match card ────────────────────────────────────────────────────────────
 
 function DayMatchCard({ match }: { match: Match }) {
-  const color = matchColor(match);
-  const dt = new Date(match.match_datetime);
-  const badge = BADGE_LABEL[color];
+  const prefClass = matchPrefClass(match);
+  const homeTla = match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase();
+  const awayTla = match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
+
   return (
-    <Link
-      to={`/matches/${match.id}`}
-      className={`block rounded-xl border p-4 hover:opacity-80 transition-all hover:shadow-md ${CARD[color]}`}
-    >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl">⚽</span>
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {match.stage}{match.matchday ? ` · MD${match.matchday}` : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {badge && (
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLE[color]}`}>
-              {badge}
-            </span>
-          )}
-          <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-            {dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-        </div>
-      </div>
-      <div className="text-center py-2">
-        <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-          {match.home_team}
-          <span className="mx-3 font-light text-gray-400 dark:text-gray-500">vs</span>
-          {match.away_team}
-        </div>
-        {match.venue && (
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{match.venue}</div>
-        )}
+    <Link to={`/matches/${match.id}`} style={{ textDecoration: "none", display: "block" }}>
+      <div className={`day-row ${prefClass}`}>
+        <span className="dr-time tnum">{fmtTime(match.match_datetime)}</span>
+        <span className="dr-teams">
+          <span className="dr-team">{homeTla}</span>
+          <span className="dr-vs">vs</span>
+          <span className="dr-team">{awayTla}</span>
+        </span>
+        <span className="dr-grp">
+          {match.stage}
+          {match.matchday ? ` · MD${match.matchday}` : ""}
+        </span>
       </div>
     </Link>
   );
 }
 
-// ── Section label cell ────────────────────────────────────────────────────────
+// ── Section label ─────────────────────────────────────────────────────────────
 
 function SectionLabel({ label, muted }: { label: string; muted?: boolean }) {
   return (
     <div
-      className={`flex items-start justify-center pt-3 border-r border-gray-200 dark:border-gray-800 ${
-        muted
-          ? "bg-gray-50/80 dark:bg-gray-900/70"
-          : "bg-gray-50 dark:bg-gray-800/60"
-      }`}
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        paddingTop: 10,
+        borderRight: "1px solid var(--border)",
+        background: muted ? "var(--surface-3)" : "var(--surface-2)",
+      }}
     >
-      <span className="text-[11px] font-bold uppercase tracking-widest text-gray-300 dark:text-gray-600 [writing-mode:vertical-lr] rotate-180">
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
+          color: "var(--text-3)",
+          writingMode: "vertical-lr",
+          transform: "rotate(180deg)",
+        }}
+      >
         {label}
       </span>
     </div>
@@ -186,7 +195,6 @@ function WeekView({
   const monday = startOfWeek(viewDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
-  // Subtle dot-grid texture for empty cells — adapts to dark mode
   const dotPattern: React.CSSProperties = {
     backgroundImage: dark
       ? "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)"
@@ -212,86 +220,136 @@ function WeekView({
   }, [matches]);
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm h-full flex flex-col">
-      {/* Scrollable on small screens; flex-1 so the grid fills parent height */}
-      <div className="overflow-x-auto flex-1 min-h-0">
-        <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] grid-rows-[auto_1fr_auto] h-full min-w-[560px]">
-
-          {/* ── Row 1: Day headers ── */}
-          <div className="bg-gray-50 dark:bg-gray-800/80 border-b border-r border-gray-200 dark:border-gray-800" />
+    <div
+      style={{
+        borderRadius: "var(--radius)",
+        border: "1px solid var(--border)",
+        overflow: "hidden",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ overflowX: "auto", flex: 1, minHeight: 0 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2.5rem repeat(7, 1fr)",
+            gridTemplateRows: "auto 1fr auto",
+            height: "100%",
+            minWidth: 560,
+          }}
+        >
+          {/* Day headers */}
+          <div style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)", borderRight: "1px solid var(--border)" }} />
           {days.map((day, i) => {
             const isToday = sameDay(day, today);
-            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
             return (
               <button
                 key={i}
                 onClick={() => onDayClick(day)}
-                className={[
-                  "w-full px-2 py-2.5 text-center border-b border-l transition-colors",
-                  isToday
-                    ? "bg-blue-600 border-blue-500 hover:bg-blue-700"
-                    : isWeekend
-                    ? "bg-slate-100/80 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-slate-200/70 dark:hover:bg-gray-700/60"
-                    : "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/60",
-                ].join(" ")}
+                style={{
+                  padding: "10px 8px",
+                  textAlign: "center",
+                  borderBottom: "1px solid var(--border)",
+                  borderLeft: "1px solid var(--border)",
+                  background: isToday
+                    ? "color-mix(in oklab, var(--gold) 15%, var(--surface-2))"
+                    : "var(--surface-2)",
+                  cursor: "pointer",
+                  transition: "background 0.12s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isToday) (e.currentTarget as HTMLElement).style.background = "var(--surface-3)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = isToday
+                    ? "color-mix(in oklab, var(--gold) 15%, var(--surface-2))"
+                    : "var(--surface-2)";
+                }}
               >
-                <div className={`text-[10px] font-semibold uppercase tracking-wide ${isToday ? "text-blue-200" : "text-gray-400 dark:text-gray-500"}`}>
+                <div style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  color: isToday ? "var(--gold)" : "var(--text-3)",
+                }}>
                   {day.toLocaleDateString("en-GB", { weekday: "short" })}
                 </div>
-                <div className={`text-base font-bold leading-tight ${isToday ? "text-white" : "text-gray-900 dark:text-gray-100"}`}>
+                <div style={{
+                  fontFamily: "Archivo, sans-serif",
+                  fontStretch: "125%",
+                  fontWeight: 800,
+                  fontSize: 18,
+                  lineHeight: 1.1,
+                  color: isToday ? "var(--gold)" : "var(--text)",
+                }}>
                   {day.getDate()}
                 </div>
-                <div className={`text-[9px] mt-0.5 ${isToday ? "text-blue-300" : "text-gray-300 dark:text-gray-600"}`}>
+                <div style={{ fontSize: 9, color: isToday ? "var(--gold)" : "var(--text-3)", marginTop: 2 }}>
                   {day.toLocaleDateString("en-GB", { month: "short" })}
                 </div>
               </button>
             );
           })}
 
-          {/* ── Row 2: Evening — expands to fill available height via 1fr grid row ── */}
+          {/* Evening row */}
           <SectionLabel label="Evening" />
           {days.map((day, i) => {
             const { evening } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
             const isToday = sameDay(day, today);
-            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            const bgClass = isToday
-              ? "bg-blue-50/60 dark:bg-blue-950/25"
-              : isWeekend
-              ? "bg-slate-50 dark:bg-gray-900/40"
-              : "bg-white dark:bg-gray-900";
             return (
               <div
                 key={i}
-                className={`p-1.5 space-y-1.5 overflow-y-auto border-l border-b border-gray-100 dark:border-gray-800 ${bgClass}`}
-                style={evening.length === 0 ? dotPattern : undefined}
+                style={{
+                  padding: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  overflowY: "auto",
+                  borderLeft: "1px solid var(--border)",
+                  borderBottom: "1px solid var(--border)",
+                  background: isToday
+                    ? "color-mix(in oklab, var(--gold) 5%, var(--surface))"
+                    : "var(--surface)",
+                  ...(evening.length === 0 ? dotPattern : {}),
+                }}
               >
-                {evening.map((m) => <MatchPill key={m.id} match={m} />)}
+                {evening.map((m) => (
+                  <MatchPill key={m.id} match={m} />
+                ))}
               </div>
             );
           })}
 
-          {/* ── Row 3: Late night — fixed 80px via grid-rows ── */}
+          {/* Late night row */}
           <SectionLabel label="Late" muted />
           {days.map((day, i) => {
             const { dawn } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
             const isToday = sameDay(day, today);
-            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            const bgClass = isToday
-              ? "bg-blue-50/25 dark:bg-blue-950/10"
-              : isWeekend
-              ? "bg-slate-50/80 dark:bg-gray-900/50"
-              : "bg-gray-50/60 dark:bg-gray-900/60";
             return (
               <div
                 key={i}
-                className={`p-1.5 space-y-1.5 min-h-[80px] border-l border-gray-100 dark:border-gray-800 ${bgClass}`}
-                style={dawn.length === 0 ? dotPattern : undefined}
+                style={{
+                  padding: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  minHeight: 80,
+                  borderLeft: "1px solid var(--border)",
+                  background: isToday
+                    ? "color-mix(in oklab, var(--gold) 3%, var(--surface-2))"
+                    : "var(--surface-2)",
+                  ...(dawn.length === 0 ? dotPattern : {}),
+                }}
               >
-                {dawn.map((m) => <MatchPill key={m.id} match={m} />)}
+                {dawn.map((m) => (
+                  <MatchPill key={m.id} match={m} />
+                ))}
               </div>
             );
           })}
-
         </div>
       </div>
     </div>
@@ -318,34 +376,43 @@ function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
   }, [matches, viewDate]);
 
   if (evening.length === 0 && dawn.length === 0) {
-    return (
-      <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">
-        No matches on this day.
-      </div>
-    );
+    return <div className="empty-day">No matches on this day.</div>;
   }
 
+  const SectionHead = ({ label, muted }: { label: string; muted?: boolean }) => (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 12,
+    }}>
+      <span style={{
+        fontSize: 11,
+        fontWeight: 800,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: muted ? "var(--text-3)" : "var(--text-2)",
+      }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+    </div>
+  );
+
   return (
-    <div className="max-w-xl mx-auto space-y-5">
+    <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
       {evening.length > 0 && (
         <div>
-          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
-            <span>Evening</span>
-            <div className="flex-1 border-t border-gray-100 dark:border-gray-800" />
-          </div>
-          <div className="space-y-3">
+          <SectionHead label="Evening" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {evening.map((m) => <DayMatchCard key={m.id} match={m} />)}
           </div>
         </div>
       )}
-
       {dawn.length > 0 && (
         <div>
-          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
-            <span>Late night</span>
-            <div className="flex-1 border-t border-dashed border-gray-200 dark:border-gray-700" />
-          </div>
-          <div className="space-y-3">
+          <SectionHead label="Late night" muted />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {dawn.map((m) => <DayMatchCard key={m.id} match={m} />)}
           </div>
         </div>
@@ -373,7 +440,7 @@ export function CalendarPage() {
   const watchMatches = useMemo(() => allMatches.filter(isWatching), [allMatches]);
   const displayMatches = calFilter === "all" ? allMatches : watchMatches;
 
-  const navigate = (dir: 1 | -1) => {
+  const step = (dir: 1 | -1) => {
     setViewDate((prev) => {
       const d = new Date(prev);
       if (view === "week") d.setDate(d.getDate() + dir * 7);
@@ -397,154 +464,111 @@ export function CalendarPage() {
       return `${mon.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${sun.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
     }
     return viewDate.toLocaleDateString("en-GB", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   const isEmpty = !loading && watchMatches.length === 0;
 
   return (
-    // h-[calc(100dvh-6.5rem)]: fill viewport minus sticky nav (3.5rem) and main padding (3rem)
-    <div className="flex flex-col h-[calc(100dvh-6.5rem)]">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-        {/* Navigation */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-lg leading-none"
-          >
-            ‹
-          </button>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 min-w-[220px] text-center">
-            {loading ? "…" : headerLabel()}
-          </h2>
-          <button
-            onClick={() => navigate(1)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-lg leading-none"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => setViewDate(new Date())}
-            className="text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
-          >
-            Today
-          </button>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 6.5rem)" }}>
+      {/* Screen head */}
+      <div className="screen-head">
+        <div className="screen-title">
+          <h1>Calendar</h1>
         </div>
-
-        {/* Right controls */}
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["watching", "all"] as CalFilter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setCalFilter(f)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors
-                  ${calFilter === f
-                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-              >
-                {f === "watching" ? "Watching" : "All"}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {(["week", "day"] as ViewMode[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors
-                  ${view === v
-                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-
-          {!loading && watchMatches.length > 0 && (
-            <button
-              onClick={() => { void downloadICal(); }}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
-              title="Download watchlist as calendar file"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download .ics
-            </button>
-          )}
+        <div className="seg-toggle">
+          <button className={view === "week" ? "on" : ""} onClick={() => setView("week")}>
+            Week
+          </button>
+          <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>
+            Day
+          </button>
         </div>
       </div>
 
-      {/* Legend */}
-      {!loading && !isEmpty && (
-        <div className="flex items-center gap-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-green-300 dark:bg-green-700 inline-block" />
-            Together
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-blue-300 dark:bg-blue-700 inline-block" />
-            Watch
-          </span>
-          {calFilter === "all" && (
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 dark:bg-gray-600 inline-block" />
-              Skip / undecided
-            </span>
-          )}
+      {/* Toolbar */}
+      <div className="cal-toolbar">
+        <div className="cal-nav">
+          <button className="mn-icon-btn" onClick={() => step(-1)} aria-label="Previous">
+            <ChevL />
+          </button>
+          <span className="cal-range">{loading ? "…" : headerLabel()}</span>
+          <button className="mn-icon-btn" onClick={() => step(1)} aria-label="Next">
+            <ChevR />
+          </button>
         </div>
-      )}
 
-      {/* Content — flex-1 so week grid fills remaining height */}
-      {loading ? (
-        <div className="flex-1 min-h-0 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-pulse flex flex-col">
-          {/* header */}
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800 shrink-0">
-            <div className="h-14 border-r border-gray-200 dark:border-gray-800" />
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="py-3 px-2 border-l border-gray-200 dark:border-gray-800">
-                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded mx-auto w-6 mb-1.5" />
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mx-auto w-5" />
-              </div>
-            ))}
-          </div>
-          {/* evening — flex-1 */}
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)] flex-1 min-h-0">
-            <div className="bg-gray-50 dark:bg-gray-800/60 border-r border-gray-200 dark:border-gray-800" />
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-800 border-b p-1.5 space-y-1.5">
-                <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-lg" />
-              </div>
-            ))}
-          </div>
-          {/* late night — auto height */}
-          <div className="grid grid-cols-[2.5rem_repeat(7,1fr)]">
-            <div className="bg-gray-50/80 dark:bg-gray-900/70 border-r border-gray-200 dark:border-gray-800" />
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="min-h-[80px] bg-gray-50/60 dark:bg-gray-900/60 border-l border-gray-100 dark:border-gray-800" />
-            ))}
-          </div>
+        <button className="btn-ghost" onClick={() => setViewDate(new Date())}>
+          Today
+        </button>
+
+        <span style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>
+          Times shown in your local time
+        </span>
+
+        {/* Watching/All toggle */}
+        <div className="seg-toggle" style={{ marginLeft: "auto" }}>
+          {(["watching", "all"] as CalFilter[]).map((f) => (
+            <button
+              key={f}
+              className={calFilter === f ? "on" : ""}
+              onClick={() => setCalFilter(f)}
+            >
+              {f === "watching" ? "Watching" : "All"}
+            </button>
+          ))}
         </div>
+
+        {!loading && watchMatches.length > 0 && (
+          <button className="btn-gold" onClick={() => { void downloadICal(); }}>
+            <DownloadIcon />
+            Download .ics
+          </button>
+        )}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            borderRadius: "var(--radius)",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+        />
       ) : isEmpty ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-          <div className="text-4xl mb-3">📅</div>
-          <div className="font-medium">Your watchlist is empty</div>
-          <div className="text-sm mt-1">
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-3)",
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: 40 }}>📅</div>
+          <div style={{ fontWeight: 700, color: "var(--text-2)" }}>Your watchlist is empty</div>
+          <div style={{ fontSize: 13 }}>
             Mark matches as <strong>Watch</strong> or <strong>Together</strong> to see them here.
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 transition-opacity duration-150">
+        <div style={{ flex: 1, minHeight: 0 }}>
           {view === "week" && (
-            <WeekView viewDate={viewDate} matches={displayMatches} onDayClick={handleDayClick} />
+            <WeekView
+              viewDate={viewDate}
+              matches={displayMatches}
+              onDayClick={handleDayClick}
+            />
           )}
           {view === "day" && (
             <DayView viewDate={viewDate} matches={displayMatches} />

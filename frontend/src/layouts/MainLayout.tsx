@@ -1,24 +1,57 @@
 import { useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 
 function SunIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
 
 function MoonIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+      <path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function BallIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 7.5l2.6 1.9-1 3.1h-3.2l-1-3.1z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+      <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export function MainLayout() {
@@ -34,116 +67,100 @@ export function MainLayout() {
 
   const closeMenu = () => setMenuOpen(false);
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <nav className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="/matches" className="font-semibold text-gray-900 dark:text-gray-100">
-              MatchNights
-            </Link>
-            <div className="hidden sm:flex items-center gap-6">
-              <Link to="/matches" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
-                Matches
-              </Link>
-              <Link to="/calendar" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
-                Calendar
-              </Link>
-              {user?.role === "admin" && (
-                <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
-                  Admin
-                </Link>
-              )}
-            </div>
-          </div>
+  const navLinks = [
+    { to: "/matches", label: "Matches" },
+    { to: "/calendar", label: "Calendar" },
+    ...(user?.role === "admin" ? [{ to: "/admin", label: "Admin" }] : []),
+  ];
 
-          {/* Desktop: theme toggle + user info + logout */}
-          <div className="hidden sm:flex items-center gap-3">
-            <button
-              onClick={toggle}
-              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Toggle theme"
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <header className="mn-nav" style={{ position: "relative" }}>
+        {/* Hamburger — mobile only */}
+        <button
+          className="mn-icon-btn sm:hidden"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? <XIcon /> : <MenuIcon />}
+        </button>
+
+        {/* Brand */}
+        <Link to="/matches" className="mn-brand" onClick={closeMenu}>
+          <span className="mn-mark">
+            <BallIcon />
+          </span>
+          <span className="mn-wordmark">
+            Match<em>Nights</em>
+          </span>
+        </Link>
+
+        {/* Desktop nav links */}
+        <nav className="mn-nav-links hidden sm:flex">
+          {navLinks.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className={({ isActive }) =>
+                `mn-nav-link${isActive ? " active" : ""}`
+              }
             >
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <span className="text-sm text-gray-500 dark:text-gray-400">{user?.full_name}</span>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Right: theme toggle + avatar */}
+        <div className="mn-nav-right">
+          <button
+            className="mn-icon-btn"
+            onClick={toggle}
+            aria-label="Toggle theme"
+          >
+            {dark ? <SunIcon /> : <MoonIcon />}
+          </button>
+          {user && (
+            <div style={{ position: "relative" }}>
+              <button
+                className="mn-avatar"
+                title={user.full_name}
+                onClick={handleLogout}
+                style={{ cursor: "pointer" }}
+              >
+                {initials(user.full_name)}
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div className="mn-mobile-sheet">
+          {navLinks.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `mn-mobile-link${isActive ? " active" : ""}`
+              }
             >
+              {l.label}
+            </NavLink>
+          ))}
+          <div style={{ borderTop: "1px solid var(--border)", marginTop: 8, paddingTop: 8 }}>
+            <div style={{ padding: "4px 12px", fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>
+              {user?.full_name}
+            </div>
+            <button className="mn-mobile-link" onClick={handleLogout} style={{ width: "100%" }}>
               Logout
             </button>
           </div>
-
-          {/* Mobile: theme toggle + hamburger */}
-          <div className="sm:hidden flex items-center gap-1">
-            <button
-              onClick={toggle}
-              className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-              aria-label="Toggle theme"
-            >
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <button
-              className="p-2 -mr-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded"
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
         </div>
+      )}
 
-        {/* Mobile dropdown */}
-        {menuOpen && (
-          <div className="sm:hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-            <div className="px-4 py-2 space-y-0.5">
-              <Link
-                to="/matches"
-                onClick={closeMenu}
-                className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Matches
-              </Link>
-              <Link
-                to="/calendar"
-                onClick={closeMenu}
-                className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Calendar
-              </Link>
-              {user?.role === "admin" && (
-                <Link
-                  to="/admin"
-                  onClick={closeMenu}
-                  className="block px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Admin
-                </Link>
-              )}
-              <div className="border-t border-gray-100 dark:border-gray-800 mt-2 pt-2">
-                <div className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500">{user?.full_name}</div>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </nav>
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="mn-page">
         <Outlet />
       </main>
     </div>
