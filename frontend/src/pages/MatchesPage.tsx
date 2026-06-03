@@ -16,7 +16,7 @@ const CHOICE_ORDER: PreferenceChoice[] = ["watch_together", "watch", "skip"];
 const CHOICE_STYLES: Record<PreferenceChoice, string> = {
   watch_together: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700",
   watch: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700",
-  skip: "bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600",
+  skip: "bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-600 dark:text-slate-100 dark:border-slate-500",
 };
 
 type FilterMode = "all" | "today" | "together" | "planned";
@@ -280,9 +280,13 @@ function MatchCard({
     );
   };
 
-  const cardCls = isHot
-    ? "bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700 p-4 shadow-sm shadow-green-100 dark:shadow-none hover:border-green-400 dark:hover:border-green-500 hover:shadow-md transition-all duration-150"
-    : "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all duration-150";
+  const isSkipped = hasMyChoice(match, ["skip"]) && !hasMyChoice(match, ["watch", "watch_together"]);
+  const cardCls = [
+    isSkipped ? "opacity-40" : "",
+    isHot
+      ? "bg-white dark:bg-gray-800 rounded-lg border border-green-300 dark:border-green-700 p-4 shadow-sm shadow-green-100 dark:shadow-none hover:border-green-400 dark:hover:border-green-500 hover:shadow-md transition-all duration-150"
+      : "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md transition-all duration-150",
+  ].join(" ");
 
   return (
     <>
@@ -525,7 +529,7 @@ const FILTERS: { key: FilterMode; label: string }[] = [
   { key: "all", label: "All" },
   { key: "today", label: "Today" },
   { key: "together", label: "Together" },
-  { key: "planned", label: "Planned" },
+  { key: "planned", label: "At Home" },
 ];
 
 export function MatchesPage() {
