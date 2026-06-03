@@ -32,6 +32,8 @@ class Match(Base):
     )
     home_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
     away_team_crest: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    home_team_tla: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    away_team_tla: Mapped[str | None] = mapped_column(String(10), nullable=True)
     matchday: Mapped[int | None] = mapped_column(Integer, nullable=True)
     home_odds: Mapped[float | None] = mapped_column(Float, nullable=True)
     draw_odds: Mapped[float | None] = mapped_column(Float, nullable=True)

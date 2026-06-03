@@ -8,11 +8,11 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Per-group preferences** — Watch and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
 - **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing "X/Y together"
 - **Match highlighting** — cards where ≥50% of group responses are "Together" are highlighted green
-- **Mini dashboard** — stat cards above the match grid show total matches, how many you're watching, how many are potentially together (clickable to filter), and how many you haven't decided on yet
+- **Mini dashboard** — stat cards (Together, At Home, Skip, Not Answered) above the match grid; Together and At Home are clickable to filter the list
 - **Filter pills** — quickly switch between All, Today, Together, and Planned views
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
-- **Calendar view** — full-height week/day views with evening and late-night sections that adjust to content; match times displayed in each viewer's local timezone; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
+- **Calendar view** — full-height week/day views with evening and late-night sections that adjust to content; week view shows official 3-letter country codes (TLA); match times displayed in each viewer's local timezone; download as `.ics` for Google Calendar, Apple Calendar, or Outlook (works on iOS Safari via a backend endpoint)
 - **Admin panel** — invite management, user activation/deactivation, role promotion (make/revoke admin), group CRUD with member management, one-click match sync
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 

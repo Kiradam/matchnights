@@ -385,17 +385,17 @@ function MatchCard({
 // ── Mini dashboard ────────────────────────────────────────────────────────────
 
 function Dashboard({
-  total,
-  interested,
-  undecided,
-  potentiallyTogether,
+  together,
+  atHome,
+  skipped,
+  notAnswered,
   nextGame,
   onFilterChange,
 }: {
-  total: number;
-  interested: number;
-  undecided: number;
-  potentiallyTogether: number;
+  together: number;
+  atHome: number;
+  skipped: number;
+  notAnswered: number;
   nextGame: Match | undefined;
   onFilterChange: (f: FilterMode) => void;
 }) {
@@ -405,45 +405,44 @@ function Dashboard({
     gradient: string;
     border: string;
     valueColor: string;
-    tagLabel?: string;
-    tagColor?: string;
+    labelColor: string;
     onClick?: () => void;
   };
 
   const statCards: StatCardDef[] = [
     {
-      label: "Total matches",
-      value: total,
-      gradient: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/60 dark:to-slate-800/20",
-      border: "border-slate-200 dark:border-slate-700",
-      valueColor: "text-slate-800 dark:text-slate-100",
-    },
-    {
-      label: "I'm watching",
-      value: interested,
-      gradient: "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30",
-      border: "border-blue-200 dark:border-blue-800",
-      valueColor: "text-blue-700 dark:text-blue-300",
-      tagLabel: "PLANNED",
-      tagColor: "text-blue-500 dark:text-blue-400",
-      onClick: () => onFilterChange("planned"),
-    },
-    {
-      label: "Potentially together",
-      value: potentiallyTogether,
+      label: "Together",
+      value: together,
       gradient: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/60 dark:to-emerald-900/30",
       border: "border-green-200 dark:border-green-800",
       valueColor: "text-green-700 dark:text-green-300",
-      tagLabel: "TOGETHER",
-      tagColor: "text-green-600 dark:text-green-400",
+      labelColor: "text-green-600 dark:text-green-400",
       onClick: () => onFilterChange("together"),
     },
     {
-      label: "Not decided yet",
-      value: undecided,
+      label: "At Home",
+      value: atHome,
+      gradient: "bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/60 dark:to-indigo-900/30",
+      border: "border-blue-200 dark:border-blue-800",
+      valueColor: "text-blue-700 dark:text-blue-300",
+      labelColor: "text-blue-500 dark:text-blue-400",
+      onClick: () => onFilterChange("planned"),
+    },
+    {
+      label: "Skip",
+      value: skipped,
+      gradient: "bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/60 dark:to-slate-800/20",
+      border: "border-slate-200 dark:border-slate-700",
+      valueColor: "text-slate-600 dark:text-slate-400",
+      labelColor: "text-slate-500 dark:text-slate-400",
+    },
+    {
+      label: "Not Answered",
+      value: notAnswered,
       gradient: "bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950/60 dark:to-orange-900/30",
       border: "border-amber-200 dark:border-amber-800",
       valueColor: "text-amber-600 dark:text-amber-400",
+      labelColor: "text-amber-500 dark:text-amber-400",
     },
   ];
 
@@ -463,26 +462,18 @@ function Dashboard({
               card.gradient,
               "border",
               card.border,
-              "rounded-xl p-3.5 relative overflow-hidden shadow-sm text-left transition-all duration-150",
-              card.onClick
-                ? "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]"
-                : "",
+              "rounded-xl p-3.5 relative overflow-hidden shadow-sm text-left flex flex-col justify-center transition-all duration-150",
+              card.onClick ? "cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]" : "",
             ].join(" ")}
           >
-            {/* ghost watermark */}
-            <span className="absolute right-1 -bottom-2 text-7xl font-black opacity-[0.06] select-none pointer-events-none leading-none tabIndex={-1}">
+            <span className="absolute right-1 -bottom-2 text-7xl font-black opacity-[0.06] select-none pointer-events-none leading-none">
               {card.value}
             </span>
-            {card.tagLabel && (
-              <span className={`text-[9px] font-bold uppercase tracking-widest ${card.tagColor} mb-1 block`}>
-                {card.tagLabel}
-              </span>
-            )}
+            <span className={`text-[9px] font-bold uppercase tracking-widest ${card.labelColor} mb-1 block`}>
+              {card.label}
+            </span>
             <span className={`text-3xl font-bold ${card.valueColor} relative z-10 leading-none`}>
               {card.value}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 relative z-10 mt-1 block leading-snug">
-              {card.label}
             </span>
           </Comp>
         );
@@ -618,15 +609,14 @@ export function MatchesPage() {
 
   const dashboardStats = useMemo(() => {
     const now = new Date();
-    const interested = allMatches.filter((m) => hasMyChoice(m, ["watch", "watch_together"])).length;
-    const potentiallyTogether = allMatches.filter((m) =>
-      (summaries[m.id] ?? []).some((g) => g.watch_together > 0)
-    ).length;
+    const together = allMatches.filter((m) => hasMyChoice(m, ["watch_together"])).length;
+    const atHome = allMatches.filter((m) => hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])).length;
+    const skipped = allMatches.filter((m) => hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])).length;
+    const notAnswered = allMatches.filter((m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])).length;
     const nextGame = allMatches
       .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
       .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
-    const undecided = allMatches.length - interested;
-    return { interested, potentiallyTogether, nextGame, undecided };
+    return { together, atHome, skipped, notAnswered, nextGame };
   }, [allMatches, summaries]);
 
   const matches = useMemo(() => {
@@ -684,10 +674,10 @@ export function MatchesPage() {
       {/* Mini dashboard */}
       {!loading && allMatches.length > 0 && (
         <Dashboard
-          total={allMatches.length}
-          interested={dashboardStats.interested}
-          undecided={dashboardStats.undecided}
-          potentiallyTogether={dashboardStats.potentiallyTogether}
+          together={dashboardStats.together}
+          atHome={dashboardStats.atHome}
+          skipped={dashboardStats.skipped}
+          notAnswered={dashboardStats.notAnswered}
           nextGame={dashboardStats.nextGame}
           onFilterChange={setActiveFilter}
         />

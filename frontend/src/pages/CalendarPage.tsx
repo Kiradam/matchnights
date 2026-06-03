@@ -106,8 +106,7 @@ function MatchPill({ match }: { match: Match }) {
       className={`block text-[11px] px-2 py-1.5 rounded-lg border leading-snug hover:opacity-75 transition-opacity ${PILL[color]}`}
     >
       <div className="font-bold tabular-nums">{fmtTime(match.match_datetime)}</div>
-      <div className="truncate">{match.home_team}</div>
-      <div className="opacity-55 truncate text-[10px]">vs {match.away_team}</div>
+      <div className="truncate">{match.home_team_tla ?? match.home_team} vs {match.away_team_tla ?? match.away_team}</div>
     </Link>
   );
 }

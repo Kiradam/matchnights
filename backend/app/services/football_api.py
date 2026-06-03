@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 class NormalisedMatch:
     __slots__ = ("external_id", "home_team", "away_team", "stage",
                  "match_datetime", "venue", "status",
-                 "home_team_crest", "away_team_crest", "matchday")
+                 "home_team_crest", "away_team_crest", "matchday",
+                 "home_team_tla", "away_team_tla")
 
     def __init__(
         self,
@@ -37,6 +38,8 @@ class NormalisedMatch:
         home_team_crest: str | None = None,
         away_team_crest: str | None = None,
         matchday: int | None = None,
+        home_team_tla: str | None = None,
+        away_team_tla: str | None = None,
     ) -> None:
         self.external_id = external_id
         self.home_team = home_team
@@ -48,6 +51,8 @@ class NormalisedMatch:
         self.home_team_crest = home_team_crest
         self.away_team_crest = away_team_crest
         self.matchday = matchday
+        self.home_team_tla = home_team_tla
+        self.away_team_tla = away_team_tla
 
 
 # ── openfootball source ──────────────────────────────────────────────────────
@@ -317,6 +322,8 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
             away = away_obj.get("name") or "TBD"
             home_crest = home_obj.get("crest") or None
             away_crest = away_obj.get("crest") or None
+            home_tla = home_obj.get("tla") or None
+            away_tla = away_obj.get("tla") or None
             stage = _fd_stage(m.get("stage", ""), m.get("group"))
             status = _FD_STATUS_MAP.get(m.get("status", ""), "scheduled")
             match_utc = datetime.fromisoformat(
@@ -334,6 +341,8 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
                 home_team_crest=home_crest,
                 away_team_crest=away_crest,
                 matchday=m.get("matchday"),
+                home_team_tla=home_tla,
+                away_team_tla=away_tla,
             ))
         except Exception as exc:
             logger.warning("football_data: skipping match: %s", exc)

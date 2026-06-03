@@ -114,6 +114,10 @@ async def sync_matches(
                 if fix.away_team_crest:
                     existing.away_team_crest = fix.away_team_crest
                 existing.matchday = fix.matchday
+                if fix.home_team_tla:
+                    existing.home_team_tla = fix.home_team_tla
+                if fix.away_team_tla:
+                    existing.away_team_tla = fix.away_team_tla
             else:
                 match = Match(
                     external_id=fix.external_id,
@@ -127,6 +131,8 @@ async def sync_matches(
                     home_team_crest=fix.home_team_crest,
                     away_team_crest=fix.away_team_crest,
                     matchday=fix.matchday,
+                    home_team_tla=fix.home_team_tla,
+                    away_team_tla=fix.away_team_tla,
                 )
                 db.add(match)
             synced += 1
