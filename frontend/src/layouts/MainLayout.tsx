@@ -20,14 +20,6 @@ function MoonIcon() {
   );
 }
 
-function BallIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 7.5l2.6 1.9-1 3.1h-3.2l-1-3.1z" fill="currentColor" />
-    </svg>
-  );
-}
 
 function MenuIcon() {
   return (
@@ -87,9 +79,7 @@ export function MainLayout() {
 
         {/* Brand */}
         <Link to="/matches" className="mn-brand" onClick={closeMenu}>
-          <span className="mn-mark">
-            <BallIcon />
-          </span>
+          <img src="/logo.png" alt="MatchNights logo" className="mn-mark" />
           <span className="mn-wordmark">
             Match<em>Nights</em>
           </span>

@@ -101,14 +101,10 @@ body {
 }
 
 .mn-mark {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  background: conic-gradient(from 160deg, #6C63FF, #2FC08A, #F2B441, #F2685E, #6C63FF);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
