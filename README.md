@@ -9,12 +9,12 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing a progress bar and "X/Y together" count
 - **Match highlighting** — cards where ≥50% of group responses are "Together" get a green "Match on" border and glow
 - **Broadcast-style UI** — bold scoreboard layout with flag chips, 3-letter country codes (TLA), odds strip with gold favourite highlight, and oklch-based semantic colour tokens (Together green, At home blue, Skip red, gold accent)
-- **Mini dashboard** — stat tiles (Together, At Home, Skip, Not Answered) with large ghost watermark numbers; Together and At Home are clickable filters; skipped cards are visually dimmed; next-game hero tile with pulsing gold dot
+- **Mini dashboard** — stat tiles (Together, At Home, Skip, Not Answered) with large ghost watermark numbers; all four tiles are clickable filters; skipped cards are visually dimmed; next-game hero tile with pulsing gold dot
 - **3-way segmented preference control** — connected Together / At home / Skip control with semantic colour fill and drop-shadow; replaces three separate buttons
 - **Toast notifications** — slide-up confirmation for every preference change
 - **Match detail page** — full preference controls and group panels accessible from both the matches list and the calendar
-- **Filter pills** — quickly switch between All, Today, Together, and At Home views
-- **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button; oklch colour tokens adapt for both themes
+- **Filter pills** — quickly switch between All, Today, and Tomorrow views; per-preference filtering via the dashboard stat tiles
+- **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button; oklch colour tokens adapt for both themes; logo mark gets a dark-blue gradient frame with indigo glow
 - **Mobile-friendly** — hamburger nav with fixed dropdown sheet, single-column match grid, horizontally scrollable filter pills, responsive dashboard grid
 - **Calendar view** — full-height week/day views with evening and late-night sections; week view uses TLA country codes with semantic left-border colour chips; today column highlighted in gold; fixed-width date range label so navigation buttons never shift; match times in local timezone; download as `.ics` (works on iOS Safari via backend endpoint)
 - **Admin panel** — invite management, user activation/deactivation, role promotion, group CRUD with member management, one-click match sync
