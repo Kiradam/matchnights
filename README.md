@@ -8,7 +8,8 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Per-group preferences** — Watch and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
 - **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing "X/Y together"
 - **Match highlighting** — cards where ≥50% of group responses are "Together" are highlighted green
-- **Mini dashboard** — stat cards (Together, At Home, Skip, Not Answered) above the match grid; Together and At Home are clickable to filter the list
+- **Mini dashboard** — stat cards (Together, At Home, Skip, Not Answered) above the match grid; Together and At Home are clickable to filter the list; skipped cards are visually dimmed
+- **Match detail page** — full preference controls (Together / Watch / Skip) accessible from both the matches list and the calendar
 - **Filter pills** — quickly switch between All, Today, Together, and Planned views
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button
 - **Mobile-friendly** — hamburger nav, bottom-sheet modals, card layout on narrow screens, horizontal admin tabs
