@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { MatchCardSkeleton } from "../components/MatchCardSkeleton";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,8 +11,6 @@ import type {
   Match,
   PreferenceChoice,
 } from "../types";
-
-const CHOICE_ORDER: PreferenceChoice[] = ["watch_together", "watch", "skip"];
 
 type FilterMode = "all" | "today" | "together" | "planned";
 
@@ -330,7 +328,6 @@ function MatchCard({
   ) => void;
 }) {
   const { showToast } = useToast();
-  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<PreferenceChoice | null>(null);
 
