@@ -12,13 +12,24 @@ import type {
   PreferenceChoice,
 } from "../types";
 
-type FilterMode = "all" | "today" | "together" | "planned";
+type FilterMode = "all" | "today" | "tomorrow" | "together" | "planned" | "skip" | "not_answered";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isToday(m: Match): boolean {
   const d = new Date(m.match_datetime);
   const t = new Date();
+  return (
+    d.getFullYear() === t.getFullYear() &&
+    d.getMonth() === t.getMonth() &&
+    d.getDate() === t.getDate()
+  );
+}
+
+function isTomorrow(m: Match): boolean {
+  const d = new Date(m.match_datetime);
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
   return (
     d.getFullYear() === t.getFullYear() &&
     d.getMonth() === t.getMonth() &&
@@ -724,11 +735,10 @@ function NextGame({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const FILTERS: { key: FilterMode; label: string; dot?: boolean }[] = [
+const FILTERS: { key: FilterMode; label: string }[] = [
   { key: "all", label: "All" },
   { key: "today", label: "Today" },
-  { key: "together", label: "Together", dot: true },
-  { key: "planned", label: "At Home" },
+  { key: "tomorrow", label: "Tomorrow" },
 ];
 
 export function MatchesPage() {
@@ -867,6 +877,7 @@ export function MatchesPage() {
 
   const matches = useMemo(() => {
     if (activeFilter === "today") return allMatches.filter(isToday);
+    if (activeFilter === "tomorrow") return allMatches.filter(isTomorrow);
     if (activeFilter === "together")
       return allMatches
         .filter((m) => hasMyChoice(m, ["watch_together"]))
@@ -890,6 +901,15 @@ export function MatchesPage() {
         (m) =>
           hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
       );
+    if (activeFilter === "skip")
+      return allMatches.filter(
+        (m) =>
+          hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])
+      );
+    if (activeFilter === "not_answered")
+      return allMatches.filter(
+        (m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])
+      );
     return allMatches;
   }, [allMatches, activeFilter, summaries]);
 
@@ -904,15 +924,12 @@ export function MatchesPage() {
           )}
         </div>
         <div className="filter-pills">
-          {FILTERS.map(({ key, label, dot }) => (
+          {FILTERS.map(({ key, label }) => (
             <button
               key={key}
               className={`filter-pill${activeFilter === key ? " active" : ""}`}
               onClick={() => setActiveFilter(key)}
             >
-              {dot && activeFilter !== key && (
-                <span className="dot" />
-              )}
               {label}
             </button>
           ))}
@@ -949,12 +966,22 @@ export function MatchesPage() {
             label="Skip"
             value={dashboardStats.skipped}
             sub="sitting out"
+            clickable
+            active={activeFilter === "skip"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "skip" ? "all" : "skip"))
+            }
           />
           <StatTile
             kind="none"
             label="Not Answered"
             value={dashboardStats.notAnswered}
             sub="waiting on you"
+            clickable
+            active={activeFilter === "not_answered"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "not_answered" ? "all" : "not_answered"))
+            }
           />
           <NextGame
             match={dashboardStats.nextGame}
@@ -973,10 +1000,11 @@ export function MatchesPage() {
       ) : matches.length === 0 ? (
         <div className="empty-day">
           {activeFilter === "today" && "No matches today."}
-          {activeFilter === "together" &&
-            "You haven't marked any matches as Together yet."}
-          {activeFilter === "planned" &&
-            "No matches marked as At Home."}
+          {activeFilter === "tomorrow" && "No matches tomorrow."}
+          {activeFilter === "together" && "You haven't marked any matches as Together yet."}
+          {activeFilter === "planned" && "No matches marked as At Home."}
+          {activeFilter === "skip" && "No matches marked as Skip."}
+          {activeFilter === "not_answered" && "All matches have been answered."}
           {activeFilter === "all" && (
             <>
               No matches found.
