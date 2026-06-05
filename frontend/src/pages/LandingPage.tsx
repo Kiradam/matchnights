@@ -2,16 +2,16 @@ import { Link } from "react-router-dom";
 
 const moments = [
   {
-    label: "Choose fixtures",
-    text: "Mark the matches that matter before kick-off.",
+    label: "Pick the matches",
+    text: "Choose the fixtures your group actually wants to watch.",
   },
   {
-    label: "Find the crew",
-    text: "See which group is ready to watch together.",
+    label: "See who’s in",
+    text: "Know which friends are joining before kick-off.",
   },
   {
     label: "Make it a night",
-    text: "Turn the biggest games into shared plans.",
+    text: "Turn match decisions into shared plans.",
   },
 ];
 
@@ -24,51 +24,33 @@ export function LandingPage() {
           "radial-gradient(circle at 50% 30%, rgba(37, 125, 255, 0.2), rgba(37, 125, 255, 0) 36%), linear-gradient(180deg, #020917 0%, #020713 58%, #01040c 100%)",
       }}
     >
-      <section className="relative mx-auto flex min-h-[78vh] w-full max-w-7xl flex-col px-5 pb-8 pt-5 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-4">
-          <span className="font-display text-lg font-black tracking-normal text-white sm:text-xl">
-            Match
-            <span className="bg-gradient-to-r from-[#247dff] to-[#67c8ff] bg-clip-text text-transparent">
-              Nights
+      <section className="relative mx-auto flex min-h-[76vh] w-full max-w-7xl flex-col items-center justify-center px-5 pb-8 pt-10 text-center sm:px-8 lg:px-10">
+        <img
+          src="/matchnights-logo-concept.png"
+          alt="MatchNights"
+          className="h-auto w-full max-w-[780px] object-contain drop-shadow-[0_24px_80px_rgba(31,118,255,0.26)]"
+        />
+
+        <div className="mt-6 max-w-2xl">
+          <h1 className="font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-6xl lg:text-7xl">
+            Every Match.
+            <span className="block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
+              Every Night.
             </span>
-          </span>
-          <Link
-            to="/login"
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-4 text-sm font-bold text-white shadow-[0_0_28px_rgba(36,125,255,0.22)] transition hover:border-[#69c9ff] hover:bg-[#10295b] focus:outline-none focus:ring-2 focus:ring-[#4aa3ff]"
-          >
-            Sign in
-          </Link>
-        </header>
-
-        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-          <img
-            src="/matchnights-logo-concept.png"
-            alt="MatchNights"
-            className="h-auto w-full max-w-[780px] object-contain drop-shadow-[0_24px_80px_rgba(31,118,255,0.26)]"
-          />
-
-          <div className="mt-6 max-w-2xl">
-            <h1 className="font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-6xl lg:text-7xl">
-              Match
-              <span className="bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
-                Nights
-              </span>
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
-              Plan every kick-off, see who is watching, and turn the best
-              fixtures into nights together.
-            </p>
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                to="/login"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-to-r from-[#126cff] to-[#5fc7ff] px-6 text-sm font-black uppercase tracking-normal text-white shadow-[0_18px_48px_rgba(18,108,255,0.32)] transition hover:from-[#247dff] hover:to-[#7bd4ff] focus:outline-none focus:ring-2 focus:ring-[#84d7ff]"
-              >
-                Enter MatchNights
-              </Link>
-              <span className="text-sm font-semibold text-[#8ba6cf]">
-                Invite-only group planning
-              </span>
-            </div>
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
+            Plan football nights with your friends — without endless group chats.
+          </p>
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              to="/login"
+              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-to-r from-[#126cff] to-[#5fc7ff] px-6 text-sm font-black uppercase tracking-normal text-white shadow-[0_18px_48px_rgba(18,108,255,0.32)] transition hover:from-[#247dff] hover:to-[#7bd4ff] focus:outline-none focus:ring-2 focus:ring-[#84d7ff]"
+            >
+              Enter MatchNights
+            </Link>
+            <span className="text-sm font-semibold text-[#8ba6cf]">
+              Invite-only group planning
+            </span>
           </div>
         </div>
       </section>
