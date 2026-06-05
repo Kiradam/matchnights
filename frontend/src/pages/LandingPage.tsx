@@ -24,6 +24,32 @@ export function LandingPage() {
           "radial-gradient(circle at 50% 30%, rgba(37, 125, 255, 0.2), rgba(37, 125, 255, 0) 36%), linear-gradient(180deg, #020917 0%, #020713 58%, #01040c 100%)",
       }}
     >
+      <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8 lg:px-10">
+        <Link
+          to="/"
+          className="font-display text-lg font-black tracking-normal text-white sm:text-xl"
+        >
+          Match
+          <span className="bg-gradient-to-r from-[#247dff] to-[#67c8ff] bg-clip-text text-transparent">
+            Nights
+          </span>
+        </Link>
+        <nav className="flex items-center gap-3 text-sm font-bold">
+          <Link
+            className="text-[#9bb1d1] transition hover:text-white"
+            to="/learn-more"
+          >
+            Learn More
+          </Link>
+          <Link
+            className="rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-4 py-2 text-white transition hover:border-[#69c9ff] hover:bg-[#10295b]"
+            to="/login"
+          >
+            Enter MatchNights
+          </Link>
+        </nav>
+      </header>
+
       <section className="relative mx-auto flex min-h-[76vh] w-full max-w-7xl flex-col items-center justify-center px-5 pb-8 pt-10 text-center sm:px-8 lg:px-10">
         <div
           className="w-full max-w-[780px] overflow-hidden shadow-[0_24px_80px_rgba(31,118,255,0.26)]"
