@@ -37,8 +37,8 @@ export function LandingPage() {
         </div>
 
         <div className="mt-6 w-full max-w-5xl text-center">
-          <h1 className="mx-auto font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:whitespace-nowrap lg:text-6xl xl:text-7xl">
-            <span>Every Match.</span>{" "}
+          <h1 className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:text-6xl xl:text-7xl">
+            <span>Every Match.</span>
             <span className="bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
               Every Night.
             </span>
