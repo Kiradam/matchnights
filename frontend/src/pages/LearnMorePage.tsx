@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 const steps = [
@@ -64,7 +65,7 @@ function SecondaryLink({ children, to }: { children: string; to: string }) {
   );
 }
 
-function Section({ children, title }: { children: React.ReactNode; title: string }) {
+function Section({ children, title }: { children: ReactNode; title: string }) {
   return (
     <section className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 lg:px-10">
       <h2 className="font-display text-2xl font-black uppercase tracking-normal text-white sm:text-3xl">
