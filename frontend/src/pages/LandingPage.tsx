@@ -25,18 +25,20 @@ export function LandingPage() {
       }}
     >
       <section className="relative mx-auto flex min-h-[76vh] w-full max-w-7xl flex-col items-center justify-center px-5 pb-8 pt-10 text-center sm:px-8 lg:px-10">
-        <img
-          src="/matchnights-logo-concept.png"
-          alt="MatchNights"
-          className="h-auto w-full max-w-[780px] object-contain drop-shadow-[0_24px_80px_rgba(31,118,255,0.26)]"
-        />
+        <div
+          className="w-full max-w-[780px] overflow-hidden shadow-[0_24px_80px_rgba(31,118,255,0.26)]"
+          style={{ aspectRatio: "2.2 / 1" }}
+        >
+          <img
+            src="/matchnights-logo-concept.png"
+            alt="MatchNights"
+            className="h-auto w-full object-contain"
+          />
+        </div>
 
-        <div className="mt-6 max-w-2xl">
-          <h1 className="font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-6xl lg:text-7xl">
-            Every Match.
-            <span className="block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
-              Every Night.
-            </span>
+        <div className="mt-6 max-w-5xl">
+          <h1 className="font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:whitespace-nowrap lg:text-6xl xl:text-7xl">
+            Every Match. Every Night.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
             Plan football nights with your friends — without endless group chats.
