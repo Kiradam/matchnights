@@ -46,16 +46,24 @@ export function LandingPage() {
           <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
             Plan football nights with your friends — without endless group chats.
           </p>
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/login"
-              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-to-r from-[#126cff] to-[#5fc7ff] px-6 text-sm font-black uppercase tracking-normal text-white shadow-[0_18px_48px_rgba(18,108,255,0.32)] transition hover:from-[#247dff] hover:to-[#7bd4ff] focus:outline-none focus:ring-2 focus:ring-[#84d7ff]"
-            >
-              Enter MatchNights
-            </Link>
-            <span className="text-sm font-semibold text-[#8ba6cf]">
-              Invite-only group planning
-            </span>
+          <div className="mt-7 flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                to="/login"
+                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-to-r from-[#126cff] to-[#5fc7ff] px-6 text-sm font-black uppercase tracking-normal text-white shadow-[0_18px_48px_rgba(18,108,255,0.32)] transition hover:from-[#247dff] hover:to-[#7bd4ff] focus:outline-none focus:ring-2 focus:ring-[#84d7ff]"
+              >
+                Enter MatchNights
+              </Link>
+              <Link
+                to="/learn-more"
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-6 text-sm font-black uppercase tracking-normal text-white transition hover:border-[#69c9ff] hover:bg-[#10295b] focus:outline-none focus:ring-2 focus:ring-[#4aa3ff]"
+              >
+                Learn More
+              </Link>
+            </div>
+            <p className="text-sm font-semibold text-[#8ba6cf]">
+              Coordinate matches, groups, and watch parties.
+            </p>
           </div>
         </div>
       </section>
