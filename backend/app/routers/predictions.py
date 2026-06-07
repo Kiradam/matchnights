@@ -128,6 +128,64 @@ async def _build_leaderboard(user_ids: list[int], db: AsyncSession) -> list[Lead
 
 
 # ---------------------------------------------------------------------------
+# Winner prediction — fixed paths must come before /{match_id} routes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/predictions/winner", response_model=WinnerPredictionOut)
+async def get_winner_prediction(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> WinnerPredictionOut:
+    result = await db.execute(
+        select(WorldCupWinnerPrediction).where(WorldCupWinnerPrediction.user_id == user.id)
+    )
+    pred = result.scalar_one_or_none()
+    if not pred:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No winner prediction found")
+    return WinnerPredictionOut.model_validate(pred)
+
+
+@router.put("/predictions/winner", response_model=WinnerPredictionOut)
+async def upsert_winner_prediction(
+    body: WinnerPredictionIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> WinnerPredictionOut:
+    # Deadline: kickoff of earliest knockout-stage match
+    deadline = await _get_winner_lock_deadline(db)
+    now = datetime.now(UTC)
+
+    if deadline is not None:
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        if now >= deadline:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="World Cup Winner prediction is locked — knockout stage has started",
+            )
+
+    result = await db.execute(
+        select(WorldCupWinnerPrediction).where(WorldCupWinnerPrediction.user_id == user.id)
+    )
+    pred = result.scalar_one_or_none()
+
+    if pred is None:
+        pred = WorldCupWinnerPrediction(
+            user_id=user.id,
+            team_name=body.team_name,
+            submitted_at=now,
+        )
+        db.add(pred)
+    else:
+        pred.team_name = body.team_name
+        pred.submitted_at = now
+
+    await db.commit()
+    return WinnerPredictionOut.model_validate(pred)
+
+
+# ---------------------------------------------------------------------------
 # Match predictions
 # ---------------------------------------------------------------------------
 
@@ -229,59 +287,6 @@ async def upsert_prediction(
 
     await db.commit()
     return MatchPredictionOut.model_validate(pred)
-
-
-@router.get("/predictions/winner", response_model=WinnerPredictionOut)
-async def get_winner_prediction(
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> WinnerPredictionOut:
-    result = await db.execute(
-        select(WorldCupWinnerPrediction).where(WorldCupWinnerPrediction.user_id == user.id)
-    )
-    pred = result.scalar_one_or_none()
-    if not pred:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No winner prediction found")
-    return WinnerPredictionOut.model_validate(pred)
-
-
-@router.put("/predictions/winner", response_model=WinnerPredictionOut)
-async def upsert_winner_prediction(
-    body: WinnerPredictionIn,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> WinnerPredictionOut:
-    # Deadline: kickoff of earliest knockout-stage match
-    deadline = await _get_winner_lock_deadline(db)
-    now = datetime.now(UTC)
-
-    if deadline is not None:
-        if deadline.tzinfo is None:
-            deadline = deadline.replace(tzinfo=UTC)
-        if now >= deadline:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="World Cup Winner prediction is locked — knockout stage has started",
-            )
-
-    result = await db.execute(
-        select(WorldCupWinnerPrediction).where(WorldCupWinnerPrediction.user_id == user.id)
-    )
-    pred = result.scalar_one_or_none()
-
-    if pred is None:
-        pred = WorldCupWinnerPrediction(
-            user_id=user.id,
-            team_name=body.team_name,
-            submitted_at=now,
-        )
-        db.add(pred)
-    else:
-        pred.team_name = body.team_name
-        pred.submitted_at = now
-
-    await db.commit()
-    return WinnerPredictionOut.model_validate(pred)
 
 
 @router.get("/predictions/match/{match_id}/stats", response_model=MatchPredictionStats)

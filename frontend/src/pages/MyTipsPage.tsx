@@ -1279,7 +1279,7 @@ export function MyTipsPage() {
 
       {/* Tab 2: WC Winner ── spectacular redesign */}
       {activeTab === "winner" && (
-        <div style={{ maxWidth: 520 }}>
+        <div style={{ maxWidth: 520, margin: "0 auto" }}>
           {winnerLoading ? (
             <Spinner />
           ) : (
@@ -1499,7 +1499,7 @@ export function MyTipsPage() {
                 </div>
               ) : (
                 /* Editable form */
-                <form onSubmit={handleWinnerSubmit} className="card" style={{ gap: 14 }}>
+                <form onSubmit={handleWinnerSubmit} className="card" style={{ gap: 14, overflow: "visible" }}>
                   <div>
                     <div
                       style={{
