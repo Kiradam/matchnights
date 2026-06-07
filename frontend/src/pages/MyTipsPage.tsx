@@ -15,108 +15,44 @@ import type {
 
 // ── WC 2026 teams ─────────────────────────────────────────────────────────────
 
-const WC2026_TEAMS: { name: string; iso: string }[] = [
+const WC2026_TEAMS: string[] = [
   // Hosts
-  { name: "Canada",        iso: "ca" },
-  { name: "Mexico",        iso: "mx" },
-  { name: "United States", iso: "us" },
+  "Canada", "Mexico", "United States",
   // South America
-  { name: "Argentina",  iso: "ar" },
-  { name: "Bolivia",    iso: "bo" },
-  { name: "Brazil",     iso: "br" },
-  { name: "Chile",      iso: "cl" },
-  { name: "Colombia",   iso: "co" },
-  { name: "Ecuador",    iso: "ec" },
-  { name: "Paraguay",   iso: "py" },
-  { name: "Peru",       iso: "pe" },
-  { name: "Uruguay",    iso: "uy" },
-  { name: "Venezuela",  iso: "ve" },
+  "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+  "Paraguay", "Peru", "Uruguay", "Venezuela",
   // CONCACAF
-  { name: "Costa Rica",   iso: "cr" },
-  { name: "El Salvador",  iso: "sv" },
-  { name: "Honduras",     iso: "hn" },
-  { name: "Jamaica",      iso: "jm" },
-  { name: "Panama",       iso: "pa" },
+  "Costa Rica", "El Salvador", "Honduras", "Jamaica", "Panama",
   // Europe
-  { name: "Albania",        iso: "al" },
-  { name: "Austria",        iso: "at" },
-  { name: "Belgium",        iso: "be" },
-  { name: "Croatia",        iso: "hr" },
-  { name: "Czech Republic", iso: "cz" },
-  { name: "Denmark",        iso: "dk" },
-  { name: "England",        iso: "gb-eng" },
-  { name: "France",         iso: "fr" },
-  { name: "Georgia",        iso: "ge" },
-  { name: "Germany",        iso: "de" },
-  { name: "Greece",         iso: "gr" },
-  { name: "Hungary",        iso: "hu" },
-  { name: "Italy",          iso: "it" },
-  { name: "Netherlands",    iso: "nl" },
-  { name: "Norway",         iso: "no" },
-  { name: "Poland",         iso: "pl" },
-  { name: "Portugal",       iso: "pt" },
-  { name: "Romania",        iso: "ro" },
-  { name: "Scotland",       iso: "gb-sct" },
-  { name: "Serbia",         iso: "rs" },
-  { name: "Slovakia",       iso: "sk" },
-  { name: "Spain",          iso: "es" },
-  { name: "Switzerland",    iso: "ch" },
-  { name: "Turkey",         iso: "tr" },
-  { name: "Ukraine",        iso: "ua" },
+  "Albania", "Austria", "Belgium", "Croatia", "Czech Republic", "Denmark",
+  "England", "France", "Georgia", "Germany", "Greece", "Hungary", "Italy",
+  "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Scotland",
+  "Serbia", "Slovakia", "Spain", "Switzerland", "Turkey", "Ukraine",
   // Africa
-  { name: "Algeria",      iso: "dz" },
-  { name: "Cameroon",     iso: "cm" },
-  { name: "DR Congo",     iso: "cd" },
-  { name: "Egypt",        iso: "eg" },
-  { name: "Ghana",        iso: "gh" },
-  { name: "Ivory Coast",  iso: "ci" },
-  { name: "Mali",         iso: "ml" },
-  { name: "Morocco",      iso: "ma" },
-  { name: "Nigeria",      iso: "ng" },
-  { name: "Senegal",      iso: "sn" },
-  { name: "South Africa", iso: "za" },
-  { name: "Tanzania",     iso: "tz" },
-  { name: "Tunisia",      iso: "tn" },
+  "Algeria", "Cameroon", "DR Congo", "Egypt", "Ghana", "Ivory Coast",
+  "Mali", "Morocco", "Nigeria", "Senegal", "South Africa", "Tanzania", "Tunisia",
   // Asia
-  { name: "Australia",    iso: "au" },
-  { name: "Bahrain",      iso: "bh" },
-  { name: "China",        iso: "cn" },
-  { name: "Indonesia",    iso: "id" },
-  { name: "Iran",         iso: "ir" },
-  { name: "Iraq",         iso: "iq" },
-  { name: "Japan",        iso: "jp" },
-  { name: "Jordan",       iso: "jo" },
-  { name: "Qatar",        iso: "qa" },
-  { name: "Saudi Arabia", iso: "sa" },
-  { name: "South Korea",  iso: "kr" },
-  { name: "Uzbekistan",   iso: "uz" },
+  "Australia", "Bahrain", "China", "Indonesia", "Iran", "Iraq", "Japan",
+  "Jordan", "Qatar", "Saudi Arabia", "South Korea", "Uzbekistan",
   // Oceania
-  { name: "New Zealand", iso: "nz" },
+  "New Zealand",
 ];
 
-function teamIso(name: string): string | null {
-  return WC2026_TEAMS.find((t) => t.name === name)?.iso ?? null;
-}
+// ── Crest image component — reuses the same URLs as the match cards ───────────
 
-function flagUrl(iso: string, width = 40): string {
-  return `https://flagcdn.com/w${width}/${iso}.png`;
-}
-
-// ── Flag image component ───────────────────────────────────────────────────────
-
-function FlagImg({
-  iso,
+function CrestImg({
+  src,
   name,
   size = 40,
   style,
 }: {
-  iso: string | null;
+  src: string | null | undefined;
   name?: string;
   size?: number;
   style?: React.CSSProperties;
 }) {
   const [failed, setFailed] = useState(false);
-  if (!iso || failed) {
+  if (!src || failed) {
     return (
       <span
         style={{
@@ -124,7 +60,7 @@ function FlagImg({
           alignItems: "center",
           justifyContent: "center",
           width: size,
-          height: size * 0.67,
+          height: size,
           background: "var(--surface-2)",
           border: "1px solid var(--border)",
           borderRadius: 4,
@@ -140,15 +76,14 @@ function FlagImg({
   }
   return (
     <img
-      src={flagUrl(iso, size)}
-      alt={name ?? iso}
+      src={src}
+      alt={name}
       width={size}
-      height={Math.round(size * 0.67)}
+      height={size}
       onError={() => setFailed(true)}
       style={{
-        objectFit: "cover",
+        objectFit: "contain",
         borderRadius: 4,
-        border: "1px solid var(--border)",
         display: "block",
         ...style,
       }}
@@ -211,20 +146,21 @@ function CountrySelector({
   value,
   onChange,
   disabled,
+  crestMap,
 }: {
   value: string;
   onChange: (name: string) => void;
   disabled?: boolean;
+  crestMap: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const selected = WC2026_TEAMS.find((t) => t.name === value);
-  const selectedIso = selected ? selected.iso : null;
+  const selected = WC2026_TEAMS.includes(value) ? value : null;
   const filtered = query
-    ? WC2026_TEAMS.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
+    ? WC2026_TEAMS.filter((t) => t.toLowerCase().includes(query.toLowerCase()))
     : WC2026_TEAMS;
 
   useEffect(() => {
@@ -268,13 +204,13 @@ function CountrySelector({
           boxShadow: open ? "0 0 0 2px color-mix(in oklab, var(--gold) 25%, transparent)" : "none",
         }}
       >
-        {selectedIso ? (
-          <FlagImg iso={selectedIso} name={selected?.name} size={28} style={{ flexShrink: 0 }} />
+        {selected ? (
+          <CrestImg src={crestMap[selected]} name={selected} size={28} style={{ flexShrink: 0 }} />
         ) : (
           <span style={{ fontSize: 20, lineHeight: 1 }}>🌍</span>
         )}
         <span style={{ flex: 1 }}>
-          {selected ? selected.name : "Select a team…"}
+          {selected ?? "Select a team…"}
         </span>
         <span
           style={{
@@ -335,10 +271,10 @@ function CountrySelector({
             ) : (
               filtered.map((t) => (
                 <button
-                  key={t.name}
+                  key={t}
                   type="button"
                   onClick={() => {
-                    onChange(t.name);
+                    onChange(t);
                     setOpen(false);
                     setQuery("");
                   }}
@@ -349,28 +285,28 @@ function CountrySelector({
                     width: "100%",
                     padding: "9px 14px",
                     border: "none",
-                    background: t.name === value
+                    background: t === value
                       ? "color-mix(in oklab, var(--gold) 12%, transparent)"
                       : "transparent",
-                    color: t.name === value ? "var(--gold)" : "var(--text)",
+                    color: t === value ? "var(--gold)" : "var(--text)",
                     fontSize: 13,
-                    fontWeight: t.name === value ? 700 : 500,
+                    fontWeight: t === value ? 700 : 500,
                     cursor: "pointer",
                     textAlign: "left" as const,
                     transition: "background 0.1s",
                   }}
                   onMouseEnter={(e) => {
-                    if (t.name !== value)
+                    if (t !== value)
                       (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
                   }}
                   onMouseLeave={(e) => {
-                    if (t.name !== value)
+                    if (t !== value)
                       (e.currentTarget as HTMLButtonElement).style.background = "transparent";
                   }}
                 >
-                  <FlagImg iso={t.iso} name={t.name} size={24} style={{ flexShrink: 0 }} />
-                  <span>{t.name}</span>
-                  {t.name === value && (
+                  <CrestImg src={crestMap[t]} name={t} size={24} style={{ flexShrink: 0 }} />
+                  <span>{t}</span>
+                  {t === value && (
                     <span style={{ marginLeft: "auto", fontSize: 12 }}>✓</span>
                   )}
                 </button>
@@ -1179,9 +1115,12 @@ export function MyTipsPage() {
   const winnerReadOnly =
     winner !== null && (winner.locked_at !== null || winner.evaluated_at !== null);
 
-  // Derive flag for currently selected/saved pick
-  const currentIso = teamIso(winnerInput);
-  const savedIso = winner ? teamIso(winner.team_name) : null;
+  // Build crestMap from all loaded match data (same source as match cards)
+  const crestMap: Record<string, string> = {};
+  for (const m of Object.values(matchMap)) {
+    if (m.home_team_crest) crestMap[m.home_team] = m.home_team_crest;
+    if (m.away_team_crest) crestMap[m.away_team] = m.away_team_crest;
+  }
 
   return (
     <div>
@@ -1349,7 +1288,7 @@ export function MyTipsPage() {
                             justifyContent: "center",
                           }}
                         >
-                          <FlagImg iso={currentIso} name={winnerInput} size={96} />
+                          <CrestImg src={crestMap[winnerInput]} name={winnerInput} size={96} />
                         </div>
                         <div
                           style={{
@@ -1445,7 +1384,7 @@ export function MyTipsPage() {
                   style={{ gap: 12 }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <FlagImg iso={savedIso} name={winner?.team_name} size={42} />
+                    <CrestImg src={winner?.team_name ? crestMap[winner.team_name] : null} name={winner?.team_name} size={42} />
                     <div>
                       <div
                         style={{
@@ -1506,6 +1445,7 @@ export function MyTipsPage() {
                       value={winnerInput}
                       onChange={setWinnerInput}
                       disabled={winnerSaving}
+                      crestMap={crestMap}
                     />
                   </div>
 
