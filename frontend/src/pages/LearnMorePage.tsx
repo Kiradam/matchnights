@@ -175,6 +175,44 @@ export function LearnMorePage() {
         </div>
       </Section>
 
+      <Section title="No betting. Just friendly competition.">
+        <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
+          <p>
+            MatchNights is not a betting platform and there are no prizes,
+            payouts, or gambling features.
+          </p>
+          <p>
+            The goal is simple: make predictions, compare opinions, and enjoy
+            match nights with your friends.
+          </p>
+          <p>
+            If your group wants to celebrate the best predictor with a high
+            five, a coffee, or bragging rights, that's entirely up to you —
+            MatchNights is only here to make the experience more fun and
+            organized.
+          </p>
+        </div>
+      </Section>
+
+      <Section title="How match prediction insights work">
+        <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
+          <p>
+            The prediction insights shown in MatchNights are based on publicly
+            available market data and probability calculations.
+          </p>
+          <p>
+            Instead of displaying complex numbers, we convert those estimates
+            into simple win, draw, and away-win probabilities that are easier to
+            understand and discuss with friends.
+          </p>
+          <p>
+            They're not guarantees and they're not betting advice — they're
+            simply a helpful way to spark conversation and compare opinions
+            before kickoff.
+          </p>
+        </div>
+      </Section>
+
       <section className="mx-auto w-full max-w-5xl px-5 py-14 text-center sm:px-8 lg:px-10">
         <div className="rounded-lg border border-[#2d8cff]/30 bg-[#071a3a]/70 px-5 py-10 shadow-[0_22px_70px_rgba(18,108,255,0.18)]">
           <h2 className="font-display text-3xl font-black uppercase leading-none tracking-normal text-white sm:text-4xl">
