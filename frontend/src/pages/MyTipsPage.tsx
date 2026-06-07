@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import type {
@@ -10,6 +10,315 @@ import type {
   PredictionState,
   WinnerPrediction,
 } from "../types";
+
+// ── WC 2026 teams ─────────────────────────────────────────────────────────────
+
+const WC2026_TEAMS: { name: string; flag: string }[] = [
+  // Hosts
+  { name: "Canada", flag: "🇨🇦" },
+  { name: "Mexico", flag: "🇲🇽" },
+  { name: "United States", flag: "🇺🇸" },
+  // South America
+  { name: "Argentina", flag: "🇦🇷" },
+  { name: "Bolivia", flag: "🇧🇴" },
+  { name: "Brazil", flag: "🇧🇷" },
+  { name: "Chile", flag: "🇨🇱" },
+  { name: "Colombia", flag: "🇨🇴" },
+  { name: "Ecuador", flag: "🇪🇨" },
+  { name: "Paraguay", flag: "🇵🇾" },
+  { name: "Peru", flag: "🇵🇪" },
+  { name: "Uruguay", flag: "🇺🇾" },
+  { name: "Venezuela", flag: "🇻🇪" },
+  // CONCACAF
+  { name: "Costa Rica", flag: "🇨🇷" },
+  { name: "El Salvador", flag: "🇸🇻" },
+  { name: "Honduras", flag: "🇭🇳" },
+  { name: "Jamaica", flag: "🇯🇲" },
+  { name: "Panama", flag: "🇵🇦" },
+  // Europe
+  { name: "Albania", flag: "🇦🇱" },
+  { name: "Austria", flag: "🇦🇹" },
+  { name: "Belgium", flag: "🇧🇪" },
+  { name: "Croatia", flag: "🇭🇷" },
+  { name: "Czech Republic", flag: "🇨🇿" },
+  { name: "Denmark", flag: "🇩🇰" },
+  { name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { name: "France", flag: "🇫🇷" },
+  { name: "Georgia", flag: "🇬🇪" },
+  { name: "Germany", flag: "🇩🇪" },
+  { name: "Greece", flag: "🇬🇷" },
+  { name: "Hungary", flag: "🇭🇺" },
+  { name: "Italy", flag: "🇮🇹" },
+  { name: "Netherlands", flag: "🇳🇱" },
+  { name: "Norway", flag: "🇳🇴" },
+  { name: "Poland", flag: "🇵🇱" },
+  { name: "Portugal", flag: "🇵🇹" },
+  { name: "Romania", flag: "🇷🇴" },
+  { name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { name: "Serbia", flag: "🇷🇸" },
+  { name: "Slovakia", flag: "🇸🇰" },
+  { name: "Spain", flag: "🇪🇸" },
+  { name: "Switzerland", flag: "🇨🇭" },
+  { name: "Turkey", flag: "🇹🇷" },
+  { name: "Ukraine", flag: "🇺🇦" },
+  // Africa
+  { name: "Algeria", flag: "🇩🇿" },
+  { name: "Cameroon", flag: "🇨🇲" },
+  { name: "DR Congo", flag: "🇨🇩" },
+  { name: "Egypt", flag: "🇪🇬" },
+  { name: "Ghana", flag: "🇬🇭" },
+  { name: "Ivory Coast", flag: "🇨🇮" },
+  { name: "Mali", flag: "🇲🇱" },
+  { name: "Morocco", flag: "🇲🇦" },
+  { name: "Nigeria", flag: "🇳🇬" },
+  { name: "Senegal", flag: "🇸🇳" },
+  { name: "South Africa", flag: "🇿🇦" },
+  { name: "Tanzania", flag: "🇹🇿" },
+  { name: "Tunisia", flag: "🇹🇳" },
+  // Asia
+  { name: "Australia", flag: "🇦🇺" },
+  { name: "Bahrain", flag: "🇧🇭" },
+  { name: "China", flag: "🇨🇳" },
+  { name: "Indonesia", flag: "🇮🇩" },
+  { name: "Iran", flag: "🇮🇷" },
+  { name: "Iraq", flag: "🇮🇶" },
+  { name: "Japan", flag: "🇯🇵" },
+  { name: "Jordan", flag: "🇯🇴" },
+  { name: "Qatar", flag: "🇶🇦" },
+  { name: "Saudi Arabia", flag: "🇸🇦" },
+  { name: "South Korea", flag: "🇰🇷" },
+  { name: "Uzbekistan", flag: "🇺🇿" },
+  // Oceania
+  { name: "New Zealand", flag: "🇳🇿" },
+];
+
+function teamFlag(name: string): string {
+  return WC2026_TEAMS.find((t) => t.name === name)?.flag ?? "🏳️";
+}
+
+// ── Trophy SVG ────────────────────────────────────────────────────────────────
+
+function TrophySVG({ size = 80, mirror = false }: { size?: number; mirror?: boolean }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 120"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ transform: mirror ? "scaleX(-1)" : undefined, flexShrink: 0 }}
+      aria-hidden="true"
+    >
+      {/* Cup body */}
+      <path d="M22 8 L78 8 L72 58 Q50 72 28 58 Z" fill="#FFD700" />
+      {/* Inner shading */}
+      <path d="M32 8 L68 8 L64 50 Q50 62 36 50 Z" fill="#FFA500" opacity="0.45" />
+      {/* Left handle */}
+      <path
+        d="M24 16 Q6 16 6 36 Q6 54 25 50"
+        stroke="#FFD700"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      {/* Right handle */}
+      <path
+        d="M76 16 Q94 16 94 36 Q94 54 75 50"
+        stroke="#FFD700"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      {/* Stem */}
+      <rect x="43" y="60" width="14" height="22" rx="3" fill="#FFD700" />
+      {/* Base plate */}
+      <rect x="28" y="82" width="44" height="13" rx="5" fill="#FFD700" />
+      {/* Base bottom line */}
+      <rect x="32" y="92" width="36" height="3" rx="2" fill="#FFA500" opacity="0.5" />
+      {/* Shine streak */}
+      <path d="M34 14 L38 54" stroke="rgba(255,255,255,0.45)" strokeWidth="4" strokeLinecap="round" />
+      {/* Star dot */}
+      <circle cx="57" cy="30" r="5" fill="rgba(255,255,255,0.28)" />
+      {/* Stars above */}
+      <text x="50" y="7" textAnchor="middle" fontSize="6" fill="#FFD700" opacity="0.7">✦ ✦ ✦</text>
+    </svg>
+  );
+}
+
+// ── Country selector combobox ─────────────────────────────────────────────────
+
+function CountrySelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (name: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const selected = WC2026_TEAMS.find((t) => t.name === value);
+  const filtered = query
+    ? WC2026_TEAMS.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
+    : WC2026_TEAMS;
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 30);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          padding: "11px 14px",
+          borderRadius: "var(--radius-xs)",
+          border: `1px solid ${open ? "var(--gold)" : "var(--border)"}`,
+          background: "var(--surface-2)",
+          color: selected ? "var(--text)" : "var(--text-3)",
+          fontSize: 14,
+          fontWeight: selected ? 700 : 500,
+          cursor: disabled ? "default" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          textAlign: "left" as const,
+          transition: "border-color 0.15s",
+          boxShadow: open ? "0 0 0 2px color-mix(in oklab, var(--gold) 25%, transparent)" : "none",
+        }}
+      >
+        <span style={{ fontSize: 20, lineHeight: 1 }}>
+          {selected ? selected.flag : "🌍"}
+        </span>
+        <span style={{ flex: 1 }}>
+          {selected ? selected.name : "Select a team…"}
+        </span>
+        <span
+          style={{
+            color: "var(--text-3)",
+            fontSize: 11,
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "transform 0.2s",
+          }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            zIndex: 200,
+            overflow: "hidden",
+          }}
+        >
+          {/* Search */}
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--border)" }}>
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search countries…"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                borderRadius: "var(--radius-xs)",
+                border: "1px solid var(--border)",
+                background: "var(--surface-2)",
+                color: "var(--text)",
+                fontSize: 13,
+                outline: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box" as const,
+              }}
+            />
+          </div>
+
+          {/* List */}
+          <div style={{ maxHeight: 240, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "12px 14px", color: "var(--text-3)", fontSize: 13 }}>
+                No team found
+              </div>
+            ) : (
+              filtered.map((t) => (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => {
+                    onChange(t.name);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    width: "100%",
+                    padding: "9px 14px",
+                    border: "none",
+                    background: t.name === value
+                      ? "color-mix(in oklab, var(--gold) 12%, transparent)"
+                      : "transparent",
+                    color: t.name === value ? "var(--gold)" : "var(--text)",
+                    fontSize: 13,
+                    fontWeight: t.name === value ? 700 : 500,
+                    cursor: "pointer",
+                    textAlign: "left" as const,
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (t.name !== value)
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (t.name !== value)
+                      (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                  }}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{t.flag}</span>
+                  <span>{t.name}</span>
+                  {t.name === value && (
+                    <span style={{ marginLeft: "auto", fontSize: 12 }}>✓</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -744,7 +1053,6 @@ export function MyTipsPage() {
         const sorted = [...predsRes.data].sort((a, b) => {
           const orderDiff = STATE_ORDER[a.state] - STATE_ORDER[b.state];
           if (orderDiff !== 0) return orderDiff;
-          // Within same state: sort by match datetime
           const dtA = map[a.match_id]?.match_datetime ?? "";
           const dtB = map[b.match_id]?.match_datetime ?? "";
           return dtA.localeCompare(dtB);
@@ -802,7 +1110,6 @@ export function MyTipsPage() {
       .catch((err) => {
         if (cancelled) return;
         if (err?.response?.status === 404) {
-          // No prediction yet — that's fine
           setWinner(null);
         } else {
           setWinnerError("Failed to load winner prediction.");
@@ -887,6 +1194,10 @@ export function MyTipsPage() {
   const winnerReadOnly =
     winner !== null && (winner.locked_at !== null || winner.evaluated_at !== null);
 
+  // Derive flag for currently selected/saved pick
+  const currentFlag = teamFlag(winnerInput);
+  const savedFlag = winner ? teamFlag(winner.team_name) : "";
+
   return (
     <div>
       {/* Screen head */}
@@ -966,56 +1277,165 @@ export function MyTipsPage() {
         </div>
       )}
 
-      {/* Tab 2: WC Winner */}
+      {/* Tab 2: WC Winner ── spectacular redesign */}
       {activeTab === "winner" && (
-        <div style={{ maxWidth: 480 }}>
+        <div style={{ maxWidth: 520 }}>
           {winnerLoading ? (
             <Spinner />
           ) : (
-            <div
-              className="card"
-              style={{ gap: 16 }}
-            >
-              {/* Trophy icon area */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* ── Hero banner ── */}
+              <div
+                style={{
+                  borderRadius: "var(--radius)",
+                  border: "1px solid color-mix(in oklab, var(--gold) 30%, transparent)",
+                  background:
+                    "radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in oklab, var(--gold) 18%, transparent), transparent 70%), var(--surface)",
+                  overflow: "hidden",
+                  position: "relative",
+                  padding: "28px 20px 24px",
+                }}
+              >
+                {/* Shimmer line */}
                 <div
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: "var(--gold-tint)",
-                    border: "1px solid color-mix(in oklab, var(--gold) 30%, transparent)",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 2,
+                    background:
+                      "linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%)",
+                    opacity: 0.6,
+                  }}
+                />
+
+                {/* Title */}
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "var(--gold)",
+                    opacity: 0.75,
+                    marginBottom: 20,
+                  }}
+                >
+                  World Cup 2026 · Winner Prediction
+                </div>
+
+                {/* Trophies + flag row */}
+                <div
+                  style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 22,
-                    flexShrink: 0,
+                    gap: 12,
                   }}
                 >
-                  🏆
-                </div>
-                <div>
+                  {/* Left trophy */}
                   <div
                     style={{
-                      fontFamily: '"Archivo", sans-serif',
-                      fontStretch: "125%",
-                      fontWeight: 900,
-                      fontSize: 16,
-                      color: "var(--text)",
+                      filter: "drop-shadow(0 4px 16px rgba(255,215,0,0.45))",
+                      flexShrink: 0,
                     }}
                   >
-                    World Cup Winner
+                    <TrophySVG size={72} />
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>
-                    {winner
-                      ? winnerReadOnly
-                        ? "Your pick is locked in."
-                        : "Your current pick. You can change it while open."
-                      : "Pick the team you think will win the 2026 World Cup."}
+
+                  {/* Center: flag + country */}
+                  <div
+                    style={{
+                      textAlign: "center",
+                      flex: 1,
+                      minWidth: 120,
+                    }}
+                  >
+                    {winnerInput ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: 72,
+                            lineHeight: 1,
+                            filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.25))",
+                            marginBottom: 10,
+                          }}
+                        >
+                          {currentFlag}
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: '"Archivo", sans-serif',
+                            fontStretch: "125%",
+                            fontWeight: 900,
+                            fontSize: 22,
+                            color: "var(--gold)",
+                            letterSpacing: "0.01em",
+                            lineHeight: 1.1,
+                          }}
+                        >
+                          {winnerInput}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "var(--text-3)",
+                            marginTop: 6,
+                            letterSpacing: "0.06em",
+                          }}
+                        >
+                          {winnerReadOnly ? "🔒 Pick locked in" : "★ Your current pick ★"}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 10, opacity: 0.3 }}>
+                          🌍
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: '"Archivo", sans-serif',
+                            fontStretch: "125%",
+                            fontWeight: 800,
+                            fontSize: 16,
+                            color: "var(--text-3)",
+                          }}
+                        >
+                          No pick yet
+                        </div>
+                        <div
+                          style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4 }}
+                        >
+                          Who will lift the trophy?
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Right trophy (mirrored) */}
+                  <div
+                    style={{
+                      filter: "drop-shadow(0 4px 16px rgba(255,215,0,0.45))",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <TrophySVG size={72} mirror />
                   </div>
                 </div>
+
+                {/* Points badge — when evaluated */}
+                {winner?.points_awarded !== null && winner?.points_awarded !== undefined && (
+                  <div style={{ textAlign: "center", marginTop: 16 }}>
+                    <Points points={winner.points_awarded} />
+                  </div>
+                )}
               </div>
 
+              {/* ── Error ── */}
               {winnerError && (
                 <div
                   style={{
@@ -1032,106 +1452,86 @@ export function MyTipsPage() {
                 </div>
               )}
 
-              {/* Read-only view */}
-              {winner && winnerReadOnly ? (
-                <div>
-                  <div
-                    style={{
-                      padding: "16px 20px",
-                      background: "var(--surface-2)",
-                      borderRadius: "var(--radius-sm)",
-                      border: "1px solid var(--border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: '"Archivo", sans-serif',
-                        fontStretch: "125%",
-                        fontWeight: 900,
-                        fontSize: 20,
-                        color: "var(--gold)",
-                      }}
-                    >
-                      {winner.team_name}
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {winner.locked_at && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            color: "oklch(0.62 0.16 55)",
-                            background: "oklch(0.65 0.18 55 / 0.15)",
-                            borderRadius: 20,
-                            padding: "2px 8px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.05em",
-                          }}
-                        >
-                          Locked
-                        </span>
-                      )}
-                      {winner.points_awarded !== null && (
-                        <Points points={winner.points_awarded} />
-                      )}
+              {/* ── Form or lock info ── */}
+              {winnerReadOnly ? (
+                /* Locked state */
+                <div
+                  className="card"
+                  style={{ gap: 12 }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 28 }}>{savedFlag}</span>
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: '"Archivo", sans-serif',
+                          fontStretch: "125%",
+                          fontWeight: 900,
+                          fontSize: 18,
+                          color: "var(--gold)",
+                        }}
+                      >
+                        {winner!.team_name}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>
+                        {winner!.evaluated_at
+                          ? "Prediction evaluated — final result recorded."
+                          : "Your pick is locked. Good luck!"}
+                      </div>
+                    </div>
+                    <div style={{ marginLeft: "auto" }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: "oklch(0.62 0.16 55)",
+                          background: "oklch(0.65 0.18 55 / 0.15)",
+                          borderRadius: 20,
+                          padding: "3px 10px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        🔒 Locked
+                      </span>
                     </div>
                   </div>
                 </div>
               ) : (
                 /* Editable form */
-                <form onSubmit={handleWinnerSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {winner && (
+                <form onSubmit={handleWinnerSubmit} className="card" style={{ gap: 14 }}>
+                  <div>
                     <div
                       style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--text-3)",
-                        padding: "8px 12px",
-                        background: "var(--surface-2)",
-                        borderRadius: "var(--radius-xs)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      Current pick:{" "}
-                      <span style={{ color: "var(--gold)", fontWeight: 800 }}>
-                        {winner.team_name}
-                      </span>
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      type="text"
-                      value={winnerInput}
-                      onChange={(e) => setWinnerInput(e.target.value)}
-                      placeholder="e.g. Brazil"
-                      disabled={winnerSaving}
-                      style={{
-                        flex: 1,
-                        padding: "9px 14px",
-                        borderRadius: "var(--radius-xs)",
-                        border: "1px solid var(--border)",
-                        background: "var(--surface-2)",
+                        fontFamily: '"Archivo", sans-serif',
+                        fontStretch: "125%",
+                        fontWeight: 800,
+                        fontSize: 13,
                         color: "var(--text)",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        outline: "none",
-                        fontFamily: "inherit",
+                        marginBottom: 8,
                       }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={winnerSaving || !winnerInput.trim()}
-                      className="btn-gold"
-                      style={{ marginLeft: 0, flexShrink: 0 }}
                     >
-                      {winnerSaving ? "Saving…" : winner ? "Update" : "Submit"}
-                    </button>
+                      {winner ? "Change your pick" : "Choose a team"}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>
+                      Select the country you think will win the 2026 World Cup.
+                      Locked when the knockout stage begins.
+                    </div>
+                    <CountrySelector
+                      value={winnerInput}
+                      onChange={setWinnerInput}
+                      disabled={winnerSaving}
+                    />
                   </div>
+
+                  <button
+                    type="submit"
+                    disabled={winnerSaving || !winnerInput.trim()}
+                    className="btn-gold"
+                    style={{ alignSelf: "flex-end" }}
+                  >
+                    {winnerSaving ? "Saving…" : winner ? "Update pick" : "Submit pick"}
+                  </button>
                 </form>
               )}
             </div>
