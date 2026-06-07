@@ -10,7 +10,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Match highlighting** — cards where ≥50% of group responses are "Together" get a green "Match on" border and glow
 - **Broadcast-style UI** — bold scoreboard layout with flag chips, 3-letter country codes (TLA), and oklch-based semantic colour tokens (Together green, At home blue, Skip red, gold accent)
 - **Watch-first card hierarchy** — each match card is structured around the user journey: Teams → Kickoff → **Watch Mode** (Together / At home / Skip) → **Prediction Insights** → **Submit Tip**; the social coordination layer is always prominent and prediction tools are secondary; for fixtures with unknown opponents (TBD), the Submit Tip button is disabled with a helper message until both teams are confirmed
-- **Prediction Insights** — normalized implied probability panel on every match card, derived from bookmaker odds: Home Win %, Draw %, Away Win %; clicking any tile navigates to the Match Detail page and auto-opens the tip popup; section only shown when odds data is available; Match Detail page also shows probabilities instead of raw odds
+- **Prediction Insights** — normalized implied probability panel on every match card, derived from bookmaker odds: Home Win %, Draw %, Away Win %; clicking any tile opens the tip popup directly on the matches view without navigating away; section only shown when odds data is available; Match Detail page also shows probabilities instead of raw odds
 - **Mini dashboard** — two rows of clickable stat tiles above the match list: **(1)** watch-mode row: Together, At Home, Skip, Not Answered (scoped to upcoming matches) + next-game hero tile with pulsing gold dot; **(2)** prediction row: **Tips Submitted** (upcoming scheduled matches with a tip, green) and **Missing Tips** (upcoming scheduled matches with known opponents and no tip yet, gold); all six tiles filter the match list when clicked — click again to return to Upcoming; skipped cards are visually dimmed
 - **3-way segmented preference control** — connected Together / At home / Skip control with semantic colour fill and drop-shadow; replaces three separate buttons
 - **Toast notifications** — slide-up confirmation for every preference change
@@ -134,7 +134,7 @@ This pulls all fixtures from football-data.org and saves them to the local datab
 1. Go to **Admin → Invites**
 2. Click **Generate invite link** and copy the link
 3. Send it via WhatsApp, email, or however you like
-4. Your friends open the link, pick a username and password, and they're in
+4. Your friends open the link, pick a username/nickname and password, and they're in
 
 Each invite link can be used by up to 100 people (shown as "X/100 used" in the admin panel). You can revoke a link before it reaches its limit.
 
