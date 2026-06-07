@@ -40,9 +40,24 @@ export function AdminInvitesPage() {
   };
 
   const copyLink = (inv: Invite) => {
-    navigator.clipboard.writeText(inv.registration_url);
+    const text = inv.registration_url;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => execCopy(text));
+    } else {
+      execCopy(text);
+    }
     setCopied(inv.id);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const execCopy = (text: string) => {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.cssText = "position:fixed;opacity:0;top:0;left:0";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
   };
 
   const btnCls = "text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-40";
