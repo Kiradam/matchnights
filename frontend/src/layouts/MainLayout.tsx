@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -51,6 +51,8 @@ export function MainLayout() {
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -58,6 +60,17 @@ export function MainLayout() {
   };
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileOpen]);
 
   const navLinks = [
     { to: "/matches", label: "Matches" },
@@ -113,15 +126,79 @@ export function MainLayout() {
             {dark ? <SunIcon /> : <MoonIcon />}
           </button>
           {user && (
-            <div style={{ position: "relative" }}>
+            <div ref={profileRef} style={{ position: "relative" }}>
               <button
                 className="mn-avatar"
                 title={user.full_name}
-                onClick={handleLogout}
-                style={{ cursor: "pointer" }}
+                onClick={() => setProfileOpen((o) => !o)}
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
               >
                 {initials(user.full_name)}
               </button>
+
+              {profileOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    right: 0,
+                    minWidth: 180,
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                    overflow: "hidden",
+                    zIndex: 300,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderBottom: "1px solid var(--border)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--text)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {user.full_name}
+                    <div style={{ fontSize: 11, fontWeight: 500, color: "var(--text-3)", marginTop: 1 }}>
+                      {user.email}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      width: "100%",
+                      padding: "10px 14px",
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--skip)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      textAlign: "left" as const,
+                    }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.background = "color-mix(in oklab, var(--skip) 10%, transparent)")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
+                    }
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style={{ flexShrink: 0 }}>
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Log out
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
