@@ -17,6 +17,7 @@ import { AdminSyncPage } from "./pages/admin/AdminSyncPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { MyTipsPage } from "./pages/MyTipsPage";
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
                 <Route index element={<Navigate to="/matches" replace />} />
                 <Route path="/matches" element={<MatchesPage />} />
                 <Route path="/matches/:id" element={<MatchDetailPage />} />
+                <Route path="/my-tips" element={<MyTipsPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
 
                 <Route element={<ProtectedRoute adminOnly />}>

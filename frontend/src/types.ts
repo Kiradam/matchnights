@@ -92,3 +92,55 @@ export interface SyncState {
   request_count_today: number;
   quota_remaining: number;
 }
+
+// ── Predictions ───────────────────────────────────────────────────────────────
+
+export type PredictedOutcome = "home_win" | "away_win" | "draw";
+export type PointsReason = "exact_score" | "correct_outcome" | "wrong";
+export type PredictionState = "tip_available" | "tip_locked" | "evaluated" | "manual_review";
+
+export interface MatchPrediction {
+  id: number;
+  user_id: number;
+  match_id: number;
+  home_goals: number;
+  away_goals: number;
+  predicted_outcome: PredictedOutcome;
+  predicted_qualifier: string | null;
+  boosted: boolean;
+  submitted_at: string;
+  locked_at: string | null;
+  points_awarded: number | null;
+  base_points: number | null;
+  evaluated_at: string | null;
+  points_reason: PointsReason | null;
+  state: PredictionState;
+}
+
+export interface WinnerPrediction {
+  id: number;
+  user_id: number;
+  team_name: string;
+  submitted_at: string;
+  locked_at: string | null;
+  points_awarded: number | null;
+  evaluated_at: string | null;
+}
+
+export interface LeaderboardEntry {
+  user_id: number;
+  full_name: string;
+  total_points: number;
+  exact_score_count: number;
+  base_points: number;
+}
+
+export interface ManualReviewMatch {
+  match_id: number;
+  external_id: string;
+  home_team: string;
+  away_team: string;
+  stage: string;
+  match_datetime: string;
+  pending_predictions: number;
+}

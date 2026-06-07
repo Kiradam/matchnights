@@ -61,6 +61,7 @@ export function MainLayout() {
 
   const navLinks = [
     { to: "/matches", label: "Matches" },
+    { to: "/my-tips", label: "My Tips" },
     { to: "/calendar", label: "Calendar" },
     ...(user?.role === "admin" ? [{ to: "/admin", label: "Admin" }] : []),
   ];

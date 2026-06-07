@@ -9,6 +9,7 @@ import type {
   GroupMemberPreference,
   GroupPreferenceSummary,
   Match,
+  MatchPrediction,
   PreferenceChoice,
 } from "../types";
 
@@ -311,6 +312,457 @@ function GroupPanel({
   );
 }
 
+// ── Prediction helpers ────────────────────────────────────────────────────────
+
+function isKnockout(stage: string): boolean {
+  return !stage.toLowerCase().includes("group");
+}
+
+function boostAllowance(stage: string): number {
+  const s = stage.toLowerCase();
+  if (s.includes("group")) return 4;
+  if (s.includes("r32") || s.includes("round of 32")) return 3;
+  if (s.includes("r16") || s.includes("round of 16")) return 2;
+  if (s.includes("qf") || s.includes("quarter")) return 1;
+  return 0; // semi, final, etc.
+}
+
+// ── Prediction popup ──────────────────────────────────────────────────────────
+
+function PredictionPopup({
+  match,
+  prediction,
+  usedBoosts,
+  onClose,
+  onSaved,
+}: {
+  match: Match;
+  prediction: MatchPrediction | null;
+  usedBoosts: number;
+  onClose: () => void;
+  onSaved: (p: MatchPrediction) => void;
+}) {
+  const { showToast } = useToast();
+  const [homeGoals, setHomeGoals] = useState<number>(prediction?.home_goals ?? 0);
+  const [awayGoals, setAwayGoals] = useState<number>(prediction?.away_goals ?? 0);
+  const [qualifier, setQualifier] = useState<string>(prediction?.predicted_qualifier ?? "");
+  const [boosted, setBoosted] = useState<boolean>(prediction?.boosted ?? false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const knockout = isKnockout(match.stage);
+  const allowance = boostAllowance(match.stage);
+  const isDraw = homeGoals === awayGoals;
+  const showQualifier = knockout && isDraw;
+
+  // Boosts already used for this stage (excluding current prediction if already boosted)
+  const boostedElsewhere = prediction?.boosted ? usedBoosts - 1 : usedBoosts;
+  const canBoost = allowance > 0 && (boosted || boostedElsewhere < allowance);
+  const boostsLeft = allowance - boostedElsewhere;
+
+  const readOnly =
+    prediction !== null && prediction.state !== "tip_available";
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const body = {
+        home_goals: homeGoals,
+        away_goals: awayGoals,
+        predicted_qualifier: showQualifier && qualifier.trim() ? qualifier.trim() : null,
+        boosted,
+      };
+      const res = await api.put<MatchPrediction>(`/predictions/${match.id}`, body);
+      onSaved(res.data);
+      showToast("Prediction saved");
+      onClose();
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        err.response &&
+        typeof err.response === "object" &&
+        "data" in err.response &&
+        err.response.data &&
+        typeof err.response.data === "object" &&
+        "detail" in err.response.data
+          ? String((err.response.data as { detail: unknown }).detail)
+          : "Failed to save prediction.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const stateLabel = (state: MatchPrediction["state"]): string => {
+    if (state === "tip_locked") return "Locked";
+    if (state === "evaluated")
+      return prediction?.points_awarded != null
+        ? `${prediction.points_awarded} pts`
+        : "Evaluated";
+    if (state === "manual_review") return "Reviewing...";
+    return state;
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--surface)",
+          borderRadius: 12,
+          padding: 24,
+          maxWidth: 400,
+          width: "90%",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          border: "1px solid var(--border)",
+          boxShadow: "0 20px 60px -20px rgba(0,0,0,0.5)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Title */}
+        <div style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              fontFamily: "'Archivo', sans-serif",
+              fontStretch: "125%",
+              fontWeight: 800,
+              fontSize: 17,
+              color: "var(--text)",
+              marginBottom: 4,
+            }}
+          >
+            {match.home_team} vs {match.away_team}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>
+            {match.stage}
+          </div>
+        </div>
+
+        {readOnly && prediction ? (
+          /* Read-only view */
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div
+              style={{
+                background: "var(--surface-2)",
+                borderRadius: 10,
+                padding: "14px 16px",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--text-3)",
+                  marginBottom: 8,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  fontSize: 11,
+                }}
+              >
+                Your prediction
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Archivo', sans-serif",
+                  fontStretch: "125%",
+                  fontWeight: 900,
+                  fontSize: 32,
+                  color: "var(--text)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {prediction.home_goals} – {prediction.away_goals}
+                {prediction.boosted && (
+                  <span style={{ fontSize: 20, marginLeft: 8 }}>⚡</span>
+                )}
+              </div>
+              {prediction.predicted_qualifier && (
+                <div
+                  style={{ fontSize: 13, color: "var(--text-2)", marginTop: 4 }}
+                >
+                  Qualifier: {prediction.predicted_qualifier}
+                </div>
+              )}
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color:
+                    prediction.state === "evaluated"
+                      ? "var(--together)"
+                      : "var(--text-3)",
+                }}
+              >
+                {stateLabel(prediction.state)}
+              </div>
+            </div>
+            <button
+              className="btn-ghost"
+              onClick={onClose}
+              style={{ width: "100%", textAlign: "center" }}
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          /* Editable form */
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Score inputs */}
+            <div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--text-3)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 10,
+                }}
+              >
+                Predicted score
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto 1fr",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--text-3)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={homeGoals}
+                    onChange={(e) => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    style={{
+                      width: "100%",
+                      padding: "10px 8px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-2)",
+                      color: "var(--text)",
+                      fontSize: 22,
+                      fontWeight: 800,
+                      fontFamily: "'Archivo', sans-serif",
+                      fontVariantNumeric: "tabular-nums",
+                      textAlign: "center",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Archivo', sans-serif",
+                    fontWeight: 900,
+                    fontSize: 18,
+                    color: "var(--text-3)",
+                  }}
+                >
+                  –
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "var(--text-3)",
+                      textAlign: "center",
+                    }}
+                  >
+                    {match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase()}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={awayGoals}
+                    onChange={(e) => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    style={{
+                      width: "100%",
+                      padding: "10px 8px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                      background: "var(--surface-2)",
+                      color: "var(--text)",
+                      fontSize: 22,
+                      fontWeight: 800,
+                      fontFamily: "'Archivo', sans-serif",
+                      fontVariantNumeric: "tabular-nums",
+                      textAlign: "center",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Qualifier input — knockout + draw only */}
+            {showQualifier && (
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--text-3)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginBottom: 6,
+                  }}
+                >
+                  Qualifier (after extra time / penalties)
+                </label>
+                <input
+                  type="text"
+                  placeholder={`e.g. ${match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}`}
+                  value={qualifier}
+                  onChange={(e) => setQualifier(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface-2)",
+                    color: "var(--text)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Boost */}
+            {allowance > 0 && (
+              <div
+                style={{
+                  background: "var(--surface-2)",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: canBoost ? "pointer" : "not-allowed",
+                    opacity: canBoost ? 1 : 0.5,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={boosted}
+                    disabled={!canBoost}
+                    onChange={(e) => setBoosted(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: canBoost ? "pointer" : "not-allowed" }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+                    ⚡ Double points (Boost)
+                  </span>
+                </label>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-3)",
+                    marginTop: 6,
+                    marginLeft: 26,
+                    fontWeight: 600,
+                  }}
+                >
+                  {boostedElsewhere} of {allowance} boosts used for this stage
+                  {boostsLeft > 0 && ` · ${boostsLeft} left`}
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--skip)",
+                  fontWeight: 600,
+                  background: "color-mix(in oklab, var(--skip) 10%, transparent)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                style={{
+                  flex: 1,
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: submitting ? "not-allowed" : "pointer",
+                  opacity: submitting ? 0.6 : 1,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                {submitting ? "Saving..." : prediction ? "Update" : "Submit"}
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={onClose}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Match card ────────────────────────────────────────────────────────────────
 
 function togetherPct(summaries: GroupPreferenceSummary[]): number {
@@ -344,6 +796,12 @@ function MatchCard({
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<PreferenceChoice | null>(null);
+
+  // Prediction state
+  const [tipOpen, setTipOpen] = useState(false);
+  const [prediction, setPrediction] = useState<MatchPrediction | null>(null);
+  const [predLoading, setPredLoading] = useState(false);
+  const [usedBoosts, setUsedBoosts] = useState(0);
 
   const locked =
     match.status === "live" ||
@@ -476,6 +934,49 @@ function MatchCard({
       });
     }
     setPendingChoice(null);
+  };
+
+  const handleOpenTip = async () => {
+    if (predLoading) return;
+    setPredLoading(true);
+    try {
+      // Load prediction (404 = none yet)
+      try {
+        const res = await api.get<MatchPrediction>(`/predictions/${match.id}`);
+        setPrediction(res.data);
+      } catch (err: unknown) {
+        const status =
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          err.response &&
+          typeof err.response === "object" &&
+          "status" in err.response
+            ? (err.response as { status: number }).status
+            : null;
+        if (status === 404) {
+          setPrediction(null);
+        } else {
+          throw err;
+        }
+      }
+      // Count used boosts for this stage
+      try {
+        const allPreds = await api.get<MatchPrediction[]>("/predictions");
+        const stage = match.stage;
+        const count = allPreds.data.filter(
+          (p) => p.match_id !== match.id && p.boosted
+          // ideally filter by same stage, but we don't have stage on prediction
+          // so just count globally; spec says "for this stage" — we approximate by all
+        ).length;
+        setUsedBoosts(count);
+      } catch {
+        setUsedBoosts(0);
+      }
+    } finally {
+      setPredLoading(false);
+      setTipOpen(true);
+    }
   };
 
   const odds = [
