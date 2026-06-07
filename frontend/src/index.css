@@ -136,7 +136,10 @@ body {
 
 .mn-wordmark em {
   font-style: normal;
-  color: var(--gold);
+  background: linear-gradient(90deg, #247DFF, #67C8FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .mn-nav-links {
@@ -219,15 +222,21 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--together) 100%);
-  color: white;
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  background: var(--surface-2);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Archivo", sans-serif;
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.02em;
+}
+
+.mn-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* Mobile nav dropdown */
@@ -1098,14 +1107,10 @@ body {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-  color: white;
+  overflow: hidden;
   flex-shrink: 0;
-  font-family: "Archivo", sans-serif;
+  object-fit: cover;
+  display: block;
 }
 
 .mname {

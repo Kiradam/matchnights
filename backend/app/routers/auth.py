@@ -94,7 +94,7 @@ async def register(
     )
     invite = result.scalar_one_or_none()
 
-    if not invite or invite.used_by_id is not None:
+    if not invite or invite.use_count >= invite.max_uses:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invite token")
     if invite.expires_at.replace(tzinfo=UTC) < now:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Invite token has expired")
@@ -111,7 +111,7 @@ async def register(
     db.add(user)
     await db.flush()
 
-    invite.used_by_id = user.id
+    invite.use_count += 1
     await db.commit()
     await db.refresh(user)
 

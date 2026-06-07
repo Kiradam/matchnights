@@ -4,7 +4,6 @@ import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import type {
-  GoalDistEntry,
   Group,
   LeaderboardEntry,
   Match,
@@ -322,18 +321,8 @@ function CountrySelector({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function avatarColor(name: string): string {
-  const colors = [
-    "#6C63FF", "#2FC08A", "#F2B441", "#5B8DEF", "#F2685E",
-    "#9DC23B", "#19B5A6", "#C77DFF", "#FF8A00", "#00B4D8",
-  ];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
-}
-
-function initials(name: string): string {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+function dicebearUrl(seed: number | string): string {
+  return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
 }
 
 const STATE_ORDER: Record<PredictionState, number> = {
@@ -432,134 +421,25 @@ function Spinner() {
   );
 }
 
-// ── Goal distribution bar chart ───────────────────────────────────────────────
-
-const BAR_MAX_H = 52;
-
-function GoalDistChart({
-  dist,
-  myGoals,
-  teamLabel,
-}: {
-  dist: GoalDistEntry[];
-  myGoals: number;
-  teamLabel: string;
-}) {
-  if (!dist || dist.length === 0) return null;
-  const maxCount = Math.max(...dist.map((d) => d.count), 1);
-
-  return (
-    <div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          textTransform: "uppercase" as const,
-          letterSpacing: "0.08em",
-          color: "var(--text-3)",
-          marginBottom: 8,
-        }}
-      >
-        {teamLabel} goals
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: 5,
-          height: BAR_MAX_H + 32,
-        }}
-      >
-        {dist.map(({ goals, count }) => {
-          const isMe = goals === myGoals;
-          const barH = count > 0
-            ? Math.max(Math.round((count / maxCount) * BAR_MAX_H), 4)
-            : 0;
-          return (
-            <div
-              key={goals}
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 0,
-              }}
-            >
-              {/* Count above bar */}
-              <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: isMe ? 800 : 500,
-                  color: isMe ? "var(--gold)" : "var(--text-3)",
-                  minHeight: 13,
-                  lineHeight: "13px",
-                  marginBottom: 2,
-                }}
-              >
-                {count > 0 ? count : ""}
-              </div>
-              {/* Bar */}
-              <div
-                style={{
-                  width: "100%",
-                  height: barH || 1,
-                  background: isMe
-                    ? "var(--gold)"
-                    : "color-mix(in oklab, var(--watch) 50%, transparent)",
-                  borderRadius: "3px 3px 0 0",
-                  boxShadow: isMe
-                    ? "0 0 10px color-mix(in oklab, var(--gold) 50%, transparent)"
-                    : "none",
-                  opacity: count === 0 ? 0 : 1,
-                  transition: "height 0.35s ease",
-                }}
-              />
-              {/* Goal label */}
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: isMe ? 800 : 500,
-                  color: isMe ? "var(--gold)" : "var(--text-3)",
-                  marginTop: 4,
-                }}
-              >
-                {goals}
-              </div>
-              {/* User marker */}
-              <div
-                style={{
-                  fontSize: 8,
-                  color: "var(--gold)",
-                  lineHeight: "10px",
-                  visibility: isMe ? "visible" : "hidden",
-                }}
-              >
-                ▲
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Distribution charts section ───────────────────────────────────────────────
+// ── Outcome distribution widget ───────────────────────────────────────────────
 
 function DistributionCharts({
   stats,
   prediction,
-  homeTla,
-  awayTla,
 }: {
   stats: MatchPredictionStats;
   prediction: MatchPrediction;
-  homeTla: string;
-  awayTla: string;
 }) {
-  const { home_goal_dist, away_goal_dist, total } = stats;
-  if (total === 0 || !home_goal_dist?.length || !away_goal_dist?.length) return null;
+  const { outcome_counts, total } = stats;
+  if (total === 0) return null;
+
+  const myOutcome = prediction.predicted_outcome;
+  const outcomes = [
+    { key: "home_win" as const, label: "Home Win", count: outcome_counts.home_win },
+    { key: "draw" as const, label: "Draw", count: outcome_counts.draw },
+    { key: "away_win" as const, label: "Away Win", count: outcome_counts.away_win },
+  ];
+  const maxCount = Math.max(...outcomes.map((o) => o.count), 1);
 
   return (
     <div
@@ -567,21 +447,82 @@ function DistributionCharts({
         marginTop: 12,
         paddingTop: 12,
         borderTop: "1px solid var(--border)",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 20,
       }}
     >
-      <GoalDistChart
-        dist={home_goal_dist}
-        myGoals={prediction.home_goals}
-        teamLabel={homeTla}
-      />
-      <GoalDistChart
-        dist={away_goal_dist}
-        myGoals={prediction.away_goals}
-        teamLabel={awayTla}
-      />
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          textTransform: "uppercase" as const,
+          letterSpacing: "0.08em",
+          color: "var(--text-3)",
+          marginBottom: 10,
+        }}
+      >
+        Others' picks
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {outcomes.map(({ key, label, count }) => {
+          const isMe = key === myOutcome;
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          const barW = maxCount > 0 ? (count / maxCount) * 100 : 0;
+          return (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{
+                  width: 64,
+                  fontSize: 10,
+                  fontWeight: isMe ? 800 : 600,
+                  color: isMe ? "var(--gold)" : "var(--text-3)",
+                  textAlign: "right",
+                  flexShrink: 0,
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  height: 8,
+                  background: "var(--surface-2)",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${barW}%`,
+                    minWidth: count > 0 ? 4 : 0,
+                    background: isMe
+                      ? "var(--gold)"
+                      : "color-mix(in oklab, var(--watch) 50%, transparent)",
+                    borderRadius: 4,
+                    transition: "width 0.35s ease",
+                    boxShadow: isMe
+                      ? "0 0 8px color-mix(in oklab, var(--gold) 45%, transparent)"
+                      : "none",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  width: 30,
+                  fontSize: 10,
+                  fontWeight: isMe ? 800 : 500,
+                  color: isMe ? "var(--gold)" : "var(--text-3)",
+                  textAlign: "right",
+                  flexShrink: 0,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {pct}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -613,7 +554,6 @@ function LeaderboardBarChart({
       {entries.map((entry, idx) => {
         const isMe = entry.user_id === currentUserId;
         const rank = idx + 1;
-        const color = avatarColor(entry.full_name);
         const barPct = Math.max((entry.total_points / maxPoints) * 100, 0);
         const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
 
@@ -654,26 +594,17 @@ function LeaderboardBarChart({
             </div>
 
             {/* Avatar */}
-            <div
+            <img
+              src={dicebearUrl(entry.user_id)}
+              alt={entry.full_name}
               style={{
                 width: 30,
                 height: 30,
                 borderRadius: "50%",
-                background: isMe
-                  ? "linear-gradient(135deg, var(--gold) 0%, var(--together) 100%)"
-                  : color,
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 10,
-                fontWeight: 800,
                 flexShrink: 0,
-                fontFamily: '"Archivo", sans-serif',
+                objectFit: "cover",
               }}
-            >
-              {initials(entry.full_name)}
-            </div>
+            />
 
             {/* Name + bar column */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
@@ -904,8 +835,6 @@ function PredictionCard({
         <DistributionCharts
           stats={stats}
           prediction={prediction}
-          homeTla={homeTla}
-          awayTla={awayTla}
         />
       )}
     </div>

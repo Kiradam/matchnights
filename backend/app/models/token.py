@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -15,7 +15,8 @@ class InviteToken(Base):
         String(36), unique=True, index=True, default=lambda: str(uuid.uuid4())
     )
     created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    used_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    use_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_uses: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -23,9 +24,6 @@ class InviteToken(Base):
 
     created_by: Mapped["User"] = relationship(  # noqa: F821
         "User", foreign_keys=[created_by_id]
-    )
-    used_by: Mapped["User | None"] = relationship(  # noqa: F821
-        "User", foreign_keys=[used_by_id]
     )
 
 

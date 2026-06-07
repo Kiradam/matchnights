@@ -145,7 +145,8 @@ async def create_invite(
         registration_url=reg_url,
         expires_at=invite.expires_at,
         created_at=invite.created_at,
-        used=invite.used_by_id is not None,
+        use_count=invite.use_count,
+        max_uses=invite.max_uses,
     )
 
 
@@ -169,7 +170,8 @@ async def list_invites(
             registration_url=_registration_url(request, i.token),
             expires_at=i.expires_at,
             created_at=i.created_at,
-            used=i.used_by_id is not None,
+            use_count=i.use_count,
+            max_uses=i.max_uses,
         )
         for i in invites
     ]
@@ -185,7 +187,6 @@ async def cleanup_expired(
     expired_invites_result = await db.execute(
         select(InviteToken).where(
             InviteToken.expires_at < now,
-            InviteToken.used_by_id.is_(None),
         )
     )
     invite_tokens = list(expired_invites_result.scalars())

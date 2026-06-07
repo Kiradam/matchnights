@@ -37,7 +37,8 @@ class InviteOut(BaseModel):
     registration_url: str
     expires_at: datetime
     created_at: datetime
-    used: bool
+    use_count: int
+    max_uses: int
 
 
 class CreateInviteRequest(BaseModel):

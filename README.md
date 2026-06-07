@@ -4,20 +4,21 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 
 ## Features
 
-- **Invite-only** — admin generates one-time invite links; no self-registration
+- **Invite-only** — admin generates multi-use invite links (up to 100 registrations per link, configurable per link); no self-registration
 - **Per-group preferences** — At home and Skip apply across all your groups at once; Together is group-specific (pick which group you're watching with)
 - **Group visibility** — members of a shared group see each other's choices by name, with expandable per-group panels on each match card showing a progress bar and "X/Y together" count
 - **Match highlighting** — cards where ≥50% of group responses are "Together" get a green "Match on" border and glow
 - **Broadcast-style UI** — bold scoreboard layout with flag chips, 3-letter country codes (TLA), and oklch-based semantic colour tokens (Together green, At home blue, Skip red, gold accent)
 - **Watch-first card hierarchy** — each match card is structured around the user journey: Teams → Kickoff → **Watch Mode** (Together / At home / Skip) → **Prediction Insights** → **Submit Tip**; the social coordination layer is always prominent and prediction tools are secondary; for fixtures with unknown opponents (TBD), the Submit Tip button is disabled with a helper message until both teams are confirmed
-- **Prediction Insights** — normalized implied probability panel on every match card, derived from bookmaker odds: Home Win %, Draw %, Away Win %; the favourite outcome is highlighted in blue; section only shown when odds data is available
+- **Prediction Insights** — normalized implied probability panel on every match card, derived from bookmaker odds: Home Win %, Draw %, Away Win %; clicking any tile opens the tip popup directly on the matches view without navigating away; section only shown when odds data is available; Match Detail page also shows probabilities instead of raw odds
 - **Mini dashboard** — two rows of clickable stat tiles above the match list: **(1)** watch-mode row: Together, At Home, Skip, Not Answered (scoped to upcoming matches) + next-game hero tile with pulsing gold dot; **(2)** prediction row: **Tips Submitted** (upcoming scheduled matches with a tip, green) and **Missing Tips** (upcoming scheduled matches with known opponents and no tip yet, gold); all six tiles filter the match list when clicked — click again to return to Upcoming; skipped cards are visually dimmed
 - **3-way segmented preference control** — connected Together / At home / Skip control with semantic colour fill and drop-shadow; replaces three separate buttons
 - **Toast notifications** — slide-up confirmation for every preference change
 - **Match detail page** — full preference controls and group panels accessible from both the matches list and the calendar
 - **Filter pills** — default view is **Upcoming** (kickoff in future or within the last 2 hours); Today/Tomorrow use a football-day boundary (03:00 AM cutoff, so late-night matches stay on the same "day"); **All** view shows past matches dimmed below upcoming ones; dashboard stat tiles and Next Game hero are scoped to upcoming matches only
 - **Prediction / tipping system** — submit a score prediction per match via the **Submit Tip** popup on each match card (opens before kickoff, read-only once locked); scoring: 10 pts exact score, 4 pts correct outcome, 0 pts wrong; knockout-stage draws require picking the qualifier; **boost** doubles points on selected predictions (4 boosts in group stage, 3 in R32, 2 in R16, 1 in QF, none in SF/Final/3rd place); **World Cup winner** prediction awards 20 pts if correct (locks when the knockout stage begins); global and group leaderboards ranked by total points → exact-score count → base points (tie-breakers in that order)
-- **My Tips page** — dedicated page accessible from the navbar with four tabs: *My Predictions* (all submitted tips with state badges, earned points, and **distribution charts** — outcome pill and top-scores bar chart visible as soon as any prediction exists for that match; aggregate only, no individual user data exposed before kickoff), *WC Winner* (searchable country picker with flag display and trophy banner), *Group Leaderboard* and *Global Leaderboard* (bar-chart tables ranked by total points)
+- **My Tips page** — dedicated page accessible from the navbar with four tabs: *My Predictions* (all submitted tips with state badges, earned points, and **outcome distribution widget** — shows how other users split their Home Win / Draw / Away Win picks with the user's own pick highlighted in gold; visible as soon as any prediction exists for that match; aggregate only, no individual user data exposed before kickoff), *WC Winner* (searchable country picker with team crest display and trophy banner), *Group Leaderboard* and *Global Leaderboard* (bar-chart tables ranked by total points)
+- **Avatars** — all user avatars (nav header, group panels, leaderboards) are generated by DiceBear using the user's ID as seed, ensuring a consistent unique avatar for each person everywhere in the app; no upload needed
 - **Profile menu** — clicking the avatar in the top-right opens a dropdown showing the user's name and email with a dedicated **Log out** button; click outside to dismiss
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button; oklch colour tokens adapt for both themes; logo mark gets a dark-blue gradient frame with indigo glow
 - **Mobile-friendly** — hamburger nav with fixed dropdown sheet, single-column match grid, horizontally scrollable filter pills, responsive dashboard grid
@@ -133,7 +134,9 @@ This pulls all fixtures from football-data.org and saves them to the local datab
 1. Go to **Admin → Invites**
 2. Click **Generate invite link** and copy the link
 3. Send it via WhatsApp, email, or however you like
-4. Your friends open the link, pick a username and password, and they're in
+4. Your friends open the link, pick a username/nickname and password, and they're in
+
+Each invite link can be used by up to 100 people (shown as "X/100 used" in the admin panel). You can revoke a link before it reaches its limit.
 
 That's it — everyone can now mark matches as **Watch**, **Together**, or **Skip** and see each other's choices.
 

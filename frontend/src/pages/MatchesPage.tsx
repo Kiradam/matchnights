@@ -63,18 +63,8 @@ function relativeKick(dt: Date): string {
   return `in ${Math.round(diffH / 24)} days`;
 }
 
-function avatarColor(name: string): string {
-  const colors = [
-    "#6C63FF", "#2FC08A", "#F2B441", "#5B8DEF", "#F2685E",
-    "#9DC23B", "#19B5A6", "#C77DFF", "#FF8A00", "#00B4D8",
-  ];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
-}
-
-function initials(name: string): string {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+function dicebearUrl(seed: number | string): string {
+  return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -288,14 +278,11 @@ function GroupPanel({
       {open && (
         <div className="gpanel-body">
           {summary.members.map((m: GroupMemberPreference) => {
-            const color = avatarColor(m.full_name);
             const isMe = m.user_id === currentUserId;
             const statusKey = m.choice ?? "none";
             return (
               <div className="member" key={m.user_id}>
-                <span className="av" style={{ background: color }}>
-                  {initials(m.full_name)}
-                </span>
+                <img className="av" src={dicebearUrl(m.user_id)} alt={m.full_name} />
                 <span className={`mname${isMe ? " me" : ""}`}>
                   {m.full_name}
                   {isMe && (
@@ -1108,14 +1095,15 @@ function MatchCard({
               { label: "Draw", pct: probabilities.draw },
               { label: "Away Win", pct: probabilities.away },
             ].map(({ label, pct }) => (
-              <Link
+              <button
                 key={label}
-                to={`/matches/${match.id}`}
                 className="pi-item"
+                onClick={(e) => { e.stopPropagation(); handleOpenTip(); }}
+                disabled={predLoading || isTbdMatch}
               >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>
-              </Link>
+              </button>
             ))}
           </div>
         )}
