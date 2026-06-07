@@ -43,6 +43,21 @@ const features = [
   },
 ];
 
+const noBettingFeatures = [
+  {
+    title: "No prizes",
+    text: "MatchNights does not offer prizes, payouts, or rewards for predictions.",
+  },
+  {
+    title: "Friendly competition",
+    text: "Compete with friends, compare opinions, and enjoy match nights together.",
+  },
+  {
+    title: "Your group, your rules",
+    text: "If your group wants to celebrate the winner, that's entirely up to you and outside the platform.",
+  },
+];
+
 function PrimaryLink({ children, to }: { children: string; to: string }) {
   return (
     <Link
@@ -157,9 +172,44 @@ export function LearnMorePage() {
         </p>
       </Section>
 
+      <Section title="How match prediction insights work?">
+        <p className="max-w-3xl text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
+          The prediction insights shown in MatchNights are based on publicly
+          available market data and probability calculations.
+          <br />
+          <br />
+          Instead of displaying complex numbers, we convert those estimates into
+          simple win, draw, and away-win probabilities that are easier to
+          understand and discuss with friends.
+          <br />
+          <br />
+          They're not guarantees and they're not betting advice — they're simply
+          a helpful way to spark conversation and compare opinions before
+          kickoff.
+        </p>
+      </Section>
+
       <Section title="What MatchNights supports">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
+            <article
+              key={feature.title}
+              className="rounded-lg border border-white/10 bg-white/[0.05] p-5"
+            >
+              <h3 className="font-display text-base font-black uppercase tracking-normal text-white">
+                {feature.title}
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#9bb1d1]">
+                {feature.text}
+              </p>
+            </article>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="No betting. Just friendly competition.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {noBettingFeatures.map((feature) => (
             <article
               key={feature.title}
               className="rounded-lg border border-white/10 bg-white/[0.05] p-5"
