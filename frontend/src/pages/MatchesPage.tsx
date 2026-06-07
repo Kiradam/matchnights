@@ -574,8 +574,8 @@ function PredictionPopup({
                     min={0}
                     max={99}
                     value={homeGoals}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                    onChange={(e) => setHomeGoals(Math.min(99, Math.max(0, parseInt(e.target.value) || 0)))}
                     style={{
                       width: "100%",
                       padding: "10px 8px",
@@ -617,8 +617,8 @@ function PredictionPopup({
                     min={0}
                     max={99}
                     value={awayGoals}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                    onChange={(e) => setAwayGoals(Math.min(99, Math.max(0, parseInt(e.target.value) || 0)))}
                     style={{
                       width: "100%",
                       padding: "10px 8px",
@@ -1274,7 +1274,7 @@ function NextGame({
   );
 
   return (
-    <Link to={`/matches/${match.id}`} style={{ textDecoration: "none" }}>
+    <Link to={`/matches/${match.id}`} className="next-game-link" style={{ textDecoration: "none" }}>
       <div className="stat next-game">
         <div className="ng-label">
           <span className="ng-live" />

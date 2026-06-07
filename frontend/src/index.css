@@ -376,7 +376,8 @@ body {
   .dash {
     grid-template-columns: repeat(2, 1fr);
   }
-  .dash .next-game {
+  .dash .next-game,
+  .dash .next-game-link {
     grid-column: 1 / -1;
   }
 }
@@ -385,7 +386,8 @@ body {
   .dash {
     grid-template-columns: 1fr 1fr;
   }
-  .dash .next-game {
+  .dash .next-game,
+  .dash .next-game-link {
     grid-column: 1 / -1;
   }
 }
