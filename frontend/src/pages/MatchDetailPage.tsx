@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -18,18 +18,8 @@ const STATUS_LABEL: Record<string, string> = {
   skip: "Skip",
 };
 
-function avatarColor(name: string): string {
-  const colors = [
-    "#6C63FF", "#2FC08A", "#F2B441", "#5B8DEF", "#F2685E",
-    "#9DC23B", "#19B5A6", "#C77DFF", "#FF8A00", "#00B4D8",
-  ];
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return colors[h % colors.length];
-}
-
-function initials(name: string): string {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+function dicebearUrl(seed: number | string): string {
+  return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -185,9 +175,7 @@ function GroupPanel({
             const statusKey = m.choice ?? "none";
             return (
               <div className="member" key={m.user_id}>
-                <span className="av" style={{ background: avatarColor(m.full_name) }}>
-                  {initials(m.full_name)}
-                </span>
+                <img className="av" src={dicebearUrl(m.user_id)} alt={m.full_name} />
                 <span className={`mname${isMe ? " me" : ""}`}>
                   {m.full_name}
                   {isMe && (
@@ -666,6 +654,7 @@ function PredictionPopup({
 
 export function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { showToast } = useToast();
   const [match, setMatch] = useState<Match | null>(null);
@@ -678,6 +667,7 @@ export function MatchDetailPage() {
   const [prediction, setPrediction] = useState<MatchPrediction | null>(null);
   const [predLoading, setPredLoading] = useState(false);
   const [usedBoosts, setUsedBoosts] = useState(0);
+  const autoOpenTip = useRef(searchParams.get("tip") === "open");
 
   useEffect(() => {
     if (!id) return;
@@ -693,6 +683,14 @@ export function MatchDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && match && autoOpenTip.current) {
+      autoOpenTip.current = false;
+      handleOpenTip();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const updatePreference = (groupId: number, choice: PreferenceChoice | null) => {
     setMatch((prev) =>
@@ -890,16 +888,17 @@ export function MatchDetailPage() {
   const awayTla =
     match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
 
-  const odds = [
-    { k: "1", v: match.home_odds },
-    { k: "X", v: match.draw_odds },
-    { k: "2", v: match.away_odds },
+  const hasOdds = match.home_odds != null || match.draw_odds != null || match.away_odds != null;
+  const rawProbs = [
+    { label: "Home Win", v: match.home_odds ? 1 / match.home_odds : null },
+    { label: "Draw", v: match.draw_odds ? 1 / match.draw_odds : null },
+    { label: "Away Win", v: match.away_odds ? 1 / match.away_odds : null },
   ];
-  const hasOdds = odds.some((o) => o.v != null);
-  const minOdds = hasOdds
-    ? Math.min(...odds.filter((o) => o.v != null).map((o) => o.v!))
-    : null;
-
+  const probSum = rawProbs.reduce((s, p) => s + (p.v ?? 0), 0);
+  const probabilities = hasOdds && probSum > 0 ? rawProbs.map((p) => ({
+    label: p.label,
+    pct: Math.round(((p.v ?? 0) / probSum) * 100),
+  })) : null;
   const opts = [
     { choice: "watch_together" as const, label: "Together", Icon: TogetherIcon },
     { choice: "watch" as const, label: "At home", Icon: WatchIcon },
@@ -976,13 +975,13 @@ export function MatchDetailPage() {
           )}
         </div>
 
-        {/* Odds */}
-        {hasOdds && (
-          <div className="odds">
-            {odds.map(({ k, v }) => (
-              <div key={k} className={`odd${v === minOdds && v != null ? " fav" : ""}`}>
-                <span className="ok">{k}</span>
-                <span className="ov">{v != null ? v.toFixed(2) : "—"}</span>
+        {/* Probabilities */}
+        {hasOdds && probabilities && (
+          <div className="pred-insights">
+            {probabilities.map(({ label, pct }) => (
+              <div key={label} className="pi-item" style={{ cursor: "default" }}>
+                <span className="pi-label">{label}</span>
+                <span className="pi-pct">{pct}%</span>
               </div>
             ))}
           </div>

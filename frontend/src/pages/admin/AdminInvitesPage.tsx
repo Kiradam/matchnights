@@ -94,24 +94,30 @@ export function AdminInvitesPage() {
         <div className="space-y-2">
           {invites.map((inv) => {
             const expired = new Date(inv.expires_at) < new Date();
+            const exhausted = inv.use_count >= inv.max_uses;
+            const inactive = expired || exhausted;
             return (
               <div
                 key={inv.id}
-                className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 ${inv.used || expired ? "opacity-50" : ""}`}
+                className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 ${inactive ? "opacity-50" : ""}`}
               >
                 <div className="mb-2">
                   <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">{inv.registration_url}</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    Expires {new Date(inv.expires_at).toLocaleString()}
-                    {inv.used && <span className="ml-2 text-orange-500 dark:text-orange-400">used</span>}
-                    {!inv.used && expired && <span className="ml-2 text-red-500 dark:text-red-400">expired</span>}
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                    <span>Expires {new Date(inv.expires_at).toLocaleString()}</span>
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
+                    <span className={exhausted ? "text-orange-500 dark:text-orange-400" : ""}>
+                      {inv.use_count}/{inv.max_uses} used
+                    </span>
+                    {exhausted && <span className="text-orange-500 dark:text-orange-400">· exhausted</span>}
+                    {!exhausted && expired && <span className="text-red-500 dark:text-red-400">· expired</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => copyLink(inv)} disabled={inv.used || expired} className={btnCls}>
+                  <button onClick={() => copyLink(inv)} disabled={inactive} className={btnCls}>
                     {copied === inv.id ? "Copied!" : "Copy link"}
                   </button>
-                  {!inv.used && !expired && (
+                  {!inactive && (
                     <button
                       onClick={() => setRevokeConfirm(inv)}
                       className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30"

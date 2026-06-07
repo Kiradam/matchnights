@@ -37,13 +37,8 @@ function XIcon() {
   );
 }
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function dicebearUrl(seed: number | string): string {
+  return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
 }
 
 export function MainLayout() {
@@ -134,7 +129,7 @@ export function MainLayout() {
                 aria-expanded={profileOpen}
                 aria-haspopup="true"
               >
-                {initials(user.full_name)}
+                <img src={dicebearUrl(user.id)} alt={user.full_name} />
               </button>
 
               {profileOpen && (

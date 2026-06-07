@@ -83,7 +83,8 @@ export interface Invite {
   registration_url: string;
   expires_at: string;
   created_at: string;
-  used: boolean;
+  use_count: number;
+  max_uses: number;
 }
 
 export interface SyncState {
