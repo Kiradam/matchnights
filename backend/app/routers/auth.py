@@ -103,6 +103,10 @@ async def register(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    existing_name = await db.execute(select(User).where(User.full_name == body.full_name))
+    if existing_name.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+
     user = User(
         email=body.email,
         full_name=body.full_name,
