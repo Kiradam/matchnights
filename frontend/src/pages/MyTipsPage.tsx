@@ -6,6 +6,7 @@ import type {
   LeaderboardEntry,
   Match,
   MatchPrediction,
+  MatchPredictionStats,
   PredictionState,
   WinnerPrediction,
 } from "../types";
@@ -122,9 +123,255 @@ function Spinner() {
   );
 }
 
-// ── Leaderboard table ─────────────────────────────────────────────────────────
+// ── Outcome distribution pill ─────────────────────────────────────────────────
 
-function LeaderboardTable({
+function OutcomePill({
+  stats,
+  myOutcome,
+}: {
+  stats: MatchPredictionStats;
+  myOutcome: string;
+}) {
+  const { total, outcome_counts } = stats;
+  if (total === 0) return null;
+
+  const segments: Array<{ key: string; label: string; count: number; color: string }> = [
+    { key: "home_win", label: "H", count: outcome_counts.home_win, color: "var(--watch)" },
+    { key: "draw",     label: "D", count: outcome_counts.draw,     color: "var(--text-3)" },
+    { key: "away_win", label: "A", count: outcome_counts.away_win, color: "var(--together)" },
+  ];
+
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "var(--text-3)",
+          marginBottom: 6,
+        }}
+      >
+        Outcome distribution
+      </div>
+      <div
+        style={{
+          display: "flex",
+          height: 28,
+          borderRadius: 14,
+          overflow: "hidden",
+          gap: 2,
+        }}
+      >
+        {segments.map((seg) => {
+          const pct = Math.round((seg.count / total) * 100);
+          const isMe = seg.key === myOutcome;
+          return (
+            <div
+              key={seg.key}
+              style={{
+                flex: pct,
+                minWidth: pct === 0 ? 0 : 4,
+                background: seg.color,
+                opacity: pct === 0 ? 0 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "white",
+                position: "relative",
+                outline: isMe ? "2px solid rgba(255,255,255,0.85)" : "none",
+                outlineOffset: isMe ? -2 : 0,
+                transition: "flex 0.3s ease",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+              }}
+              title={`${seg.label}: ${pct}%`}
+            >
+              {pct >= 20 ? `${pct}%` : ""}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+        {segments.map((seg) => {
+          const pct = Math.round((seg.count / total) * 100);
+          const isMe = seg.key === myOutcome;
+          return (
+            <div
+              key={seg.key}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 10,
+                fontWeight: isMe ? 800 : 600,
+                color: isMe ? seg.color : "var(--text-3)",
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: seg.color,
+                  flexShrink: 0,
+                }}
+              />
+              {seg.label} {pct}%{isMe ? " ★" : ""}
+            </div>
+          );
+        })}
+        <div style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-3)", fontWeight: 600 }}>
+          {total} tip{total !== 1 ? "s" : ""}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Top scores bar chart ───────────────────────────────────────────────────────
+
+function TopScoresChart({
+  stats,
+  myHome,
+  myAway,
+}: {
+  stats: MatchPredictionStats;
+  myHome: number;
+  myAway: number;
+}) {
+  const { top_scores, total } = stats;
+  if (!top_scores || top_scores.length === 0) return null;
+
+  const top = top_scores.slice(0, 6);
+  const maxCount = Math.max(...top.map((s) => s.count));
+
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "var(--text-3)",
+          marginBottom: 6,
+        }}
+      >
+        Top predicted scores
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {top.map((score, i) => {
+          const isMe = score.home === myHome && score.away === myAway;
+          const barPct = maxCount > 0 ? (score.count / maxCount) * 100 : 0;
+          const totalPct = total > 0 ? Math.round((score.count / total) * 100) : 0;
+          return (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 11,
+              }}
+            >
+              {/* Score label */}
+              <div
+                style={{
+                  width: 32,
+                  fontFamily: '"Archivo", sans-serif',
+                  fontStretch: "125%",
+                  fontWeight: 900,
+                  fontSize: 11,
+                  color: isMe ? "var(--accent, var(--gold))" : "var(--text-2)",
+                  flexShrink: 0,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {score.home}–{score.away}
+              </div>
+              {/* Bar track */}
+              <div
+                style={{
+                  flex: 1,
+                  height: 14,
+                  background: "var(--surface-2)",
+                  borderRadius: 7,
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${barPct}%`,
+                    minWidth: barPct > 0 ? 4 : 0,
+                    background: isMe
+                      ? "var(--accent, var(--gold))"
+                      : "color-mix(in oklab, var(--watch) 45%, transparent)",
+                    borderRadius: 7,
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+              {/* Count + pct */}
+              <div
+                style={{
+                  width: 44,
+                  textAlign: "right",
+                  fontSize: 10,
+                  fontWeight: isMe ? 800 : 600,
+                  color: isMe ? "var(--accent, var(--gold))" : "var(--text-3)",
+                  fontVariantNumeric: "tabular-nums",
+                  flexShrink: 0,
+                }}
+              >
+                {score.count} · {totalPct}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Distribution charts section ───────────────────────────────────────────────
+
+function DistributionCharts({
+  stats,
+  prediction,
+}: {
+  stats: MatchPredictionStats;
+  prediction: MatchPrediction;
+}) {
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: "1px solid var(--border)",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: 16,
+      }}
+    >
+      <OutcomePill stats={stats} myOutcome={prediction.predicted_outcome} />
+      <TopScoresChart
+        stats={stats}
+        myHome={prediction.home_goals}
+        myAway={prediction.away_goals}
+      />
+    </div>
+  );
+}
+
+// ── Leaderboard bar chart ─────────────────────────────────────────────────────
+
+function LeaderboardBarChart({
   entries,
   currentUserId,
 }: {
@@ -135,6 +382,8 @@ function LeaderboardTable({
     return <div className="empty-day">No leaderboard data yet.</div>;
   }
 
+  const maxPoints = Math.max(...entries.map((e) => e.total_points), 1);
+
   return (
     <div
       style={{
@@ -144,131 +393,163 @@ function LeaderboardTable({
         overflow: "hidden",
       }}
     >
-      {/* Table header */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "48px 1fr 80px 80px",
-          gap: 8,
-          padding: "10px 16px",
-          background: "var(--surface-2)",
-          borderBottom: "1px solid var(--border)",
-          fontSize: 11,
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.07em",
-          color: "var(--text-3)",
-        }}
-      >
-        <span>#</span>
-        <span>Player</span>
-        <span style={{ textAlign: "right" }}>Points</span>
-        <span style={{ textAlign: "right" }}>Exact</span>
-      </div>
-
-      {/* Rows */}
       {entries.map((entry, idx) => {
         const isMe = entry.user_id === currentUserId;
         const rank = idx + 1;
         const color = avatarColor(entry.full_name);
+        const barPct = Math.max((entry.total_points / maxPoints) * 100, 0);
+        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
 
         return (
           <div
             key={entry.user_id}
             style={{
-              display: "grid",
-              gridTemplateColumns: "48px 1fr 80px 80px",
-              gap: 8,
-              padding: "12px 16px",
-              borderBottom: idx < entries.length - 1 ? "1px solid var(--border)" : "none",
+              display: "flex",
               alignItems: "center",
+              gap: 10,
+              padding: "10px 14px",
+              borderBottom: idx < entries.length - 1 ? "1px solid var(--border)" : "none",
+              minHeight: 52,
               background: isMe
-                ? "color-mix(in oklab, var(--gold) 8%, transparent)"
+                ? "color-mix(in oklab, var(--accent, var(--gold)) 8%, transparent)"
                 : "transparent",
             }}
           >
             {/* Rank */}
-            <span
+            <div
               style={{
+                width: 28,
+                flexShrink: 0,
+                textAlign: "center",
                 fontFamily: '"Archivo", sans-serif',
                 fontStretch: "125%",
                 fontWeight: 900,
-                fontSize: rank <= 3 ? 18 : 14,
-                color: rank === 1 ? "var(--gold)" : rank <= 3 ? "var(--text-2)" : "var(--text-3)",
+                fontSize: rankEmoji ? 18 : 13,
+                color: rank === 1
+                  ? "var(--gold)"
+                  : rank <= 3
+                  ? "var(--text-2)"
+                  : "var(--text-3)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank}
-            </span>
+              {rankEmoji ?? rank}
+            </div>
 
-            {/* Player */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <span
+            {/* Avatar */}
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: isMe
+                  ? "linear-gradient(135deg, var(--gold) 0%, var(--together) 100%)"
+                  : color,
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 10,
+                fontWeight: 800,
+                flexShrink: 0,
+                fontFamily: '"Archivo", sans-serif',
+              }}
+            >
+              {initials(entry.full_name)}
+            </div>
+
+            {/* Name + bar column */}
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Name */}
+              <div
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: isMe
-                    ? "linear-gradient(135deg, var(--gold) 0%, var(--together) 100%)"
-                    : color,
-                  color: "white",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  flexShrink: 0,
-                  fontFamily: '"Archivo", sans-serif',
-                }}
-              >
-                {initials(entry.full_name)}
-              </span>
-              <span
-                style={{
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: isMe ? 700 : 600,
                   color: isMe ? "var(--gold)" : "var(--text)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
+                  lineHeight: 1,
                 }}
               >
                 {entry.full_name}
                 {isMe && (
-                  <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4 }}>
+                  <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4, fontSize: 11 }}>
                     (you)
                   </span>
                 )}
-              </span>
+              </div>
+              {/* Bar track */}
+              <div
+                style={{
+                  height: 8,
+                  background: "var(--surface-2)",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: barPct > 0 ? `${barPct}%` : "4px",
+                    minWidth: 4,
+                    background: isMe
+                      ? "var(--accent, var(--gold))"
+                      : "color-mix(in oklab, var(--watch) 40%, transparent)",
+                    borderRadius: 4,
+                    transition: "width 0.4s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isMe) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "color-mix(in oklab, var(--watch) 65%, transparent)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isMe) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "color-mix(in oklab, var(--watch) 40%, transparent)";
+                    }
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Points */}
-            <span
+            {/* Points + exact label */}
+            <div
               style={{
-                fontFamily: '"Archivo", sans-serif',
-                fontStretch: "125%",
-                fontWeight: 900,
-                fontSize: 15,
-                color: "var(--text)",
-                fontVariantNumeric: "tabular-nums",
+                flexShrink: 0,
                 textAlign: "right",
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
               }}
             >
-              {entry.total_points}
-            </span>
-
-            {/* Exact scores */}
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: entry.exact_score_count > 0 ? "var(--gold)" : "var(--text-3)",
-                fontVariantNumeric: "tabular-nums",
-                textAlign: "right",
-              }}
-            >
-              {entry.exact_score_count}
-            </span>
+              <div
+                style={{
+                  fontFamily: '"Archivo", sans-serif',
+                  fontStretch: "125%",
+                  fontWeight: 900,
+                  fontSize: 14,
+                  color: isMe ? "var(--gold)" : "var(--text)",
+                  fontVariantNumeric: "tabular-nums",
+                  lineHeight: 1,
+                }}
+              >
+                {entry.total_points} pts
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: entry.exact_score_count > 0 ? "var(--gold)" : "var(--text-3)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {entry.exact_score_count} exact
+              </div>
+            </div>
           </div>
         );
       })}
@@ -276,14 +557,18 @@ function LeaderboardTable({
   );
 }
 
-// ── Prediction row ────────────────────────────────────────────────────────────
+// ── Prediction card ───────────────────────────────────────────────────────────
 
-function PredictionRow({
+const POST_KICKOFF_STATES: PredictionState[] = ["tip_locked", "evaluated", "manual_review"];
+
+function PredictionCard({
   prediction,
   match,
+  stats,
 }: {
   prediction: MatchPrediction;
   match: Match | undefined;
+  stats: MatchPredictionStats | undefined;
 }) {
   const homeTla = match
     ? (match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase())
@@ -297,84 +582,98 @@ function PredictionRow({
     ? dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
     : "";
 
+  const showCharts =
+    POST_KICKOFF_STATES.includes(prediction.state) && stats !== undefined && stats.total > 0;
+
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
         padding: "14px 16px",
         borderBottom: "1px solid var(--border)",
-        flexWrap: "wrap",
       }}
     >
-      {/* Match info */}
-      <div style={{ flex: 1, minWidth: 140 }}>
+      {/* Main prediction row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Match info */}
+        <div style={{ flex: 1, minWidth: 140 }}>
+          <div
+            style={{
+              fontFamily: '"Archivo", sans-serif',
+              fontStretch: "125%",
+              fontWeight: 800,
+              fontSize: 14,
+              color: "var(--text)",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {homeTla}
+            <span style={{ color: "var(--text-3)", fontWeight: 400, margin: "0 4px", fontSize: 12 }}>
+              vs
+            </span>
+            {awayTla}
+          </div>
+          {match && (
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2 }}>
+              {match.stage} · {dateStr}
+            </div>
+          )}
+        </div>
+
+        {/* Predicted score */}
         <div
           style={{
             fontFamily: '"Archivo", sans-serif',
             fontStretch: "125%",
-            fontWeight: 800,
-            fontSize: 14,
+            fontWeight: 900,
+            fontSize: 18,
             color: "var(--text)",
-            letterSpacing: "0.01em",
-          }}
-        >
-          {homeTla}
-          <span style={{ color: "var(--text-3)", fontWeight: 400, margin: "0 4px", fontSize: 12 }}>
-            vs
-          </span>
-          {awayTla}
-        </div>
-        {match && (
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2 }}>
-            {match.stage} · {dateStr}
-          </div>
-        )}
-      </div>
-
-      {/* Predicted score */}
-      <div
-        style={{
-          fontFamily: '"Archivo", sans-serif',
-          fontStretch: "125%",
-          fontWeight: 900,
-          fontSize: 18,
-          color: "var(--text)",
-          fontVariantNumeric: "tabular-nums",
-          letterSpacing: "-0.01em",
-          flexShrink: 0,
-        }}
-      >
-        {prediction.home_goals}
-        <span style={{ color: "var(--text-3)", margin: "0 2px" }}>:</span>
-        {prediction.away_goals}
-      </div>
-
-      {/* Boost indicator */}
-      {prediction.boosted && (
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            color: "var(--gold)",
-            background: "var(--gold-tint)",
-            border: "1px solid color-mix(in oklab, var(--gold) 30%, transparent)",
-            borderRadius: 20,
-            padding: "2px 8px",
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "-0.01em",
             flexShrink: 0,
           }}
         >
-          ⚡ Boost
-        </span>
-      )}
+          {prediction.home_goals}
+          <span style={{ color: "var(--text-3)", margin: "0 2px" }}>:</span>
+          {prediction.away_goals}
+        </div>
 
-      {/* State badge */}
-      <StateBadge state={prediction.state} />
+        {/* Boost indicator */}
+        {prediction.boosted && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: "var(--gold)",
+              background: "var(--gold-tint)",
+              border: "1px solid color-mix(in oklab, var(--gold) 30%, transparent)",
+              borderRadius: 20,
+              padding: "2px 8px",
+              flexShrink: 0,
+            }}
+          >
+            ⚡ Boost
+          </span>
+        )}
 
-      {/* Points */}
-      {prediction.points_awarded !== null && (
-        <Points points={prediction.points_awarded} boosted={prediction.boosted} />
+        {/* State badge */}
+        <StateBadge state={prediction.state} />
+
+        {/* Points */}
+        {prediction.points_awarded !== null && (
+          <Points points={prediction.points_awarded} boosted={prediction.boosted} />
+        )}
+      </div>
+
+      {/* Distribution charts — only post-kickoff */}
+      {showCharts && (
+        <DistributionCharts stats={stats} prediction={prediction} />
       )}
     </div>
   );
@@ -402,6 +701,9 @@ export function MyTipsPage() {
   const [matchMap, setMatchMap] = useState<Record<number, Match>>({});
   const [predsLoading, setPredsLoading] = useState(true);
   const [predsError, setPredsError] = useState<string | null>(null);
+
+  // ── Stats map ─────────────────────────────────────────────────────────────
+  const [statsMap, setStatsMap] = useState<Record<number, MatchPredictionStats>>({});
 
   // ── Tab 2: Winner ──────────────────────────────────────────────────────────
   const [winner, setWinner] = useState<WinnerPrediction | null>(null);
@@ -450,6 +752,29 @@ export function MyTipsPage() {
 
         setPredictions(sorted);
         setMatchMap(map);
+
+        // Lazily fetch stats for post-kickoff predictions
+        const eligibleMatchIds = sorted
+          .filter((p) => POST_KICKOFF_STATES.includes(p.state))
+          .map((p) => p.match_id);
+
+        if (eligibleMatchIds.length > 0) {
+          const results = await Promise.allSettled(
+            eligibleMatchIds.map((mid) =>
+              api
+                .get<MatchPredictionStats>(`/predictions/match/${mid}/stats`)
+                .then((r) => ({ mid, data: r.data }))
+            )
+          );
+          if (cancelled) return;
+          const newMap: Record<number, MatchPredictionStats> = {};
+          for (const r of results) {
+            if (r.status === "fulfilled") {
+              newMap[r.value.mid] = r.value.data;
+            }
+          }
+          setStatsMap(newMap);
+        }
       } catch {
         if (!cancelled) setPredsError("Failed to load predictions.");
       } finally {
@@ -629,10 +954,11 @@ export function MyTipsPage() {
               </div>
 
               {predictions.map((pred) => (
-                <PredictionRow
+                <PredictionCard
                   key={pred.id}
                   prediction={pred}
                   match={matchMap[pred.match_id]}
+                  stats={statsMap[pred.match_id]}
                 />
               ))}
             </div>
@@ -859,7 +1185,7 @@ export function MyTipsPage() {
               ) : groupLbError ? (
                 <div className="empty-day" style={{ color: "var(--skip)" }}>{groupLbError}</div>
               ) : (
-                <LeaderboardTable
+                <LeaderboardBarChart
                   entries={groupLeaderboard}
                   currentUserId={user?.id ?? 0}
                 />
@@ -877,7 +1203,7 @@ export function MyTipsPage() {
           ) : globalLbError ? (
             <div className="empty-day" style={{ color: "var(--skip)" }}>{globalLbError}</div>
           ) : (
-            <LeaderboardTable
+            <LeaderboardBarChart
               entries={globalLeaderboard}
               currentUserId={user?.id ?? 0}
             />
