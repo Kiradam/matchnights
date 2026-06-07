@@ -1000,6 +1000,16 @@ function MatchCard({
         />
       )}
 
+      {tipOpen && (
+        <PredictionPopup
+          match={match}
+          prediction={prediction}
+          usedBoosts={usedBoosts}
+          onClose={() => setTipOpen(false)}
+          onSaved={(p) => setPrediction(p)}
+        />
+      )}
+
       <article
         className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
       >
@@ -1084,6 +1094,38 @@ function MatchCard({
             saving={saving}
             onChoice={handleChoice}
           />
+        )}
+
+        {/* Submit Tip button */}
+        {!isPast && (
+          <button
+            className="btn-ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenTip();
+            }}
+            disabled={predLoading}
+            style={{
+              width: "100%",
+              textAlign: "center",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            {predLoading ? (
+              "Loading..."
+            ) : prediction ? (
+              <>
+                {prediction.home_goals}–{prediction.away_goals}
+                {prediction.boosted && " ⚡"}
+              </>
+            ) : (
+              "Submit Tip"
+            )}
+          </button>
         )}
 
         {/* Group panels */}

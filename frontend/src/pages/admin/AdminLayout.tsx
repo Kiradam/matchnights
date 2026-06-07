@@ -5,6 +5,7 @@ const links = [
   { to: "/admin/users", label: "Users" },
   { to: "/admin/groups", label: "Groups" },
   { to: "/admin/sync", label: "Match Sync" },
+  { to: "/admin/predictions", label: "Predictions" },
 ];
 
 export function AdminLayout() {

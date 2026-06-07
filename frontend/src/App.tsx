@@ -16,6 +16,7 @@ import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
 import { AdminSyncPage } from "./pages/admin/AdminSyncPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
+import { AdminPredictionsPage } from "./pages/admin/AdminPredictionsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { MyTipsPage } from "./pages/MyTipsPage";
 
@@ -46,6 +47,7 @@ export default function App() {
                     <Route path="users" element={<AdminUsersPage />} />
                     <Route path="groups" element={<AdminGroupsPage />} />
                     <Route path="sync" element={<AdminSyncPage />} />
+                    <Route path="predictions" element={<AdminPredictionsPage />} />
                   </Route>
                 </Route>
               </Route>
