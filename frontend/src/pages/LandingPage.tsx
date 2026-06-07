@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+
+import { useAuth } from "../contexts/AuthContext";
 
 const moments = [
   {
@@ -16,6 +18,12 @@ const moments = [
 ];
 
 export function LandingPage() {
+  const { user } = useAuth();
+
+  if (user) {
+    return <Navigate to="/matches" replace />;
+  }
+
   return (
     <main
       className="min-h-screen overflow-hidden text-white"
@@ -56,7 +64,7 @@ export function LandingPage() {
           style={{ aspectRatio: "2.2 / 1" }}
         >
           <img
-            src="/matchnights-logo-concept.png"
+            src="/logo.png"
             alt="MatchNights"
             className="h-auto w-full object-contain"
           />
