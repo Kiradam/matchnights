@@ -14,7 +14,6 @@ from app.models.prediction import (
     PointsReason,
     PredictedOutcome,
     PredictionState,
-    WorldCupWinnerPrediction,
 )
 from app.models.user import User, UserRole
 
