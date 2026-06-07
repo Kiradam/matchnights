@@ -135,6 +135,25 @@ export interface LeaderboardEntry {
   base_points: number;
 }
 
+export interface PredictedScore {
+  home: number;
+  away: number;
+  count: number;
+}
+
+export interface OutcomeCounts {
+  home_win: number;
+  draw: number;
+  away_win: number;
+}
+
+export interface MatchPredictionStats {
+  match_id: number;
+  total: number;
+  outcome_counts: OutcomeCounts;
+  top_scores: PredictedScore[];
+}
+
 export interface ManualReviewMatch {
   match_id: number;
   external_id: string;

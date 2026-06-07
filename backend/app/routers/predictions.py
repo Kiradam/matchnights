@@ -22,6 +22,9 @@ from app.schemas.predictions import (
     LeaderboardEntry,
     MatchPredictionIn,
     MatchPredictionOut,
+    MatchPredictionStats,
+    OutcomeCounts,
+    PredictedScore,
     WinnerPredictionIn,
     WinnerPredictionOut,
 )
@@ -279,6 +282,58 @@ async def upsert_winner_prediction(
 
     await db.commit()
     return WinnerPredictionOut.model_validate(pred)
+
+
+@router.get("/predictions/match/{match_id}/stats", response_model=MatchPredictionStats)
+async def get_match_prediction_stats(
+    match_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MatchPredictionStats:
+    """Return aggregate prediction distribution for a match (available after kickoff)."""
+    match_result = await db.execute(select(Match).where(Match.id == match_id))
+    match = match_result.scalar_one_or_none()
+    if not match:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+
+    now = datetime.now(UTC)
+    kickoff = match.match_datetime
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=UTC)
+    if now < kickoff:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Prediction distribution is not visible before kickoff",
+        )
+
+    preds_result = await db.execute(
+        select(MatchPrediction).where(MatchPrediction.match_id == match_id)
+    )
+    preds = list(preds_result.scalars())
+
+    outcome_counts = OutcomeCounts(home_win=0, draw=0, away_win=0)
+    score_tally: dict[tuple[int, int], int] = {}
+    for pred in preds:
+        if pred.predicted_outcome == PredictedOutcome.home_win:
+            outcome_counts.home_win += 1
+        elif pred.predicted_outcome == PredictedOutcome.draw:
+            outcome_counts.draw += 1
+        else:
+            outcome_counts.away_win += 1
+        key = (pred.home_goals, pred.away_goals)
+        score_tally[key] = score_tally.get(key, 0) + 1
+
+    top_scores = [
+        PredictedScore(home=h, away=a, count=c)
+        for (h, a), c in sorted(score_tally.items(), key=lambda x: -x[1])[:6]
+    ]
+
+    return MatchPredictionStats(
+        match_id=match_id,
+        total=len(preds),
+        outcome_counts=outcome_counts,
+        top_scores=top_scores,
+    )
 
 
 @router.get("/predictions/{match_id}", response_model=MatchPredictionOut)

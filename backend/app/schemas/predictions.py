@@ -76,6 +76,30 @@ class LeaderboardEntry(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Match prediction stats (aggregate, post-kickoff)
+# ---------------------------------------------------------------------------
+
+
+class PredictedScore(BaseModel):
+    home: int
+    away: int
+    count: int
+
+
+class OutcomeCounts(BaseModel):
+    home_win: int
+    draw: int
+    away_win: int
+
+
+class MatchPredictionStats(BaseModel):
+    match_id: int
+    total: int
+    outcome_counts: OutcomeCounts
+    top_scores: list[PredictedScore]
+
+
+# ---------------------------------------------------------------------------
 # Admin resolve
 # ---------------------------------------------------------------------------
 
