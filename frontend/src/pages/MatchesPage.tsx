@@ -475,7 +475,6 @@ function PredictionPopup({
             >
               <div
                 style={{
-                  fontSize: 13,
                   fontWeight: 700,
                   color: "var(--text-3)",
                   marginBottom: 8,
@@ -963,7 +962,6 @@ function MatchCard({
       // Count used boosts for this stage
       try {
         const allPreds = await api.get<MatchPrediction[]>("/predictions");
-        const stage = match.stage;
         const count = allPreds.data.filter(
           (p) => p.match_id !== match.id && p.boosted
           // ideally filter by same stage, but we don't have stage on prediction
