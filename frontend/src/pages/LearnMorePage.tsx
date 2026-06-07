@@ -76,6 +76,32 @@ function Section({ children, title }: { children: ReactNode; title: string }) {
   );
 }
 
+function StatementSection({
+  children,
+  headline,
+}: {
+  children: ReactNode;
+  headline: string[];
+}) {
+  return (
+    <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.38fr_0.62fr] lg:gap-12 lg:px-10 lg:py-20">
+      <h2 className="font-display text-3xl font-black uppercase leading-none tracking-normal text-white sm:text-4xl lg:text-5xl">
+        {headline.map((line, index) => (
+          <span
+            key={line}
+            className={index === headline.length - 1 ? "block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent" : "block"}
+          >
+            {line}
+          </span>
+        ))}
+      </h2>
+      <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg lg:pt-1">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 export function LearnMorePage() {
   return (
     <main
@@ -175,43 +201,38 @@ export function LearnMorePage() {
         </div>
       </Section>
 
-      <Section title="No betting. Just friendly competition.">
-        <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
-          <p>
-            MatchNights is not a betting platform and there are no prizes,
-            payouts, or gambling features.
-          </p>
-          <p>
-            The goal is simple: make predictions, compare opinions, and enjoy
-            match nights with your friends.
-          </p>
-          <p>
-            If your group wants to celebrate the best predictor with a high
-            five, a coffee, or bragging rights, that's entirely up to you —
-            MatchNights is only here to make the experience more fun and
-            organized.
-          </p>
-        </div>
-      </Section>
+      <StatementSection headline={["No betting.", "Just friendly", "competition."]}>
+        <p>
+          MatchNights is not a betting platform and there are no prizes,
+          payouts, or gambling features.
+        </p>
+        <p>
+          The goal is simple: make predictions, compare opinions, and enjoy
+          match nights with your friends.
+        </p>
+        <p>
+          If your group wants to celebrate the best predictor with a high five,
+          a coffee, or bragging rights, that's entirely up to you — MatchNights
+          is only here to make the experience more fun and organized.
+        </p>
+      </StatementSection>
 
-      <Section title="How match prediction insights work">
-        <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
-          <p>
-            The prediction insights shown in MatchNights are based on publicly
-            available market data and probability calculations.
-          </p>
-          <p>
-            Instead of displaying complex numbers, we convert those estimates
-            into simple win, draw, and away-win probabilities that are easier to
-            understand and discuss with friends.
-          </p>
-          <p>
-            They're not guarantees and they're not betting advice — they're
-            simply a helpful way to spark conversation and compare opinions
-            before kickoff.
-          </p>
-        </div>
-      </Section>
+      <StatementSection headline={["How match", "prediction", "insights work"]}>
+        <p>
+          The prediction insights shown in MatchNights are based on publicly
+          available market data and probability calculations.
+        </p>
+        <p>
+          Instead of displaying complex numbers, we convert those estimates into
+          simple win, draw, and away-win probabilities that are easier to
+          understand and discuss with friends.
+        </p>
+        <p>
+          They're not guarantees and they're not betting advice — they're simply
+          a helpful way to spark conversation and compare opinions before
+          kickoff.
+        </p>
+      </StatementSection>
 
       <section className="mx-auto w-full max-w-5xl px-5 py-14 text-center sm:px-8 lg:px-10">
         <div className="rounded-lg border border-[#2d8cff]/30 bg-[#071a3a]/70 px-5 py-10 shadow-[0_22px_70px_rgba(18,108,255,0.18)]">
