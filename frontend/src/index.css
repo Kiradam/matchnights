@@ -385,6 +385,9 @@ body {
   .dash {
     grid-template-columns: 1fr 1fr;
   }
+  .dash .next-game {
+    grid-column: 1 / -1;
+  }
 }
 
 /* ── Stat tile ─────────────────────────────────────────────────────────────── */
@@ -521,11 +524,14 @@ body {
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
   background: var(--surface-2);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.pi-item.pi-fav {
-  border-color: color-mix(in oklab, var(--watch) 45%, transparent);
-  background: color-mix(in oklab, var(--watch) 8%, var(--surface-2));
+.pi-item:hover {
+  background: color-mix(in oklab, var(--border) 30%, var(--surface-2));
+  border-color: var(--text-3);
 }
 
 .pi-label {
@@ -536,10 +542,6 @@ body {
   color: var(--text-3);
 }
 
-.pi-item.pi-fav .pi-label {
-  color: var(--watch);
-}
-
 .pi-pct {
   font-family: "Archivo", sans-serif;
   font-stretch: 125%;
@@ -547,10 +549,6 @@ body {
   font-size: 18px;
   font-variant-numeric: tabular-nums;
   color: var(--text-2);
-}
-
-.pi-item.pi-fav .pi-pct {
-  color: var(--watch);
 }
 
 /* ── TBD helper text ──────────────────────────────────────────────────────── */

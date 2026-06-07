@@ -14,87 +14,145 @@ import type {
 
 // ── WC 2026 teams ─────────────────────────────────────────────────────────────
 
-const WC2026_TEAMS: { name: string; flag: string }[] = [
+const WC2026_TEAMS: { name: string; iso: string }[] = [
   // Hosts
-  { name: "Canada", flag: "🇨🇦" },
-  { name: "Mexico", flag: "🇲🇽" },
-  { name: "United States", flag: "🇺🇸" },
+  { name: "Canada",        iso: "ca" },
+  { name: "Mexico",        iso: "mx" },
+  { name: "United States", iso: "us" },
   // South America
-  { name: "Argentina", flag: "🇦🇷" },
-  { name: "Bolivia", flag: "🇧🇴" },
-  { name: "Brazil", flag: "🇧🇷" },
-  { name: "Chile", flag: "🇨🇱" },
-  { name: "Colombia", flag: "🇨🇴" },
-  { name: "Ecuador", flag: "🇪🇨" },
-  { name: "Paraguay", flag: "🇵🇾" },
-  { name: "Peru", flag: "🇵🇪" },
-  { name: "Uruguay", flag: "🇺🇾" },
-  { name: "Venezuela", flag: "🇻🇪" },
+  { name: "Argentina",  iso: "ar" },
+  { name: "Bolivia",    iso: "bo" },
+  { name: "Brazil",     iso: "br" },
+  { name: "Chile",      iso: "cl" },
+  { name: "Colombia",   iso: "co" },
+  { name: "Ecuador",    iso: "ec" },
+  { name: "Paraguay",   iso: "py" },
+  { name: "Peru",       iso: "pe" },
+  { name: "Uruguay",    iso: "uy" },
+  { name: "Venezuela",  iso: "ve" },
   // CONCACAF
-  { name: "Costa Rica", flag: "🇨🇷" },
-  { name: "El Salvador", flag: "🇸🇻" },
-  { name: "Honduras", flag: "🇭🇳" },
-  { name: "Jamaica", flag: "🇯🇲" },
-  { name: "Panama", flag: "🇵🇦" },
+  { name: "Costa Rica",   iso: "cr" },
+  { name: "El Salvador",  iso: "sv" },
+  { name: "Honduras",     iso: "hn" },
+  { name: "Jamaica",      iso: "jm" },
+  { name: "Panama",       iso: "pa" },
   // Europe
-  { name: "Albania", flag: "🇦🇱" },
-  { name: "Austria", flag: "🇦🇹" },
-  { name: "Belgium", flag: "🇧🇪" },
-  { name: "Croatia", flag: "🇭🇷" },
-  { name: "Czech Republic", flag: "🇨🇿" },
-  { name: "Denmark", flag: "🇩🇰" },
-  { name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { name: "France", flag: "🇫🇷" },
-  { name: "Georgia", flag: "🇬🇪" },
-  { name: "Germany", flag: "🇩🇪" },
-  { name: "Greece", flag: "🇬🇷" },
-  { name: "Hungary", flag: "🇭🇺" },
-  { name: "Italy", flag: "🇮🇹" },
-  { name: "Netherlands", flag: "🇳🇱" },
-  { name: "Norway", flag: "🇳🇴" },
-  { name: "Poland", flag: "🇵🇱" },
-  { name: "Portugal", flag: "🇵🇹" },
-  { name: "Romania", flag: "🇷🇴" },
-  { name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
-  { name: "Serbia", flag: "🇷🇸" },
-  { name: "Slovakia", flag: "🇸🇰" },
-  { name: "Spain", flag: "🇪🇸" },
-  { name: "Switzerland", flag: "🇨🇭" },
-  { name: "Turkey", flag: "🇹🇷" },
-  { name: "Ukraine", flag: "🇺🇦" },
+  { name: "Albania",        iso: "al" },
+  { name: "Austria",        iso: "at" },
+  { name: "Belgium",        iso: "be" },
+  { name: "Croatia",        iso: "hr" },
+  { name: "Czech Republic", iso: "cz" },
+  { name: "Denmark",        iso: "dk" },
+  { name: "England",        iso: "gb-eng" },
+  { name: "France",         iso: "fr" },
+  { name: "Georgia",        iso: "ge" },
+  { name: "Germany",        iso: "de" },
+  { name: "Greece",         iso: "gr" },
+  { name: "Hungary",        iso: "hu" },
+  { name: "Italy",          iso: "it" },
+  { name: "Netherlands",    iso: "nl" },
+  { name: "Norway",         iso: "no" },
+  { name: "Poland",         iso: "pl" },
+  { name: "Portugal",       iso: "pt" },
+  { name: "Romania",        iso: "ro" },
+  { name: "Scotland",       iso: "gb-sct" },
+  { name: "Serbia",         iso: "rs" },
+  { name: "Slovakia",       iso: "sk" },
+  { name: "Spain",          iso: "es" },
+  { name: "Switzerland",    iso: "ch" },
+  { name: "Turkey",         iso: "tr" },
+  { name: "Ukraine",        iso: "ua" },
   // Africa
-  { name: "Algeria", flag: "🇩🇿" },
-  { name: "Cameroon", flag: "🇨🇲" },
-  { name: "DR Congo", flag: "🇨🇩" },
-  { name: "Egypt", flag: "🇪🇬" },
-  { name: "Ghana", flag: "🇬🇭" },
-  { name: "Ivory Coast", flag: "🇨🇮" },
-  { name: "Mali", flag: "🇲🇱" },
-  { name: "Morocco", flag: "🇲🇦" },
-  { name: "Nigeria", flag: "🇳🇬" },
-  { name: "Senegal", flag: "🇸🇳" },
-  { name: "South Africa", flag: "🇿🇦" },
-  { name: "Tanzania", flag: "🇹🇿" },
-  { name: "Tunisia", flag: "🇹🇳" },
+  { name: "Algeria",      iso: "dz" },
+  { name: "Cameroon",     iso: "cm" },
+  { name: "DR Congo",     iso: "cd" },
+  { name: "Egypt",        iso: "eg" },
+  { name: "Ghana",        iso: "gh" },
+  { name: "Ivory Coast",  iso: "ci" },
+  { name: "Mali",         iso: "ml" },
+  { name: "Morocco",      iso: "ma" },
+  { name: "Nigeria",      iso: "ng" },
+  { name: "Senegal",      iso: "sn" },
+  { name: "South Africa", iso: "za" },
+  { name: "Tanzania",     iso: "tz" },
+  { name: "Tunisia",      iso: "tn" },
   // Asia
-  { name: "Australia", flag: "🇦🇺" },
-  { name: "Bahrain", flag: "🇧🇭" },
-  { name: "China", flag: "🇨🇳" },
-  { name: "Indonesia", flag: "🇮🇩" },
-  { name: "Iran", flag: "🇮🇷" },
-  { name: "Iraq", flag: "🇮🇶" },
-  { name: "Japan", flag: "🇯🇵" },
-  { name: "Jordan", flag: "🇯🇴" },
-  { name: "Qatar", flag: "🇶🇦" },
-  { name: "Saudi Arabia", flag: "🇸🇦" },
-  { name: "South Korea", flag: "🇰🇷" },
-  { name: "Uzbekistan", flag: "🇺🇿" },
+  { name: "Australia",    iso: "au" },
+  { name: "Bahrain",      iso: "bh" },
+  { name: "China",        iso: "cn" },
+  { name: "Indonesia",    iso: "id" },
+  { name: "Iran",         iso: "ir" },
+  { name: "Iraq",         iso: "iq" },
+  { name: "Japan",        iso: "jp" },
+  { name: "Jordan",       iso: "jo" },
+  { name: "Qatar",        iso: "qa" },
+  { name: "Saudi Arabia", iso: "sa" },
+  { name: "South Korea",  iso: "kr" },
+  { name: "Uzbekistan",   iso: "uz" },
   // Oceania
-  { name: "New Zealand", flag: "🇳🇿" },
+  { name: "New Zealand", iso: "nz" },
 ];
 
-function teamFlag(name: string): string {
-  return WC2026_TEAMS.find((t) => t.name === name)?.flag ?? "🏳️";
+function teamIso(name: string): string | null {
+  return WC2026_TEAMS.find((t) => t.name === name)?.iso ?? null;
+}
+
+function flagUrl(iso: string, width = 40): string {
+  return `https://flagcdn.com/w${width}/${iso}.png`;
+}
+
+// ── Flag image component ───────────────────────────────────────────────────────
+
+function FlagImg({
+  iso,
+  name,
+  size = 40,
+  style,
+}: {
+  iso: string | null;
+  name?: string;
+  size?: number;
+  style?: React.CSSProperties;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (!iso || failed) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: size,
+          height: size * 0.67,
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+          borderRadius: 4,
+          fontSize: Math.round(size * 0.3),
+          fontWeight: 700,
+          color: "var(--text-3)",
+          ...style,
+        }}
+      >
+        {name ? name.slice(0, 2).toUpperCase() : "?"}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={flagUrl(iso, size)}
+      alt={name ?? iso}
+      width={size}
+      height={Math.round(size * 0.67)}
+      onError={() => setFailed(true)}
+      style={{
+        objectFit: "cover",
+        borderRadius: 4,
+        border: "1px solid var(--border)",
+        display: "block",
+        ...style,
+      }}
+    />
+  );
 }
 
 // ── Trophy SVG ────────────────────────────────────────────────────────────────
@@ -163,6 +221,7 @@ function CountrySelector({
   const searchRef = useRef<HTMLInputElement>(null);
 
   const selected = WC2026_TEAMS.find((t) => t.name === value);
+  const selectedIso = selected ? selected.iso : null;
   const filtered = query
     ? WC2026_TEAMS.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
     : WC2026_TEAMS;
@@ -208,9 +267,11 @@ function CountrySelector({
           boxShadow: open ? "0 0 0 2px color-mix(in oklab, var(--gold) 25%, transparent)" : "none",
         }}
       >
-        <span style={{ fontSize: 20, lineHeight: 1 }}>
-          {selected ? selected.flag : "🌍"}
-        </span>
+        {selectedIso ? (
+          <FlagImg iso={selectedIso} name={selected?.name} size={28} style={{ flexShrink: 0 }} />
+        ) : (
+          <span style={{ fontSize: 20, lineHeight: 1 }}>🌍</span>
+        )}
         <span style={{ flex: 1 }}>
           {selected ? selected.name : "Select a team…"}
         </span>
@@ -306,7 +367,7 @@ function CountrySelector({
                       (e.currentTarget as HTMLButtonElement).style.background = "transparent";
                   }}
                 >
-                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{t.flag}</span>
+                  <FlagImg iso={t.iso} name={t.name} size={24} style={{ flexShrink: 0 }} />
                   <span>{t.name}</span>
                   {t.name === value && (
                     <span style={{ marginLeft: "auto", fontSize: 12 }}>✓</span>
@@ -1115,8 +1176,8 @@ export function MyTipsPage() {
     winner !== null && (winner.locked_at !== null || winner.evaluated_at !== null);
 
   // Derive flag for currently selected/saved pick
-  const currentFlag = teamFlag(winnerInput);
-  const savedFlag = winner ? teamFlag(winner.team_name) : "";
+  const currentIso = teamIso(winnerInput);
+  const savedIso = winner ? teamIso(winner.team_name) : null;
 
   return (
     <div>
@@ -1278,13 +1339,13 @@ export function MyTipsPage() {
                       <>
                         <div
                           style={{
-                            fontSize: 72,
-                            lineHeight: 1,
                             filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.25))",
                             marginBottom: 10,
+                            display: "flex",
+                            justifyContent: "center",
                           }}
                         >
-                          {currentFlag}
+                          <FlagImg iso={currentIso} name={winnerInput} size={96} />
                         </div>
                         <div
                           style={{
@@ -1380,7 +1441,7 @@ export function MyTipsPage() {
                   style={{ gap: 12 }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 28 }}>{savedFlag}</span>
+                    <FlagImg iso={savedIso} name={winner?.team_name} size={42} />
                     <div>
                       <div
                         style={{

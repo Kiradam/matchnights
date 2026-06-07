@@ -572,7 +572,9 @@ function PredictionPopup({
                   <input
                     type="number"
                     min={0}
+                    max={99}
                     value={homeGoals}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
                     style={{
                       width: "100%",
@@ -613,7 +615,9 @@ function PredictionPopup({
                   <input
                     type="number"
                     min={0}
+                    max={99}
                     value={awayGoals}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
                     style={{
                       width: "100%",
@@ -1104,13 +1108,14 @@ function MatchCard({
               { label: "Draw", pct: probabilities.draw },
               { label: "Away Win", pct: probabilities.away },
             ].map(({ label, pct }) => (
-              <div
+              <Link
                 key={label}
-                className={`pi-item${pct === Math.max(probabilities.home, probabilities.draw, probabilities.away) ? " pi-fav" : ""}`}
+                to={`/matches/${match.id}`}
+                className="pi-item"
               >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>
-              </div>
+              </Link>
             ))}
           </div>
         )}
