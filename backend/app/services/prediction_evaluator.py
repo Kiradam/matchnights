@@ -38,7 +38,6 @@ from app.models.prediction import (
     PredictionState,
     WorldCupWinnerPrediction,
 )
-from app.models.user import User
 
 logger = logging.getLogger(__name__)
 

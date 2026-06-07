@@ -1,9 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from app.models.prediction import PointsReason, PredictedOutcome, PredictionState
-
 
 # ---------------------------------------------------------------------------
 # Match Prediction

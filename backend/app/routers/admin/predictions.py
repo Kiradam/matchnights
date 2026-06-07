@@ -1,7 +1,6 @@
 """Admin endpoints for manual match result review and resolution."""
 
 import logging
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -13,8 +12,7 @@ from app.models.audit import AuditLog
 from app.models.match import Match
 from app.models.prediction import MatchPrediction, PredictionState
 from app.models.user import User
-from app.schemas.match import MatchOut
-from app.schemas.predictions import MatchResolveIn, MatchPredictionOut
+from app.schemas.predictions import MatchPredictionOut, MatchResolveIn
 from app.services.prediction_evaluator import evaluate_match_predictions
 
 logger = logging.getLogger(__name__)
@@ -22,14 +20,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-class ManualReviewMatchOut(MatchOut):
-    """MatchOut extended with prediction state summary."""
-    prediction_count: int = 0
-
-
 @router.get("/predictions/manual-review")
 async def list_manual_review_matches(
-    admin: User = Depends(require_admin),
+    admin=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all matches that have at least one prediction in manual_review state."""
@@ -85,8 +78,6 @@ async def resolve_match(
     match = match_result.scalar_one_or_none()
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-
-    now = datetime.now(UTC)
 
     count = await evaluate_match_predictions(
         match_id=match_id,

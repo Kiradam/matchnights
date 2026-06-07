@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.group import Group, UserGroup
+from app.models.group import UserGroup
 from app.models.match import Match
 from app.models.prediction import (
     MatchPrediction,
@@ -184,7 +184,6 @@ async def upsert_prediction(
         current_pred = existing_check.scalar_one_or_none()
         # If editing and it was already boosted, that boost is already counted
         already_boosted_here = current_pred is not None and current_pred.boosted
-        effective_used = used if already_boosted_here else used
         # If not already boosted on this match, adding one more
         if not already_boosted_here and used >= allowance:
             raise HTTPException(
