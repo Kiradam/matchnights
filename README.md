@@ -14,11 +14,12 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 - **Toast notifications** — slide-up confirmation for every preference change
 - **Match detail page** — full preference controls and group panels accessible from both the matches list and the calendar
 - **Filter pills** — default view is **Upcoming** (kickoff in future or within the last 2 hours); Today/Tomorrow use a football-day boundary (03:00 AM cutoff, so late-night matches stay on the same "day"); **All** view shows past matches dimmed below upcoming ones; dashboard stat tiles and Next Game hero are scoped to upcoming matches only
-- **Prediction / tipping system** — submit a score prediction per match before kickoff; scoring: 10 pts exact score, 4 pts correct outcome, 0 pts wrong; knockout-stage draws require picking the qualifier; **boost** doubles points on selected predictions (4 boosts in group stage, 3 in R32, 2 in R16, 1 in QF, none in SF/Final/3rd place); **World Cup winner** prediction awards 20 pts if correct (locks when the knockout stage begins); global and group leaderboards ranked by total points → exact-score count → base points (tie-breakers in that order)
+- **Prediction / tipping system** — submit a score prediction per match via the **Submit Tip** popup on each match card (opens before kickoff, read-only once locked); scoring: 10 pts exact score, 4 pts correct outcome, 0 pts wrong; knockout-stage draws require picking the qualifier; **boost** doubles points on selected predictions (4 boosts in group stage, 3 in R32, 2 in R16, 1 in QF, none in SF/Final/3rd place); **World Cup winner** prediction awards 20 pts if correct (locks when the knockout stage begins); global and group leaderboards ranked by total points → exact-score count → base points (tie-breakers in that order)
+- **My Tips page** — dedicated page accessible from the navbar with four tabs: *My Predictions* (all submitted tips with state badges and earned points), *WC Winner* (pick or update your tournament winner prediction), *Group Leaderboard* (ranked table for each group the user belongs to, with a group selector for members of multiple groups), and *Global Leaderboard* (all active users ranked)
 - **Dark mode** — system-preference-aware, persisted in localStorage, toggled via navbar button; oklch colour tokens adapt for both themes; logo mark gets a dark-blue gradient frame with indigo glow
 - **Mobile-friendly** — hamburger nav with fixed dropdown sheet, single-column match grid, horizontally scrollable filter pills, responsive dashboard grid
 - **Calendar view** — full-height week/day views with evening and late-night sections; week view uses TLA country codes with semantic left-border colour chips; today column highlighted in gold; fixed-width date range label so navigation buttons never shift; match times in local timezone; download as `.ics` (works on iOS Safari via backend endpoint)
-- **Admin panel** — invite management, user activation/deactivation, role promotion, group CRUD with member management, one-click match sync
+- **Admin panel** — invite management, user activation/deactivation, role promotion, group CRUD with member management, one-click match sync (stores final scores for auto-evaluation), and a **Predictions** tab to manually enter results for matches that couldn't be scored automatically
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 - **Password reset** — admin-triggered reset link sent to user; time-limited single-use token; frontend reset page with confirmation and redirect to login
 
@@ -26,7 +27,7 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Alembic, SQLite |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Alembic, SQLite, APScheduler |
 | Frontend | React 18, Vite, TypeScript, Tailwind CSS, Archivo + Hanken Grotesk (Google Fonts) |
 | Infrastructure | Docker, Docker Compose, Nginx |
 | Football data | [football-data.org](https://www.football-data.org) free tier (default) |
@@ -122,7 +123,7 @@ Log in with the email and password you set in Step 4.
 2. Go to the **Match Sync** tab
 3. Click **Sync matches now**
 
-This pulls all fixtures from football-data.org and saves them to the local database. It takes a few seconds. Re-sync periodically to pick up kick-off time changes and live scores (free tier allows 100 requests/day).
+This pulls all fixtures from football-data.org and saves them to the local database. It takes a few seconds. Re-sync periodically to pick up kick-off time changes and final scores — once a finished match has a score in the database, the background scheduler evaluates all locked predictions for it automatically (free tier allows 100 requests/day).
 
 ### Step 7 — Invite your friends
 
@@ -220,6 +221,30 @@ Each preference is scoped to a `(user, match, group)` triple:
 - **Skip** — registers for all your groups simultaneously
 
 The match list endpoint (`GET /matches`) returns each match with `my_preferences` — your choice per group — in a single efficient query.
+
+## Prediction lifecycle
+
+Each match prediction moves through the following states automatically:
+
+```
+tip_available  ──(kickoff)──▶  tip_locked  ──(result known)──▶  evaluated
+                                    │
+                                    └──(24 h, no result)──▶  manual_review
+```
+
+| State | Meaning | Who acts |
+|---|---|---|
+| `tip_available` | User can submit or edit their prediction | User (before kickoff) |
+| `tip_locked` | Kickoff has passed; prediction is frozen | Background job (runs every 5 min) |
+| `evaluated` | Points awarded based on the final score | Background job (every 15 min) once the match sync stores a result, or immediately after an admin manually enters the score |
+| `manual_review` | 24 h passed without a synced result | Admin enters the score via **Admin → Predictions** |
+
+**Auto-evaluation flow:**
+1. Admin runs **Match Sync** → finished matches have their `home_score`/`away_score` stored in the database.
+2. The background evaluator (runs every 15 minutes) detects tip-locked predictions whose match now has a score and evaluates them automatically.
+3. If no score arrives within 24 hours of kickoff, predictions are moved to `manual_review` so an admin can enter the result by hand.
+
+**World Cup winner prediction** is locked automatically when the first knockout-stage match kicks off, and is evaluated automatically when the admin resolves the Final.
 
 ## Production deployment
 
