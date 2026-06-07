@@ -15,10 +15,12 @@ from app.db.session import async_session_maker
 from app.routers import health
 from app.routers.admin.groups import router as admin_groups_router
 from app.routers.admin.matches import router as admin_matches_router
+from app.routers.admin.predictions import router as admin_predictions_router
 from app.routers.admin.users import router as admin_users_router
 from app.routers.auth import router as auth_router
 from app.routers.groups import router as groups_router
 from app.routers.matches import router as matches_router
+from app.routers.predictions import router as predictions_router
 from app.routers.preferences import router as preferences_router
 from app.routers.users import router as users_router
 
@@ -73,6 +75,8 @@ app.include_router(users_router)
 app.include_router(matches_router)
 app.include_router(preferences_router)
 app.include_router(groups_router)
+app.include_router(predictions_router)
 app.include_router(admin_users_router)
 app.include_router(admin_groups_router)
 app.include_router(admin_matches_router)
+app.include_router(admin_predictions_router)

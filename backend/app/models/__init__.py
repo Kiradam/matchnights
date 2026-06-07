@@ -1,6 +1,13 @@
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.group import Group, UserGroup  # noqa: F401
 from app.models.match import Match, MatchStatus  # noqa: F401
+from app.models.prediction import (  # noqa: F401
+    MatchPrediction,
+    PointsReason,
+    PredictedOutcome,
+    PredictionState,
+    WorldCupWinnerPrediction,
+)
 from app.models.preference import Preference, PreferenceChoice  # noqa: F401
 from app.models.sync import SyncState  # noqa: F401
 from app.models.token import InviteToken, PasswordResetToken, RefreshToken  # noqa: F401

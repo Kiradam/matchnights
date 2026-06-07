@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 import app.models.audit  # noqa: F401
 import app.models.group  # noqa: F401
 import app.models.match  # noqa: F401
+import app.models.prediction  # noqa: F401
 import app.models.preference  # noqa: F401
 import app.models.sync  # noqa: F401
 import app.models.token  # noqa: F401

@@ -12,29 +12,31 @@ import type {
   PreferenceChoice,
 } from "../types";
 
-type FilterMode = "all" | "today" | "tomorrow" | "together" | "planned" | "skip" | "not_answered";
+type FilterMode = "upcoming" | "today" | "tomorrow" | "all" | "together" | "planned" | "skip" | "not_answered";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+// MatchNights football day: boundary at 03:00 AM so late-night matches
+// (e.g. 23:00 kickoff) still belong to the same "day" as earlier matches.
+function footballDayTs(date: Date): number {
+  const d = new Date(date);
+  if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function isUpcoming(m: Match): boolean {
+  return new Date(m.match_datetime).getTime() > Date.now() - 2 * 3_600_000;
+}
+
 function isToday(m: Match): boolean {
-  const d = new Date(m.match_datetime);
-  const t = new Date();
-  return (
-    d.getFullYear() === t.getFullYear() &&
-    d.getMonth() === t.getMonth() &&
-    d.getDate() === t.getDate()
-  );
+  return footballDayTs(new Date(m.match_datetime)) === footballDayTs(new Date());
 }
 
 function isTomorrow(m: Match): boolean {
-  const d = new Date(m.match_datetime);
-  const t = new Date();
-  t.setDate(t.getDate() + 1);
-  return (
-    d.getFullYear() === t.getFullYear() &&
-    d.getMonth() === t.getMonth() &&
-    d.getDate() === t.getDate()
-  );
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return footballDayTs(new Date(m.match_datetime)) === footballDayTs(tomorrow);
 }
 
 function hasMyChoice(m: Match, choices: PreferenceChoice[]): boolean {
@@ -47,6 +49,7 @@ function relativeKick(dt: Date): string {
   const now = new Date();
   const diffMs = dt.getTime() - now.getTime();
   const diffH = diffMs / 3_600_000;
+  if (diffH < -2) return "Finished";
   if (diffH < 0) return "Live / done";
   if (diffH < 1) return `in ${Math.round(diffMs / 60_000)} min`;
   if (diffH < 24 && isToday({ match_datetime: dt.toISOString() } as Match))
@@ -351,6 +354,7 @@ function MatchCard({
   const isSkipped =
     hasMyChoice(match, ["skip"]) &&
     !hasMyChoice(match, ["watch", "watch_together"]);
+  const isPast = !isUpcoming(match);
 
   const dt = new Date(match.match_datetime);
   const dateStr = dt.toLocaleDateString("en-GB", {
@@ -496,7 +500,7 @@ function MatchCard({
       )}
 
       <article
-        className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}`}
+        className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
       >
         {/* Card head */}
         <div className="card-head">
@@ -736,9 +740,10 @@ function NextGame({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const FILTERS: { key: FilterMode; label: string }[] = [
-  { key: "all", label: "All" },
+  { key: "upcoming", label: "Upcoming" },
   { key: "today", label: "Today" },
   { key: "tomorrow", label: "Tomorrow" },
+  { key: "all", label: "All" },
 ];
 
 export function MatchesPage() {
@@ -746,7 +751,7 @@ export function MatchesPage() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<FilterMode>("all");
+  const [activeFilter, setActiveFilter] = useState<FilterMode>("upcoming");
   const [summaries, setSummaries] = useState<
     Record<number, GroupPreferenceSummary[]>
   >({});
@@ -843,75 +848,61 @@ export function MatchesPage() {
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
+  const upcomingMatches = useMemo(() => allMatches.filter(isUpcoming), [allMatches]);
+
+  // Dashboard stats and Next Game are scoped to upcoming matches only.
   const dashboardStats = useMemo(() => {
     const now = new Date();
-    const together = allMatches.filter((m) =>
+    const together = upcomingMatches.filter((m) =>
       hasMyChoice(m, ["watch_together"])
     ).length;
-    const atHome = allMatches.filter(
-      (m) =>
-        hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
+    const atHome = upcomingMatches.filter(
+      (m) => hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
     ).length;
-    const skipped = allMatches.filter(
-      (m) =>
-        hasMyChoice(m, ["skip"]) &&
-        !hasMyChoice(m, ["watch", "watch_together"])
+    const skipped = upcomingMatches.filter(
+      (m) => hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])
     ).length;
-    const notAnswered = allMatches.filter(
+    const notAnswered = upcomingMatches.filter(
       (m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])
     ).length;
-    const nextGame = allMatches
-      .filter(
-        (m) =>
-          new Date(m.match_datetime) > now &&
-          hasMyChoice(m, ["watch", "watch_together"])
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.match_datetime).getTime() -
-          new Date(b.match_datetime).getTime()
-      )[0];
+    const nextGame = upcomingMatches
+      .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
+      .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
     const nextGameSummaries = nextGame ? (summaries[nextGame.id] ?? []) : [];
     return { together, atHome, skipped, notAnswered, nextGame, nextGameSummaries };
-  }, [allMatches, summaries]);
+  }, [upcomingMatches, summaries]);
+
+  const sortByTime = (a: Match, b: Match) =>
+    new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime();
 
   const matches = useMemo(() => {
+    if (activeFilter === "upcoming") return upcomingMatches;
     if (activeFilter === "today") return allMatches.filter(isToday);
     if (activeFilter === "tomorrow") return allMatches.filter(isTomorrow);
     if (activeFilter === "together")
-      return allMatches
+      return upcomingMatches
         .filter((m) => hasMyChoice(m, ["watch_together"]))
         .sort((a, b) => {
-          const scoreA = (summaries[a.id] ?? []).reduce(
-            (s, g) => s + g.watch_together,
-            0
-          );
-          const scoreB = (summaries[b.id] ?? []).reduce(
-            (s, g) => s + g.watch_together,
-            0
-          );
-          return (
-            scoreB - scoreA ||
-            new Date(a.match_datetime).getTime() -
-              new Date(b.match_datetime).getTime()
-          );
+          const scoreA = (summaries[a.id] ?? []).reduce((s, g) => s + g.watch_together, 0);
+          const scoreB = (summaries[b.id] ?? []).reduce((s, g) => s + g.watch_together, 0);
+          return scoreB - scoreA || sortByTime(a, b);
         });
     if (activeFilter === "planned")
-      return allMatches.filter(
-        (m) =>
-          hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
+      return upcomingMatches.filter(
+        (m) => hasMyChoice(m, ["watch"]) && !hasMyChoice(m, ["watch_together"])
       );
     if (activeFilter === "skip")
-      return allMatches.filter(
-        (m) =>
-          hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])
+      return upcomingMatches.filter(
+        (m) => hasMyChoice(m, ["skip"]) && !hasMyChoice(m, ["watch", "watch_together"])
       );
     if (activeFilter === "not_answered")
-      return allMatches.filter(
+      return upcomingMatches.filter(
         (m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])
       );
-    return allMatches;
-  }, [allMatches, activeFilter, summaries]);
+    // "all": upcoming first then past, each group sorted by time ascending
+    const past = allMatches.filter((m) => !isUpcoming(m));
+    return [...upcomingMatches.slice().sort(sortByTime), ...past.slice().sort(sortByTime)];
+  }, [allMatches, upcomingMatches, activeFilter, summaries]);
 
   return (
     <div>
@@ -920,7 +911,7 @@ export function MatchesPage() {
         <div className="screen-title">
           <h1>Matches</h1>
           {!loading && (
-            <span className="count-pill">{allMatches.length}</span>
+            <span className="count-pill">{matches.length}</span>
           )}
         </div>
         <div className="filter-pills">
@@ -947,7 +938,7 @@ export function MatchesPage() {
             clickable
             active={activeFilter === "together"}
             onClick={() =>
-              setActiveFilter((f) => (f === "together" ? "all" : "together"))
+              setActiveFilter((f) => (f === "together" ? "upcoming" : "together"))
             }
           />
           <StatTile
@@ -958,7 +949,7 @@ export function MatchesPage() {
             clickable
             active={activeFilter === "planned"}
             onClick={() =>
-              setActiveFilter((f) => (f === "planned" ? "all" : "planned"))
+              setActiveFilter((f) => (f === "planned" ? "upcoming" : "planned"))
             }
           />
           <StatTile
@@ -969,7 +960,7 @@ export function MatchesPage() {
             clickable
             active={activeFilter === "skip"}
             onClick={() =>
-              setActiveFilter((f) => (f === "skip" ? "all" : "skip"))
+              setActiveFilter((f) => (f === "skip" ? "upcoming" : "skip"))
             }
           />
           <StatTile
@@ -980,7 +971,7 @@ export function MatchesPage() {
             clickable
             active={activeFilter === "not_answered"}
             onClick={() =>
-              setActiveFilter((f) => (f === "not_answered" ? "all" : "not_answered"))
+              setActiveFilter((f) => (f === "not_answered" ? "upcoming" : "not_answered"))
             }
           />
           <NextGame
@@ -999,12 +990,13 @@ export function MatchesPage() {
         </div>
       ) : matches.length === 0 ? (
         <div className="empty-day">
+          {activeFilter === "upcoming" && "No upcoming matches."}
           {activeFilter === "today" && "No matches today."}
           {activeFilter === "tomorrow" && "No matches tomorrow."}
-          {activeFilter === "together" && "You haven't marked any matches as Together yet."}
-          {activeFilter === "planned" && "No matches marked as At Home."}
-          {activeFilter === "skip" && "No matches marked as Skip."}
-          {activeFilter === "not_answered" && "All matches have been answered."}
+          {activeFilter === "together" && "No upcoming matches marked as Together."}
+          {activeFilter === "planned" && "No upcoming matches marked as At Home."}
+          {activeFilter === "skip" && "No upcoming matches marked as Skip."}
+          {activeFilter === "not_answered" && "All upcoming matches have been answered."}
           {activeFilter === "all" && (
             <>
               No matches found.

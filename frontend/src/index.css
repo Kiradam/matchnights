@@ -639,6 +639,16 @@ body {
   opacity: 0.80;
 }
 
+.card.past {
+  opacity: 0.40;
+  filter: grayscale(0.3);
+}
+
+.card.past:hover {
+  opacity: 0.65;
+  filter: grayscale(0);
+}
+
 /* ── Card head ─────────────────────────────────────────────────────────────── */
 
 .card-head {
