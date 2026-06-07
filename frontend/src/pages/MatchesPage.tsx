@@ -776,6 +776,7 @@ function MatchCard({
   currentUserId,
   onPreferenceChange,
   onPredictionSaved,
+  initialPrediction,
 }: {
   match: Match;
   groupSummaries: GroupPreferenceSummary[] | undefined;
@@ -788,6 +789,7 @@ function MatchCard({
     prevChoice: PreferenceChoice | null
   ) => void;
   onPredictionSaved?: (matchId: number, p: MatchPrediction) => void;
+  initialPrediction?: MatchPrediction;
 }) {
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -795,7 +797,7 @@ function MatchCard({
 
   // Prediction state
   const [tipOpen, setTipOpen] = useState(false);
-  const [prediction, setPrediction] = useState<MatchPrediction | null>(null);
+  const [prediction, setPrediction] = useState<MatchPrediction | null>(initialPrediction ?? null);
   const [predLoading, setPredLoading] = useState(false);
   const [usedBoosts, setUsedBoosts] = useState(0);
 
@@ -1625,6 +1627,7 @@ export function MatchesPage() {
               currentUserId={user?.id ?? 0}
               onPreferenceChange={handlePreferenceChange}
               onPredictionSaved={handlePredictionSaved}
+              initialPrediction={predictions[m.id]}
             />
           ))}
         </div>

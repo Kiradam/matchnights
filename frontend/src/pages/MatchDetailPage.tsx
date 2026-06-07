@@ -675,11 +675,13 @@ export function MatchDetailPage() {
       api.get<Match>(`/matches/${id}`),
       api.get<GroupPreferenceSummary[]>(`/matches/${id}/preferences`),
       api.get<Group[]>("/groups/me"),
+      api.get<MatchPrediction>(`/predictions/${id}`).catch(() => null),
     ])
-      .then(([matchRes, prefsRes, groupsRes]) => {
+      .then(([matchRes, prefsRes, groupsRes, predRes]) => {
         setMatch(matchRes.data);
         setSummaries(prefsRes.data);
         setUserGroups(groupsRes.data);
+        if (predRes) setPrediction(predRes.data);
       })
       .finally(() => setLoading(false));
   }, [id]);
