@@ -59,11 +59,16 @@ export function LandingPage() {
       </header>
 
       <section className="relative mx-auto flex min-h-[76vh] w-full max-w-7xl flex-col items-center justify-center px-5 pb-8 pt-10 text-center sm:px-8 lg:px-10">
-        <img
-          src="/matchnights-logo-concept.png"
-          alt="MatchNights"
-          className="h-auto max-h-[46vh] w-full max-w-[780px] object-contain"
-        />
+        <div
+          className="w-full max-w-[780px] overflow-hidden shadow-[0_26px_96px_rgba(31,118,255,0.34)]"
+          style={{ aspectRatio: "2.2 / 1" }}
+        >
+          <img
+            src="/matchnights-logo-concept.png"
+            alt="MatchNights"
+            className="h-auto w-full object-contain"
+          />
+        </div>
 
         <div className="mt-6 w-full max-w-5xl text-center">
           <h1 className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:text-6xl xl:text-7xl">
