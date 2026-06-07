@@ -58,7 +58,7 @@ export function RegisterPage() {
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Create account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username / Nickname</label>
             <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} />
           </div>
           <div>
