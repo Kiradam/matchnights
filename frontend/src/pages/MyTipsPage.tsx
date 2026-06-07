@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import type {
   GoalDistEntry,
   Group,
@@ -926,6 +927,7 @@ const TABS: { id: TabId; label: string }[] = [
 
 export function MyTipsPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>("predictions");
 
   // ── Tab 1: Predictions ─────────────────────────────────────────────────────
@@ -1098,6 +1100,7 @@ export function MyTipsPage() {
     const name = winnerInput.trim();
     if (!name) return;
 
+    setWinnerError(null);
     setWinnerSaving(true);
     try {
       const { data } = await api.put<WinnerPrediction>("/predictions/winner", {
@@ -1105,6 +1108,7 @@ export function MyTipsPage() {
       });
       setWinner(data);
       setWinnerInput(data.team_name);
+      showToast(`Pick saved: ${data.team_name} 🏆`);
     } catch {
       setWinnerError("Failed to save winner prediction.");
     } finally {
