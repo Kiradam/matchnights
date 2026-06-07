@@ -13,7 +13,7 @@ import type {
   PreferenceChoice,
 } from "../types";
 
-type FilterMode = "upcoming" | "today" | "tomorrow" | "all" | "together" | "planned" | "skip" | "not_answered";
+type FilterMode = "upcoming" | "today" | "tomorrow" | "all" | "together" | "planned" | "skip" | "not_answered" | "tips_submitted" | "tips_missing";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,10 @@ function isTomorrow(m: Match): boolean {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return footballDayTs(new Date(m.match_datetime)) === footballDayTs(tomorrow);
+}
+
+function isTbd(m: Match): boolean {
+  return m.home_team === "TBD" || m.away_team === "TBD";
 }
 
 function hasMyChoice(m: Match, choices: PreferenceChoice[]): boolean {
@@ -780,6 +784,7 @@ function MatchCard({
   userGroups,
   currentUserId,
   onPreferenceChange,
+  onPredictionSaved,
 }: {
   match: Match;
   groupSummaries: GroupPreferenceSummary[] | undefined;
@@ -791,6 +796,7 @@ function MatchCard({
     choice: PreferenceChoice | null,
     prevChoice: PreferenceChoice | null
   ) => void;
+  onPredictionSaved?: (matchId: number, p: MatchPrediction) => void;
 }) {
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -806,6 +812,8 @@ function MatchCard({
     match.status === "live" ||
     match.status === "finished" ||
     match.status === "cancelled";
+
+  const isTbdMatch = isTbd(match);
 
   const isHot = groupSummaries ? togetherPct(groupSummaries) >= 0.5 : false;
   const isSkipped =
@@ -977,15 +985,21 @@ function MatchCard({
     }
   };
 
-  const odds = [
-    { k: "1", v: match.home_odds },
-    { k: "X", v: match.draw_odds },
-    { k: "2", v: match.away_odds },
-  ];
-  const hasOdds = odds.some((o) => o.v != null);
-  const minOdds = hasOdds
-    ? Math.min(...odds.filter((o) => o.v != null).map((o) => o.v!))
-    : null;
+  const hasOdds =
+    match.home_odds != null || match.draw_odds != null || match.away_odds != null;
+
+  const probabilities = (() => {
+    if (!match.home_odds || !match.draw_odds || !match.away_odds) return null;
+    const rh = 1 / match.home_odds;
+    const rd = 1 / match.draw_odds;
+    const ra = 1 / match.away_odds;
+    const total = rh + rd + ra;
+    return {
+      home: Math.round((rh / total) * 100),
+      draw: Math.round((rd / total) * 100),
+      away: Math.round((ra / total) * 100),
+    };
+  })();
 
   return (
     <>
@@ -1004,7 +1018,7 @@ function MatchCard({
           prediction={prediction}
           usedBoosts={usedBoosts}
           onClose={() => setTipOpen(false)}
-          onSaved={(p) => setPrediction(p)}
+          onSaved={(p) => { setPrediction(p); onPredictionSaved?.(match.id, p); }}
         />
       )}
 
@@ -1071,19 +1085,7 @@ function MatchCard({
           <span className="ko-rel">{relativeKick(dt)}</span>
         </div>
 
-        {/* Odds */}
-        {hasOdds && (
-          <div className="odds">
-            {odds.map(({ k, v }) => (
-              <div key={k} className={`odd${v === minOdds && v != null ? " fav" : ""}`}>
-                <span className="ok">{k}</span>
-                <span className="ov">{v != null ? v.toFixed(2) : "—"}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Preference control */}
+        {/* Watch Mode */}
         {userGroups.length > 0 && (
           <PrefControl
             match={match}
@@ -1094,36 +1096,62 @@ function MatchCard({
           />
         )}
 
+        {/* Prediction Insights — implied probabilities from odds */}
+        {hasOdds && probabilities && (
+          <div className="pred-insights">
+            {[
+              { label: "Home Win", pct: probabilities.home },
+              { label: "Draw", pct: probabilities.draw },
+              { label: "Away Win", pct: probabilities.away },
+            ].map(({ label, pct }) => (
+              <div
+                key={label}
+                className={`pi-item${pct === Math.max(probabilities.home, probabilities.draw, probabilities.away) ? " pi-fav" : ""}`}
+              >
+                <span className="pi-label">{label}</span>
+                <span className="pi-pct">{pct}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Submit Tip button */}
         {!isPast && (
-          <button
-            className="btn-ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpenTip();
-            }}
-            disabled={predLoading}
-            style={{
-              width: "100%",
-              textAlign: "center",
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            {predLoading ? (
-              "Loading..."
-            ) : prediction ? (
-              <>
-                {prediction.home_goals}–{prediction.away_goals}
-                {prediction.boosted && " ⚡"}
-              </>
-            ) : (
-              "Submit Tip"
+          <>
+            {isTbdMatch && (
+              <p className="tbd-note">
+                Predictions will open once both teams are confirmed.
+              </p>
             )}
-          </button>
+            <button
+              className="btn-ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenTip();
+              }}
+              disabled={predLoading || isTbdMatch}
+              style={{
+                width: "100%",
+                textAlign: "center",
+                fontSize: 13,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              {predLoading ? (
+                "Loading..."
+              ) : prediction ? (
+                <>
+                  {prediction.home_goals}–{prediction.away_goals}
+                  {prediction.boosted && " ⚡"}
+                </>
+              ) : (
+                "Submit Tip"
+              )}
+            </button>
+          </>
         )}
 
         {/* Group panels */}
@@ -1296,20 +1324,26 @@ export function MatchesPage() {
   const [summaries, setSummaries] = useState<
     Record<number, GroupPreferenceSummary[]>
   >({});
+  const [predictions, setPredictions] = useState<Record<number, MatchPrediction>>({});
   const fetchRef = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     const id = ++fetchRef.current;
     try {
-      const [matchesRes, groupsRes] = await Promise.all([
+      const [matchesRes, groupsRes, predsRes] = await Promise.all([
         api.get<Match[]>("/matches", { params: { page_size: 200 } }),
         api.get<Group[]>("/groups/me"),
+        api.get<MatchPrediction[]>("/predictions").catch(() => ({ data: [] as MatchPrediction[] })),
       ]);
 
       if (id !== fetchRef.current) return;
       setAllMatches(matchesRes.data);
       setUserGroups(groupsRes.data);
+
+      const predsMap: Record<number, MatchPrediction> = {};
+      for (const p of predsRes.data) predsMap[p.match_id] = p;
+      setPredictions(predsMap);
 
       const results = await Promise.allSettled(
         matchesRes.data.map((m) =>
@@ -1387,6 +1421,10 @@ export function MatchesPage() {
     });
   };
 
+  const handlePredictionSaved = (matchId: number, p: MatchPrediction) => {
+    setPredictions((prev) => ({ ...prev, [matchId]: p }));
+  };
+
   // ── Derived data ────────────────────────────────────────────────────────────
 
   const upcomingMatches = useMemo(() => allMatches.filter(isUpcoming), [allMatches]);
@@ -1410,8 +1448,11 @@ export function MatchesPage() {
       .filter((m) => new Date(m.match_datetime) > now && hasMyChoice(m, ["watch", "watch_together"]))
       .sort((a, b) => new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime())[0];
     const nextGameSummaries = nextGame ? (summaries[nextGame.id] ?? []) : [];
-    return { together, atHome, skipped, notAnswered, nextGame, nextGameSummaries };
-  }, [upcomingMatches, summaries]);
+    const scheduled = allMatches.filter((m) => m.status === "scheduled");
+    const tipsSubmitted = scheduled.filter((m) => predictions[m.id] != null).length;
+    const tipsMissing = scheduled.filter((m) => !isTbd(m) && predictions[m.id] == null).length;
+    return { together, atHome, skipped, notAnswered, nextGame, nextGameSummaries, tipsSubmitted, tipsMissing };
+  }, [upcomingMatches, summaries, predictions, allMatches]);
 
   const sortByTime = (a: Match, b: Match) =>
     new Date(a.match_datetime).getTime() - new Date(b.match_datetime).getTime();
@@ -1440,10 +1481,14 @@ export function MatchesPage() {
       return upcomingMatches.filter(
         (m) => !hasMyChoice(m, ["watch", "watch_together", "skip"])
       );
+    if (activeFilter === "tips_submitted")
+      return allMatches.filter((m) => m.status === "scheduled" && predictions[m.id] != null);
+    if (activeFilter === "tips_missing")
+      return allMatches.filter((m) => m.status === "scheduled" && !isTbd(m) && predictions[m.id] == null);
     // "all": upcoming first then past, each group sorted by time ascending
     const past = allMatches.filter((m) => !isUpcoming(m));
     return [...upcomingMatches.slice().sort(sortByTime), ...past.slice().sort(sortByTime)];
-  }, [allMatches, upcomingMatches, activeFilter, summaries]);
+  }, [allMatches, upcomingMatches, activeFilter, summaries, predictions]);
 
   return (
     <div>
@@ -1522,6 +1567,34 @@ export function MatchesPage() {
         </div>
       )}
 
+      {/* Tips stats row */}
+      {!loading && allMatches.length > 0 && (
+        <div className="dash-tips">
+          <StatTile
+            kind="tip-done"
+            label="Tips Submitted"
+            value={dashboardStats.tipsSubmitted}
+            sub="upcoming with a tip"
+            clickable
+            active={activeFilter === "tips_submitted"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "tips_submitted" ? "upcoming" : "tips_submitted"))
+            }
+          />
+          <StatTile
+            kind="tip-todo"
+            label="Missing Tips"
+            value={dashboardStats.tipsMissing}
+            sub="upcoming without a tip"
+            clickable
+            active={activeFilter === "tips_missing"}
+            onClick={() =>
+              setActiveFilter((f) => (f === "tips_missing" ? "upcoming" : "tips_missing"))
+            }
+          />
+        </div>
+      )}
+
       {/* Match grid */}
       {loading ? (
         <div className="match-grid">
@@ -1538,6 +1611,8 @@ export function MatchesPage() {
           {activeFilter === "planned" && "No upcoming matches marked as At Home."}
           {activeFilter === "skip" && "No upcoming matches marked as Skip."}
           {activeFilter === "not_answered" && "All upcoming matches have been answered."}
+          {activeFilter === "tips_submitted" && "No upcoming matches with a submitted tip."}
+          {activeFilter === "tips_missing" && "No upcoming matches missing a tip — you're all caught up!"}
           {activeFilter === "all" && (
             <>
               No matches found.
@@ -1556,6 +1631,7 @@ export function MatchesPage() {
               userGroups={userGroups}
               currentUserId={user?.id ?? 0}
               onPreferenceChange={handlePreferenceChange}
+              onPredictionSaved={handlePredictionSaved}
             />
           ))}
         </div>
