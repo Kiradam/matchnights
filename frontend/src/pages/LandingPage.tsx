@@ -60,9 +60,9 @@ export function LandingPage() {
 
       <section className="relative mx-auto flex min-h-[76vh] w-full max-w-7xl flex-col items-center justify-center px-5 pb-8 pt-10 text-center sm:px-8 lg:px-10">
         <img
-          src="/logo.png"
+          src="/matchnights-logo-concept.png"
           alt="MatchNights"
-          className="h-auto max-h-[46vh] w-full max-w-[680px] object-contain"
+          className="h-auto max-h-[46vh] w-full max-w-[780px] object-contain"
         />
 
         <div className="mt-6 w-full max-w-5xl text-center">
