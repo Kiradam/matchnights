@@ -1095,14 +1095,15 @@ function MatchCard({
               { label: "Draw", pct: probabilities.draw },
               { label: "Away Win", pct: probabilities.away },
             ].map(({ label, pct }) => (
-              <Link
+              <button
                 key={label}
-                to={`/matches/${match.id}?tip=open`}
                 className="pi-item"
+                onClick={(e) => { e.stopPropagation(); handleOpenTip(); }}
+                disabled={predLoading || isTbdMatch}
               >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>
-              </Link>
+              </button>
             ))}
           </div>
         )}
