@@ -23,6 +23,7 @@ from app.routers.matches import router as matches_router
 from app.routers.predictions import router as predictions_router
 from app.routers.preferences import router as preferences_router
 from app.routers.users import router as users_router
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -35,7 +36,9 @@ async def lifespan(app: FastAPI):
     logger.info("MatchNights starting up")
     async with async_session_maker() as db:
         await seed_admin(db)
+    scheduler = start_scheduler(async_session_maker)
     yield
+    stop_scheduler(scheduler)
     logger.info("MatchNights shutting down")
 
 

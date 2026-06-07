@@ -118,6 +118,10 @@ async def sync_matches(
                     existing.home_team_tla = fix.home_team_tla
                 if fix.away_team_tla:
                     existing.away_team_tla = fix.away_team_tla
+                if fix.home_score is not None:
+                    existing.home_score = fix.home_score
+                if fix.away_score is not None:
+                    existing.away_score = fix.away_score
             else:
                 match = Match(
                     external_id=fix.external_id,
@@ -133,6 +137,8 @@ async def sync_matches(
                     matchday=fix.matchday,
                     home_team_tla=fix.home_team_tla,
                     away_team_tla=fix.away_team_tla,
+                    home_score=fix.home_score,
+                    away_score=fix.away_score,
                 )
                 db.add(match)
             synced += 1

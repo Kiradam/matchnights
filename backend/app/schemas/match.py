@@ -28,6 +28,8 @@ class MatchOut(BaseModel):
     home_odds: float | None = None
     draw_odds: float | None = None
     away_odds: float | None = None
+    home_score: int | None = None
+    away_score: int | None = None
     match_datetime: datetime
     venue: str | None
     status: MatchStatus

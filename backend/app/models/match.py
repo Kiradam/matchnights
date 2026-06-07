@@ -27,6 +27,8 @@ class Match(Base):
     status: Mapped[MatchStatus] = mapped_column(
         Enum(MatchStatus), default=MatchStatus.scheduled
     )
+    home_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    away_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

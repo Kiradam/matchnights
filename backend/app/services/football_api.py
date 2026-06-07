@@ -24,7 +24,8 @@ class NormalisedMatch:
     __slots__ = ("external_id", "home_team", "away_team", "stage",
                  "match_datetime", "venue", "status",
                  "home_team_crest", "away_team_crest", "matchday",
-                 "home_team_tla", "away_team_tla")
+                 "home_team_tla", "away_team_tla",
+                 "home_score", "away_score")
 
     def __init__(
         self,
@@ -40,6 +41,8 @@ class NormalisedMatch:
         matchday: int | None = None,
         home_team_tla: str | None = None,
         away_team_tla: str | None = None,
+        home_score: int | None = None,
+        away_score: int | None = None,
     ) -> None:
         self.external_id = external_id
         self.home_team = home_team
@@ -53,6 +56,8 @@ class NormalisedMatch:
         self.matchday = matchday
         self.home_team_tla = home_team_tla
         self.away_team_tla = away_team_tla
+        self.home_score = home_score
+        self.away_score = away_score
 
 
 # ── openfootball source ──────────────────────────────────────────────────────
@@ -174,10 +179,16 @@ class _League(BaseModel):
     round: str = "Unknown"
 
 
+class _Goals(BaseModel):
+    home: int | None = None
+    away: int | None = None
+
+
 class _Fixture(BaseModel):
     fixture: _FixtureInfo
     teams: _Teams
     league: _League
+    goals: _Goals = _Goals()
 
     @field_validator("fixture", mode="before")
     @classmethod
@@ -204,6 +215,13 @@ def _normalise_api_sports(f: _Fixture) -> NormalisedMatch:
     venue_parts = [fi.venue.name, fi.venue.city]
     venue = ", ".join(p for p in venue_parts if p) or None
 
+    mapped_status = _STATUS_MAP.get(fi.status.short, "scheduled")
+    home_score: int | None = None
+    away_score: int | None = None
+    if mapped_status == "finished":
+        home_score = f.goals.home
+        away_score = f.goals.away
+
     return NormalisedMatch(
         external_id=str(fi.id),
         home_team=f.teams.home.name,
@@ -211,7 +229,9 @@ def _normalise_api_sports(f: _Fixture) -> NormalisedMatch:
         stage=f.league.round,
         match_datetime=match_utc,
         venue=venue,
-        status=_STATUS_MAP.get(fi.status.short, "scheduled"),
+        status=mapped_status,
+        home_score=home_score,
+        away_score=away_score,
     )
 
 
@@ -330,6 +350,14 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
                 m["utcDate"].replace("Z", "+00:00")
             ).astimezone(UTC).replace(tzinfo=None)
 
+            home_score: int | None = None
+            away_score: int | None = None
+            if status == "finished":
+                score_obj = m.get("score") or {}
+                full_time = score_obj.get("fullTime") or {}
+                home_score = full_time.get("home")
+                away_score = full_time.get("away")
+
             normalised.append(NormalisedMatch(
                 external_id=f"fd-{m['id']}",
                 home_team=home,
@@ -343,6 +371,8 @@ async def _fetch_football_data() -> tuple[list[NormalisedMatch], int]:
                 matchday=m.get("matchday"),
                 home_team_tla=home_tla,
                 away_team_tla=away_tla,
+                home_score=home_score,
+                away_score=away_score,
             ))
         except Exception as exc:
             logger.warning("football_data: skipping match: %s", exc)

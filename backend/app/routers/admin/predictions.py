@@ -13,7 +13,10 @@ from app.models.match import Match
 from app.models.prediction import MatchPrediction, PredictionState
 from app.models.user import User
 from app.schemas.predictions import MatchPredictionOut, MatchResolveIn
-from app.services.prediction_evaluator import evaluate_match_predictions
+from app.services.prediction_evaluator import (
+    evaluate_match_predictions,
+    evaluate_winner_predictions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +89,17 @@ async def resolve_match(
         qualifier_team_name=body.qualifier_team_name,
         db=db,
     )
+
+    stage_lower = match.stage.lower()
+    if "final" in stage_lower and "semi" not in stage_lower and "3rd" not in stage_lower and "third" not in stage_lower:
+        if body.home_score > body.away_score:
+            winner_name = match.home_team
+        elif body.away_score > body.home_score:
+            winner_name = match.away_team
+        else:
+            winner_name = body.qualifier_team_name
+        if winner_name:
+            await evaluate_winner_predictions(winner_name, db)
 
     db.add(
         AuditLog(
