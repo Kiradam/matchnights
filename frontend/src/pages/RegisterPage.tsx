@@ -30,9 +30,15 @@ export function RegisterPage() {
     );
   }
 
+  const usernameValid = /^[A-Za-z0-9]+$/.test(fullName);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!usernameValid) {
+      setError("Username may only contain letters and numbers — no spaces or special characters.");
+      return;
+    }
     if (password !== confirm) {
       setError("Passwords do not match.");
       return;
@@ -43,10 +49,15 @@ export function RegisterPage() {
       await login(email, password);
       navigate("/matches", { replace: true });
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 400 || status === 410) setError("Invite link is invalid or expired.");
-      else if (status === 409) setError("An account with this email already exists.");
-      else setError("Something went wrong. Please try again.");
+      const res = (err as { response?: { status?: number; data?: { detail?: string } } })?.response;
+      if (res?.status === 400 || res?.status === 410) setError("Invite link is invalid or expired.");
+      else if (res?.status === 409) {
+        const detail = res.data?.detail ?? "";
+        if (detail.toLowerCase().includes("username")) setError("That username is already taken.");
+        else setError("An account with this email already exists.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -59,7 +70,17 @@ export function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username / Nickname</label>
-            <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} />
+            <input
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className={inputCls}
+              autoComplete="username"
+            />
+            {fullName && !usernameValid && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">Letters and numbers only — no spaces or special characters.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>

@@ -529,6 +529,116 @@ function DistributionCharts({
 
 // ── Leaderboard bar chart ─────────────────────────────────────────────────────
 
+const MEDAL_COLORS = {
+  1: { base: "#FFD700", glow: "rgba(255,215,0,0.25)", platform: "linear-gradient(180deg,#FFD700 0%,#B8860B 100%)", height: 88 },
+  2: { base: "#C0C0C0", glow: "rgba(192,192,192,0.20)", platform: "linear-gradient(180deg,#D8D8D8 0%,#909090 100%)", height: 64 },
+  3: { base: "#CD7F32", glow: "rgba(205,127,50,0.20)", platform: "linear-gradient(180deg,#CD7F32 0%,#8B4513 100%)", height: 48 },
+} as const;
+
+function PodiumSlot({
+  entry,
+  rank,
+  isMe,
+}: {
+  entry: LeaderboardEntry;
+  rank: 1 | 2 | 3;
+  isMe: boolean;
+}) {
+  const medal = MEDAL_COLORS[rank];
+  const avatarSize = rank === 1 ? 60 : 48;
+  const label = rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
+      {/* Avatar + name above the platform */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, paddingBottom: 8 }}>
+        <div
+          style={{
+            borderRadius: "50%",
+            padding: 3,
+            background: `linear-gradient(135deg, ${medal.base}, transparent)`,
+            boxShadow: `0 0 12px ${medal.glow}`,
+          }}
+        >
+          <img
+            src={dicebearUrl(entry.user_id)}
+            alt={entry.full_name}
+            style={{
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: "50%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: isMe ? "var(--gold)" : "var(--text)",
+            textAlign: "center",
+            maxWidth: 80,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            lineHeight: 1.2,
+          }}
+        >
+          {entry.full_name}
+          {isMe && <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 3, fontSize: 10 }}>(you)</span>}
+        </div>
+        <div
+          style={{
+            fontFamily: '"Archivo", sans-serif',
+            fontStretch: "125%",
+            fontWeight: 900,
+            fontSize: rank === 1 ? 15 : 13,
+            color: medal.base,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+          }}
+        >
+          {entry.total_points} pts
+        </div>
+        {entry.exact_score_count > 0 && (
+          <div style={{ fontSize: 9, fontWeight: 700, color: "var(--gold)", fontVariantNumeric: "tabular-nums" }}>
+            {entry.exact_score_count} exact
+          </div>
+        )}
+      </div>
+
+      {/* Platform block */}
+      <div
+        style={{
+          width: "100%",
+          height: medal.height,
+          background: medal.platform,
+          borderRadius: "6px 6px 0 0",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          paddingTop: 10,
+          fontSize: rank === 1 ? 22 : 18,
+          boxShadow: `0 -2px 8px ${medal.glow}`,
+          border: `1px solid color-mix(in oklab, ${medal.base} 30%, transparent)`,
+          borderBottom: "none",
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function LeaderboardBarChart({
   entries,
   currentUserId,
@@ -540,167 +650,169 @@ function LeaderboardBarChart({
     return <div className="empty-day">No leaderboard data yet.</div>;
   }
 
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
   const maxPoints = Math.max(...entries.map((e) => e.total_points), 1);
 
+  // podium order: 2nd (left), 1st (center), 3rd (right)
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean) as LeaderboardEntry[];
+  const podiumRanks = top3[1] ? ([2, 1, 3] as const) : ([1] as const);
+
   return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius)",
-        overflow: "hidden",
-      }}
-    >
-      {entries.map((entry, idx) => {
-        const isMe = entry.user_id === currentUserId;
-        const rank = idx + 1;
-        const barPct = Math.max((entry.total_points / maxPoints) * 100, 0);
-        const rankEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
-
-        return (
-          <div
+    <div>
+      {/* Podium */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 4,
+          padding: "16px 12px 0",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderBottom: rest.length > 0 ? "none" : "1px solid var(--border)",
+          borderRadius: rest.length > 0 ? "var(--radius) var(--radius) 0 0" : "var(--radius)",
+        }}
+      >
+        {podiumOrder.map((entry, i) => (
+          <PodiumSlot
             key={entry.user_id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 14px",
-              borderBottom: idx < entries.length - 1 ? "1px solid var(--border)" : "none",
-              minHeight: 52,
-              background: isMe
-                ? "color-mix(in oklab, var(--accent, var(--gold)) 8%, transparent)"
-                : "transparent",
-            }}
-          >
-            {/* Rank */}
-            <div
-              style={{
-                width: 28,
-                flexShrink: 0,
-                textAlign: "center",
-                fontFamily: '"Archivo", sans-serif',
-                fontStretch: "125%",
-                fontWeight: 900,
-                fontSize: rankEmoji ? 18 : 13,
-                color: rank === 1
-                  ? "var(--gold)"
-                  : rank <= 3
-                  ? "var(--text-2)"
-                  : "var(--text-3)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {rankEmoji ?? rank}
-            </div>
+            entry={entry}
+            rank={podiumRanks[i] as 1 | 2 | 3}
+            isMe={entry.user_id === currentUserId}
+          />
+        ))}
+      </div>
 
-            {/* Avatar */}
-            <img
-              src={dicebearUrl(entry.user_id)}
-              alt={entry.full_name}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                flexShrink: 0,
-                objectFit: "cover",
-              }}
-            />
+      {/* 4th place and below */}
+      {rest.length > 0 && (
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderTop: "none",
+            borderRadius: "0 0 var(--radius) var(--radius)",
+            overflow: "hidden",
+          }}
+        >
+          {rest.map((entry, idx) => {
+            const isMe = entry.user_id === currentUserId;
+            const rank = idx + 4;
+            const barPct = Math.max((entry.total_points / maxPoints) * 100, 0);
 
-            {/* Name + bar column */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Name */}
+            return (
               <div
+                key={entry.user_id}
                 style={{
-                  fontSize: 12,
-                  fontWeight: isMe ? 700 : 600,
-                  color: isMe ? "var(--gold)" : "var(--text)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  lineHeight: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 14px",
+                  borderBottom: idx < rest.length - 1 ? "1px solid var(--border)" : "none",
+                  minHeight: 52,
+                  background: isMe
+                    ? "color-mix(in oklab, var(--accent, var(--gold)) 8%, transparent)"
+                    : "transparent",
                 }}
               >
-                {entry.full_name}
-                {isMe && (
-                  <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4, fontSize: 11 }}>
-                    (you)
-                  </span>
-                )}
-              </div>
-              {/* Bar track */}
-              <div
-                style={{
-                  height: 8,
-                  background: "var(--surface-2)",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  border: "1px solid var(--border)",
-                }}
-              >
+                {/* Rank */}
                 <div
                   style={{
-                    height: "100%",
-                    width: barPct > 0 ? `${barPct}%` : "4px",
-                    minWidth: 4,
-                    background: isMe
-                      ? "var(--accent, var(--gold))"
-                      : "color-mix(in oklab, var(--watch) 40%, transparent)",
-                    borderRadius: 4,
-                    transition: "width 0.4s ease",
+                    width: 28,
+                    flexShrink: 0,
+                    textAlign: "center",
+                    fontFamily: '"Archivo", sans-serif',
+                    fontStretch: "125%",
+                    fontWeight: 900,
+                    fontSize: 13,
+                    color: "var(--text-3)",
+                    fontVariantNumeric: "tabular-nums",
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isMe) {
-                      (e.currentTarget as HTMLDivElement).style.background =
-                        "color-mix(in oklab, var(--watch) 65%, transparent)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isMe) {
-                      (e.currentTarget as HTMLDivElement).style.background =
-                        "color-mix(in oklab, var(--watch) 40%, transparent)";
-                    }
-                  }}
-                />
-              </div>
-            </div>
+                >
+                  {rank}
+                </div>
 
-            {/* Points + exact label */}
-            <div
-              style={{
-                flexShrink: 0,
-                textAlign: "right",
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: '"Archivo", sans-serif',
-                  fontStretch: "125%",
-                  fontWeight: 900,
-                  fontSize: 14,
-                  color: isMe ? "var(--gold)" : "var(--text)",
-                  fontVariantNumeric: "tabular-nums",
-                  lineHeight: 1,
-                }}
-              >
-                {entry.total_points} pts
+                {/* Avatar */}
+                <img
+                  src={dicebearUrl(entry.user_id)}
+                  alt={entry.full_name}
+                  style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0, objectFit: "cover" }}
+                />
+
+                {/* Name + bar */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: isMe ? 700 : 600,
+                      color: isMe ? "var(--gold)" : "var(--text)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {entry.full_name}
+                    {isMe && (
+                      <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4, fontSize: 11 }}>
+                        (you)
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      background: "var(--surface-2)",
+                      borderRadius: 4,
+                      overflow: "hidden",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: barPct > 0 ? `${barPct}%` : "4px",
+                        minWidth: 4,
+                        background: isMe
+                          ? "var(--accent, var(--gold))"
+                          : "color-mix(in oklab, var(--watch) 40%, transparent)",
+                        borderRadius: 4,
+                        transition: "width 0.4s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Points */}
+                <div style={{ flexShrink: 0, textAlign: "right", display: "flex", flexDirection: "column", gap: 1 }}>
+                  <div
+                    style={{
+                      fontFamily: '"Archivo", sans-serif',
+                      fontStretch: "125%",
+                      fontWeight: 900,
+                      fontSize: 14,
+                      color: isMe ? "var(--gold)" : "var(--text)",
+                      fontVariantNumeric: "tabular-nums",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {entry.total_points} pts
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: entry.exact_score_count > 0 ? "var(--gold)" : "var(--text-3)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {entry.exact_score_count} exact
+                  </div>
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: entry.exact_score_count > 0 ? "var(--gold)" : "var(--text-3)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {entry.exact_score_count} exact
-              </div>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

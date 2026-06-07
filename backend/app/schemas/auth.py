@@ -14,10 +14,14 @@ class RegisterRequest(BaseModel):
 
     @field_validator("full_name")
     @classmethod
-    def name_not_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("full_name must not be blank")
-        return v.strip()
+    def name_alphanumeric(cls, v: str) -> str:
+        import re
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Username must not be blank")
+        if not re.fullmatch(r"[A-Za-z0-9]+", stripped):
+            raise ValueError("Username may only contain letters and numbers (no spaces or special characters)")
+        return stripped
 
     @field_validator("password")
     @classmethod
