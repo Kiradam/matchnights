@@ -147,11 +147,18 @@ export interface OutcomeCounts {
   away_win: number;
 }
 
+export interface GoalDistEntry {
+  goals: number;
+  count: number;
+}
+
 export interface MatchPredictionStats {
   match_id: number;
   total: number;
   outcome_counts: OutcomeCounts;
   top_scores: PredictedScore[];
+  home_goal_dist: GoalDistEntry[];
+  away_goal_dist: GoalDistEntry[];
 }
 
 export interface ManualReviewMatch {

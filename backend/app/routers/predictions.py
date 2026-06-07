@@ -19,6 +19,7 @@ from app.models.prediction import (
 )
 from app.models.user import User
 from app.schemas.predictions import (
+    GoalDistEntry,
     LeaderboardEntry,
     MatchPredictionIn,
     MatchPredictionOut,
@@ -308,6 +309,8 @@ async def get_match_prediction_stats(
 
     outcome_counts = OutcomeCounts(home_win=0, draw=0, away_win=0)
     score_tally: dict[tuple[int, int], int] = {}
+    home_tally: dict[int, int] = {}
+    away_tally: dict[int, int] = {}
     for pred in preds:
         if pred.predicted_outcome == PredictedOutcome.home_win:
             outcome_counts.home_win += 1
@@ -317,17 +320,27 @@ async def get_match_prediction_stats(
             outcome_counts.away_win += 1
         key = (pred.home_goals, pred.away_goals)
         score_tally[key] = score_tally.get(key, 0) + 1
+        home_tally[pred.home_goals] = home_tally.get(pred.home_goals, 0) + 1
+        away_tally[pred.away_goals] = away_tally.get(pred.away_goals, 0) + 1
 
     top_scores = [
         PredictedScore(home=h, away=a, count=c)
         for (h, a), c in sorted(score_tally.items(), key=lambda x: -x[1])[:6]
     ]
 
+    def _build_dist(tally: dict[int, int]) -> list[GoalDistEntry]:
+        if not tally:
+            return []
+        max_g = max(tally)
+        return [GoalDistEntry(goals=g, count=tally.get(g, 0)) for g in range(max_g + 1)]
+
     return MatchPredictionStats(
         match_id=match_id,
         total=len(preds),
         outcome_counts=outcome_counts,
         top_scores=top_scores,
+        home_goal_dist=_build_dist(home_tally),
+        away_goal_dist=_build_dist(away_tally),
     )
 
 

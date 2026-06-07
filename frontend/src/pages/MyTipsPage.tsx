@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import type {
+  GoalDistEntry,
   Group,
   LeaderboardEntry,
   Match,
@@ -432,23 +433,21 @@ function Spinner() {
   );
 }
 
-// ── Outcome distribution pill ─────────────────────────────────────────────────
+// ── Goal distribution bar chart ───────────────────────────────────────────────
 
-function OutcomePill({
-  stats,
-  myOutcome,
+const BAR_MAX_H = 52;
+
+function GoalDistChart({
+  dist,
+  myGoals,
+  teamLabel,
 }: {
-  stats: MatchPredictionStats;
-  myOutcome: string;
+  dist: GoalDistEntry[];
+  myGoals: number;
+  teamLabel: string;
 }) {
-  const { total, outcome_counts } = stats;
-  if (total === 0) return null;
-
-  const segments: Array<{ key: string; label: string; count: number; color: string }> = [
-    { key: "home_win", label: "H", count: outcome_counts.home_win, color: "var(--watch)" },
-    { key: "draw",     label: "D", count: outcome_counts.draw,     color: "var(--text-3)" },
-    { key: "away_win", label: "A", count: outcome_counts.away_win, color: "var(--together)" },
-  ];
+  if (!dist || dist.length === 0) return null;
+  const maxCount = Math.max(...dist.map((d) => d.count), 1);
 
   return (
     <div>
@@ -456,189 +455,88 @@ function OutcomePill({
         style={{
           fontSize: 10,
           fontWeight: 800,
-          textTransform: "uppercase",
+          textTransform: "uppercase" as const,
           letterSpacing: "0.08em",
           color: "var(--text-3)",
-          marginBottom: 6,
+          marginBottom: 8,
         }}
       >
-        Outcome distribution
+        {teamLabel} goals
       </div>
       <div
         style={{
           display: "flex",
-          height: 28,
-          borderRadius: 14,
-          overflow: "hidden",
-          gap: 2,
+          alignItems: "flex-end",
+          gap: 5,
+          height: BAR_MAX_H + 32,
         }}
       >
-        {segments.map((seg) => {
-          const pct = Math.round((seg.count / total) * 100);
-          const isMe = seg.key === myOutcome;
+        {dist.map(({ goals, count }) => {
+          const isMe = goals === myGoals;
+          const barH = count > 0
+            ? Math.max(Math.round((count / maxCount) * BAR_MAX_H), 4)
+            : 0;
           return (
             <div
-              key={seg.key}
+              key={goals}
               style={{
-                flex: pct,
-                minWidth: pct === 0 ? 0 : 4,
-                background: seg.color,
-                opacity: pct === 0 ? 0 : 1,
+                flex: 1,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: 10,
-                fontWeight: 800,
-                color: "white",
-                position: "relative",
-                outline: isMe ? "2px solid rgba(255,255,255,0.85)" : "none",
-                outlineOffset: isMe ? -2 : 0,
-                transition: "flex 0.3s ease",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-              }}
-              title={`${seg.label}: ${pct}%`}
-            >
-              {pct >= 20 ? `${pct}%` : ""}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
-        {segments.map((seg) => {
-          const pct = Math.round((seg.count / total) * 100);
-          const isMe = seg.key === myOutcome;
-          return (
-            <div
-              key={seg.key}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: 10,
-                fontWeight: isMe ? 800 : 600,
-                color: isMe ? seg.color : "var(--text-3)",
+                gap: 0,
               }}
             >
-              <span
+              {/* Count above bar */}
+              <div
                 style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: seg.color,
-                  flexShrink: 0,
+                  fontSize: 9,
+                  fontWeight: isMe ? 800 : 500,
+                  color: isMe ? "var(--gold)" : "var(--text-3)",
+                  minHeight: 13,
+                  lineHeight: "13px",
+                  marginBottom: 2,
+                }}
+              >
+                {count > 0 ? count : ""}
+              </div>
+              {/* Bar */}
+              <div
+                style={{
+                  width: "100%",
+                  height: barH || 1,
+                  background: isMe
+                    ? "var(--gold)"
+                    : "color-mix(in oklab, var(--watch) 50%, transparent)",
+                  borderRadius: "3px 3px 0 0",
+                  boxShadow: isMe
+                    ? "0 0 10px color-mix(in oklab, var(--gold) 50%, transparent)"
+                    : "none",
+                  opacity: count === 0 ? 0 : 1,
+                  transition: "height 0.35s ease",
                 }}
               />
-              {seg.label} {pct}%{isMe ? " ★" : ""}
-            </div>
-          );
-        })}
-        <div style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-3)", fontWeight: 600 }}>
-          {total} tip{total !== 1 ? "s" : ""}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Top scores bar chart ───────────────────────────────────────────────────────
-
-function TopScoresChart({
-  stats,
-  myHome,
-  myAway,
-}: {
-  stats: MatchPredictionStats;
-  myHome: number;
-  myAway: number;
-}) {
-  const { top_scores, total } = stats;
-  if (!top_scores || top_scores.length === 0) return null;
-
-  const top = top_scores.slice(0, 6);
-  const maxCount = Math.max(...top.map((s) => s.count));
-
-  return (
-    <div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: "var(--text-3)",
-          marginBottom: 6,
-        }}
-      >
-        Top predicted scores
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {top.map((score, i) => {
-          const isMe = score.home === myHome && score.away === myAway;
-          const barPct = maxCount > 0 ? (score.count / maxCount) * 100 : 0;
-          const totalPct = total > 0 ? Math.round((score.count / total) * 100) : 0;
-          return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 11,
-              }}
-            >
-              {/* Score label */}
+              {/* Goal label */}
               <div
                 style={{
-                  width: 32,
-                  fontFamily: '"Archivo", sans-serif',
-                  fontStretch: "125%",
-                  fontWeight: 900,
-                  fontSize: 11,
-                  color: isMe ? "var(--accent, var(--gold))" : "var(--text-2)",
-                  flexShrink: 0,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {score.home}–{score.away}
-              </div>
-              {/* Bar track */}
-              <div
-                style={{
-                  flex: 1,
-                  height: 14,
-                  background: "var(--surface-2)",
-                  borderRadius: 7,
-                  overflow: "hidden",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${barPct}%`,
-                    minWidth: barPct > 0 ? 4 : 0,
-                    background: isMe
-                      ? "var(--accent, var(--gold))"
-                      : "color-mix(in oklab, var(--watch) 45%, transparent)",
-                    borderRadius: 7,
-                    transition: "width 0.4s ease",
-                  }}
-                />
-              </div>
-              {/* Count + pct */}
-              <div
-                style={{
-                  width: 44,
-                  textAlign: "right",
                   fontSize: 10,
-                  fontWeight: isMe ? 800 : 600,
-                  color: isMe ? "var(--accent, var(--gold))" : "var(--text-3)",
-                  fontVariantNumeric: "tabular-nums",
-                  flexShrink: 0,
+                  fontWeight: isMe ? 800 : 500,
+                  color: isMe ? "var(--gold)" : "var(--text-3)",
+                  marginTop: 4,
                 }}
               >
-                {score.count} · {totalPct}%
+                {goals}
+              </div>
+              {/* User marker */}
+              <div
+                style={{
+                  fontSize: 8,
+                  color: "var(--gold)",
+                  lineHeight: "10px",
+                  visibility: isMe ? "visible" : "hidden",
+                }}
+              >
+                ▲
               </div>
             </div>
           );
@@ -653,10 +551,17 @@ function TopScoresChart({
 function DistributionCharts({
   stats,
   prediction,
+  homeTla,
+  awayTla,
 }: {
   stats: MatchPredictionStats;
   prediction: MatchPrediction;
+  homeTla: string;
+  awayTla: string;
 }) {
+  const { home_goal_dist, away_goal_dist, total } = stats;
+  if (total === 0 || !home_goal_dist?.length || !away_goal_dist?.length) return null;
+
   return (
     <div
       style={{
@@ -664,15 +569,19 @@ function DistributionCharts({
         paddingTop: 12,
         borderTop: "1px solid var(--border)",
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: 16,
+        gridTemplateColumns: "1fr 1fr",
+        gap: 20,
       }}
     >
-      <OutcomePill stats={stats} myOutcome={prediction.predicted_outcome} />
-      <TopScoresChart
-        stats={stats}
-        myHome={prediction.home_goals}
-        myAway={prediction.away_goals}
+      <GoalDistChart
+        dist={home_goal_dist}
+        myGoals={prediction.home_goals}
+        teamLabel={homeTla}
+      />
+      <GoalDistChart
+        dist={away_goal_dist}
+        myGoals={prediction.away_goals}
+        teamLabel={awayTla}
       />
     </div>
   );
@@ -988,9 +897,14 @@ function PredictionCard({
         </div>
       </div>
 
-      {/* Distribution charts — visible for all predictions as soon as there is group data */}
+      {/* Distribution charts — visible as soon as any prediction exists for this match */}
       {showCharts && (
-        <DistributionCharts stats={stats} prediction={prediction} />
+        <DistributionCharts
+          stats={stats}
+          prediction={prediction}
+          homeTla={homeTla}
+          awayTla={awayTla}
+        />
       )}
     </div>
   );

@@ -92,11 +92,18 @@ class OutcomeCounts(BaseModel):
     away_win: int
 
 
+class GoalDistEntry(BaseModel):
+    goals: int
+    count: int
+
+
 class MatchPredictionStats(BaseModel):
     match_id: int
     total: int
     outcome_counts: OutcomeCounts
     top_scores: list[PredictedScore]
+    home_goal_dist: list[GoalDistEntry]
+    away_goal_dist: list[GoalDistEntry]
 
 
 # ---------------------------------------------------------------------------
