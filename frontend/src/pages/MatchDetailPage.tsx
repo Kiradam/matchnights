@@ -464,8 +464,10 @@ function PredictionPopup({
                   <input
                     type="number"
                     min={0}
+                    max={99}
                     value={homeGoals}
-                    onChange={(e) => setHomeGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                    onChange={(e) => setHomeGoals(Math.min(99, Math.max(0, parseInt(e.target.value) || 0)))}
                     style={{
                       width: "100%",
                       padding: "10px 8px",
@@ -505,8 +507,10 @@ function PredictionPopup({
                   <input
                     type="number"
                     min={0}
+                    max={99}
                     value={awayGoals}
-                    onChange={(e) => setAwayGoals(Math.max(0, parseInt(e.target.value) || 0))}
+                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                    onChange={(e) => setAwayGoals(Math.min(99, Math.max(0, parseInt(e.target.value) || 0)))}
                     style={{
                       width: "100%",
                       padding: "10px 8px",

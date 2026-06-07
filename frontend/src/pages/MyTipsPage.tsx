@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import type {
@@ -879,7 +880,10 @@ function PredictionCard({
       {/* Main prediction row — fixed columns, no wrap */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {/* Match info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <Link
+          to={match ? `/matches/${match.id}` : "#"}
+          style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+        >
           <div
             style={{
               fontFamily: '"Archivo", sans-serif',
@@ -904,7 +908,7 @@ function PredictionCard({
               {match.stage} · {dateStr}
             </div>
           )}
-        </div>
+        </Link>
 
         {/* Predicted score — fixed width, centred under "Tip" */}
         <div
