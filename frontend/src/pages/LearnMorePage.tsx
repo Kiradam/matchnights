@@ -43,6 +43,21 @@ const features = [
   },
 ];
 
+const noBettingFeatures = [
+  {
+    title: "No prizes",
+    text: "MatchNights does not offer prizes, payouts, or rewards for predictions.",
+  },
+  {
+    title: "Friendly competition",
+    text: "Compete with friends, compare opinions, and enjoy match nights together.",
+  },
+  {
+    title: "Your group, your rules",
+    text: "If your group wants to celebrate the winner, that's entirely up to you and outside the platform.",
+  },
+];
+
 function PrimaryLink({ children, to }: { children: string; to: string }) {
   return (
     <Link
@@ -72,32 +87,6 @@ function Section({ children, title }: { children: ReactNode; title: string }) {
         {title}
       </h2>
       <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-function StatementSection({
-  children,
-  headline,
-}: {
-  children: ReactNode;
-  headline: string[];
-}) {
-  return (
-    <section className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.38fr_0.62fr] lg:gap-12 lg:px-10 lg:py-20">
-      <h2 className="font-display text-3xl font-black uppercase leading-none tracking-normal text-white sm:text-4xl lg:text-5xl">
-        {headline.map((line, index) => (
-          <span
-            key={line}
-            className={index === headline.length - 1 ? "block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent" : "block"}
-          >
-            {line}
-          </span>
-        ))}
-      </h2>
-      <div className="max-w-3xl space-y-4 text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg lg:pt-1">
-        {children}
-      </div>
     </section>
   );
 }
@@ -183,6 +172,23 @@ export function LearnMorePage() {
         </p>
       </Section>
 
+      <Section title="How match prediction insights work?">
+        <p className="max-w-3xl text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
+          The prediction insights shown in MatchNights are based on publicly
+          available market data and probability calculations.
+          <br />
+          <br />
+          Instead of displaying complex numbers, we convert those estimates into
+          simple win, draw, and away-win probabilities that are easier to
+          understand and discuss with friends.
+          <br />
+          <br />
+          They're not guarantees and they're not betting advice — they're simply
+          a helpful way to spark conversation and compare opinions before
+          kickoff.
+        </p>
+      </Section>
+
       <Section title="What MatchNights supports">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
@@ -201,38 +207,23 @@ export function LearnMorePage() {
         </div>
       </Section>
 
-      <StatementSection headline={["No betting.", "Just friendly", "competition."]}>
-        <p>
-          MatchNights is not a betting platform and there are no prizes,
-          payouts, or gambling features.
-        </p>
-        <p>
-          The goal is simple: make predictions, compare opinions, and enjoy
-          match nights with your friends.
-        </p>
-        <p>
-          If your group wants to celebrate the best predictor with a high five,
-          a coffee, or bragging rights, that's entirely up to you — MatchNights
-          is only here to make the experience more fun and organized.
-        </p>
-      </StatementSection>
-
-      <StatementSection headline={["How match", "prediction", "insights work"]}>
-        <p>
-          The prediction insights shown in MatchNights are based on publicly
-          available market data and probability calculations.
-        </p>
-        <p>
-          Instead of displaying complex numbers, we convert those estimates into
-          simple win, draw, and away-win probabilities that are easier to
-          understand and discuss with friends.
-        </p>
-        <p>
-          They're not guarantees and they're not betting advice — they're simply
-          a helpful way to spark conversation and compare opinions before
-          kickoff.
-        </p>
-      </StatementSection>
+      <Section title="No betting. Just friendly competition.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {noBettingFeatures.map((feature) => (
+            <article
+              key={feature.title}
+              className="rounded-lg border border-white/10 bg-white/[0.05] p-5"
+            >
+              <h3 className="font-display text-base font-black uppercase tracking-normal text-white">
+                {feature.title}
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#9bb1d1]">
+                {feature.text}
+              </p>
+            </article>
+          ))}
+        </div>
+      </Section>
 
       <section className="mx-auto w-full max-w-5xl px-5 py-14 text-center sm:px-8 lg:px-10">
         <div className="rounded-lg border border-[#2d8cff]/30 bg-[#071a3a]/70 px-5 py-10 shadow-[0_22px_70px_rgba(18,108,255,0.18)]">
