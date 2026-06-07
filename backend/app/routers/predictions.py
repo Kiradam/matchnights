@@ -295,21 +295,11 @@ async def get_match_prediction_stats(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MatchPredictionStats:
-    """Return aggregate prediction distribution for a match (available after kickoff)."""
+    """Return aggregate prediction distribution for a match (always available; no user names exposed)."""
     match_result = await db.execute(select(Match).where(Match.id == match_id))
     match = match_result.scalar_one_or_none()
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
-
-    now = datetime.now(UTC)
-    kickoff = match.match_datetime
-    if kickoff.tzinfo is None:
-        kickoff = kickoff.replace(tzinfo=UTC)
-    if now < kickoff:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Prediction distribution is not visible before kickoff",
-        )
 
     preds_result = await db.execute(
         select(MatchPrediction).where(MatchPrediction.match_id == match_id)

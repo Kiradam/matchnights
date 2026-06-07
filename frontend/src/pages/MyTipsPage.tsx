@@ -866,9 +866,15 @@ function LeaderboardBarChart({
   );
 }
 
-// ── Prediction card ───────────────────────────────────────────────────────────
+// Column widths — must match the header row exactly
+const COL = {
+  score:  44,  // "Tip"
+  boost:  76,  // "⚡ Boost" badge space
+  status: 88,  // "Status"
+  points: 68,  // "Points"
+} as const;
 
-const POST_KICKOFF_STATES: PredictionState[] = ["tip_locked", "evaluated", "manual_review"];
+// ── Prediction card ───────────────────────────────────────────────────────────
 
 function PredictionCard({
   prediction,
@@ -891,8 +897,7 @@ function PredictionCard({
     ? dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
     : "";
 
-  const showCharts =
-    POST_KICKOFF_STATES.includes(prediction.state) && stats !== undefined && stats.total > 0;
+  const showCharts = stats !== undefined && stats.total > 0;
 
   return (
     <div
@@ -901,17 +906,10 @@ function PredictionCard({
         borderBottom: "1px solid var(--border)",
       }}
     >
-      {/* Main prediction row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+      {/* Main prediction row — fixed columns, no wrap */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {/* Match info */}
-        <div style={{ flex: 1, minWidth: 140 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: '"Archivo", sans-serif',
@@ -920,6 +918,9 @@ function PredictionCard({
               fontSize: 14,
               color: "var(--text)",
               letterSpacing: "0.01em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {homeTla}
@@ -929,15 +930,18 @@ function PredictionCard({
             {awayTla}
           </div>
           {match && (
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {match.stage} · {dateStr}
             </div>
           )}
         </div>
 
-        {/* Predicted score */}
+        {/* Predicted score — fixed width, centred under "Tip" */}
         <div
           style={{
+            width: COL.score,
+            flexShrink: 0,
+            textAlign: "center",
             fontFamily: '"Archivo", sans-serif',
             fontStretch: "125%",
             fontWeight: 900,
@@ -945,18 +949,18 @@ function PredictionCard({
             color: "var(--text)",
             fontVariantNumeric: "tabular-nums",
             letterSpacing: "-0.01em",
-            flexShrink: 0,
           }}
         >
           {prediction.home_goals}
-          <span style={{ color: "var(--text-3)", margin: "0 2px" }}>:</span>
+          <span style={{ color: "var(--text-3)", margin: "0 1px" }}>:</span>
           {prediction.away_goals}
         </div>
 
-        {/* Boost indicator */}
-        {prediction.boosted && (
+        {/* Boost indicator — always occupies space; hidden when not boosted */}
+        <div style={{ width: COL.boost, flexShrink: 0, display: "flex", alignItems: "center" }}>
           <span
             style={{
+              visibility: prediction.boosted ? "visible" : "hidden",
               fontSize: 11,
               fontWeight: 800,
               color: "var(--gold)",
@@ -964,23 +968,27 @@ function PredictionCard({
               border: "1px solid color-mix(in oklab, var(--gold) 30%, transparent)",
               borderRadius: 20,
               padding: "2px 8px",
-              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             ⚡ Boost
           </span>
-        )}
+        </div>
 
-        {/* State badge */}
-        <StateBadge state={prediction.state} />
+        {/* State badge — fixed width */}
+        <div style={{ width: COL.status, flexShrink: 0 }}>
+          <StateBadge state={prediction.state} />
+        </div>
 
-        {/* Points */}
-        {prediction.points_awarded !== null && (
-          <Points points={prediction.points_awarded} boosted={prediction.boosted} />
-        )}
+        {/* Points — fixed width, right-aligned */}
+        <div style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>
+          {prediction.points_awarded !== null && (
+            <Points points={prediction.points_awarded} boosted={prediction.boosted} />
+          )}
+        </div>
       </div>
 
-      {/* Distribution charts — only post-kickoff */}
+      {/* Distribution charts — visible for all predictions as soon as there is group data */}
       {showCharts && (
         <DistributionCharts stats={stats} prediction={prediction} />
       )}
@@ -1061,10 +1069,8 @@ export function MyTipsPage() {
         setPredictions(sorted);
         setMatchMap(map);
 
-        // Lazily fetch stats for post-kickoff predictions
-        const eligibleMatchIds = sorted
-          .filter((p) => POST_KICKOFF_STATES.includes(p.state))
-          .map((p) => p.match_id);
+        // Fetch stats for all predictions (aggregate only, no user names exposed)
+        const eligibleMatchIds = sorted.map((p) => p.match_id);
 
         if (eligibleMatchIds.length > 0) {
           const results = await Promise.allSettled(
@@ -1241,7 +1247,7 @@ export function MyTipsPage() {
                 overflow: "hidden",
               }}
             >
-              {/* Header row */}
+              {/* Header row — widths mirror COL constants in PredictionCard */}
               <div
                 style={{
                   display: "flex",
@@ -1258,10 +1264,10 @@ export function MyTipsPage() {
                 }}
               >
                 <span style={{ flex: 1 }}>Match</span>
-                <span>Tip</span>
-                <span style={{ minWidth: 60 }}> </span>
-                <span style={{ minWidth: 70 }}>Status</span>
-                <span style={{ minWidth: 60 }}>Points</span>
+                <span style={{ width: COL.score, flexShrink: 0, textAlign: "center" }}>Tip</span>
+                <span style={{ width: COL.boost, flexShrink: 0 }}></span>
+                <span style={{ width: COL.status, flexShrink: 0 }}>Status</span>
+                <span style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>Points</span>
               </div>
 
               {predictions.map((pred) => (

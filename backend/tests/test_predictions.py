@@ -430,13 +430,18 @@ async def test_winner_prediction_requires_auth(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_stats_before_kickoff_forbidden(client: AsyncClient, db: AsyncSession):
+async def test_stats_before_kickoff_returns_aggregate(client: AsyncClient, db: AsyncSession):
+    """Stats are available before kickoff; only aggregate data is returned (no user names)."""
     user = await _make_user(db)
-    match = await _make_match(db, hours_offset=2)
+    match = await _make_match(db, hours_offset=2, ext_id="pre_kick")
     token = await _login(client, user.email)
 
     r = await client.get(f"/predictions/match/{match.id}/stats", headers=_auth(token))
-    assert r.status_code == 403
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] == 0
+    assert "outcome_counts" in data
+    assert "top_scores" in data
 
 
 @pytest.mark.asyncio
