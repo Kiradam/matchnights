@@ -76,7 +76,6 @@ function FlagChip({ src, alt, tla }: { src: string | null; alt: string; tla: str
 
 function PrefControl({
   choice,
-  label: _label,
   Icon,
   on,
   locked,
@@ -84,7 +83,6 @@ function PrefControl({
   onClick,
 }: {
   choice: string;
-  label: string;
   Icon: () => JSX.Element;
   on: boolean;
   locked: boolean;
@@ -959,9 +957,9 @@ export function MatchDetailPage() {
   })) : null;
 
   const opts = [
-    { choice: "watch_together" as const, label: "Together", Icon: TogetherIcon },
-    { choice: "watch" as const, label: "At home", Icon: WatchIcon },
-    { choice: "skip" as const, label: "Skip", Icon: SkipIcon },
+    { choice: "watch_together" as const, Icon: TogetherIcon },
+    { choice: "watch" as const, Icon: WatchIcon },
+    { choice: "skip" as const, Icon: SkipIcon },
   ];
 
   const matchday = match.matchday;
@@ -1057,11 +1055,10 @@ export function MatchDetailPage() {
         {/* Preference control */}
         {userGroups.length > 0 && (
           <div className="pref-seg" role="group">
-            {opts.map(({ choice, label, Icon }) => (
+            {opts.map(({ choice, Icon }) => (
               <PrefControl
                 key={choice}
                 choice={choice}
-                label={label}
                 Icon={Icon}
                 on={isButtonActive(choice)}
                 locked={locked}

@@ -313,7 +313,7 @@ export function AdminPredictionsPage() {
         setFetchError(t("admin.predictionsPage.failedLoad"));
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const handleResolved = (matchId: number) => {
     setItems((prev) => prev.filter((i) => i.match_id !== matchId));
