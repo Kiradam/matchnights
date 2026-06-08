@@ -9,6 +9,18 @@ type ViewMode = "week" | "day";
 type CalFilter = "watching" | "all";
 type MatchColor = "watch_together" | "watch" | "skip" | "none";
 
+// Tournament week boundaries (Monday of first/last week)
+const TOUR_FIRST_WEEK = new Date(2026, 5, 8);  // Mon 8 Jun 2026
+const TOUR_LAST_WEEK  = new Date(2026, 6, 13); // Mon 13 Jul 2026
+
+// Fixed heights for week-view section rows
+// A .cal-match card: 6px pad-top + ~45px content + 6px pad-bot + 2px border = ~59px; use 64px generous.
+const CARD_H   = 64;  // px per card
+const CARD_GAP = 4;   // px between cards in column
+const CELL_PAD = 12;  // px total vertical padding of the cell (6 top + 6 bottom)
+const EVENING_H = CELL_PAD + 3 * CARD_H + 2 * CARD_GAP; // 220px — fits 3 cards
+const LATE_H    = CELL_PAD + 4 * CARD_H + 3 * CARD_GAP; // 280px — fits 4 cards
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function sameDay(a: Date, b: Date) {
@@ -232,23 +244,25 @@ function WeekView({
         borderRadius: "var(--radius)",
         border: "1px solid var(--border)",
         overflow: "hidden",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
       }}
     >
-      <div style={{ overflowX: "auto", flex: 1, minHeight: 0 }}>
+      {/* Single horizontally-scrollable container for the entire grid */}
+      <div style={{ overflowX: "auto" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2.5rem repeat(7, 1fr)",
-            gridTemplateRows: "auto 1fr auto",
-            height: "100%",
-            minWidth: 560,
+            // 40px label column + 7 day columns, each min 130px so content never truncates
+            gridTemplateColumns: `2.5rem repeat(7, minmax(130px, 1fr))`,
+            // Fixed row heights: evening fits 3 cards, late fits 4 cards
+            gridTemplateRows: `auto ${EVENING_H}px ${LATE_H}px`,
           }}
         >
-          {/* Day headers */}
-          <div style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)", borderRight: "1px solid var(--border)" }} />
+          {/* Day header row */}
+          <div style={{
+            background: "var(--surface-2)",
+            borderBottom: "1px solid var(--border)",
+            borderRight: "1px solid var(--border)",
+          }} />
           {days.map((day, i) => {
             const isToday = sameDay(day, today);
             return (
@@ -301,7 +315,7 @@ function WeekView({
             );
           })}
 
-          {/* Evening row */}
+          {/* Evening row — fixed height, no internal scroll */}
           <SectionLabel label={eveningLabel} />
           {days.map((day, i) => {
             const { evening } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
@@ -313,8 +327,7 @@ function WeekView({
                   padding: 6,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 4,
-                  overflowY: "auto",
+                  gap: CARD_GAP,
                   borderLeft: "1px solid var(--border)",
                   borderBottom: "1px solid var(--border)",
                   background: isToday
@@ -330,7 +343,7 @@ function WeekView({
             );
           })}
 
-          {/* Late night row */}
+          {/* Late night row — fixed height, no internal scroll */}
           <SectionLabel label={lateLabel} muted />
           {days.map((day, i) => {
             const { dawn } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
@@ -342,8 +355,7 @@ function WeekView({
                   padding: 6,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 4,
-                  minHeight: 80,
+                  gap: CARD_GAP,
                   borderLeft: "1px solid var(--border)",
                   background: isToday
                     ? "color-mix(in oklab, var(--gold) 3%, var(--surface-2))"
@@ -452,7 +464,15 @@ export function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("week");
   const [calFilter, setCalFilter] = useState<CalFilter>("watching");
-  const [viewDate, setViewDate] = useState(new Date());
+
+  // Open on the current week, clamped to tournament bounds
+  const [viewDate, setViewDate] = useState(() => {
+    const today = new Date();
+    const ws = startOfWeek(today);
+    if (ws.getTime() < TOUR_FIRST_WEEK.getTime()) return new Date(TOUR_FIRST_WEEK);
+    if (ws.getTime() > TOUR_LAST_WEEK.getTime())  return new Date(TOUR_LAST_WEEK);
+    return today;
+  });
 
   useEffect(() => {
     api
@@ -464,13 +484,31 @@ export function CalendarPage() {
   const watchMatches = useMemo(() => allMatches.filter(isWatching), [allMatches]);
   const displayMatches = calFilter === "all" ? allMatches : watchMatches;
 
+  // Week navigation boundary check
+  const weekStart = startOfWeek(viewDate);
+  const canGoPrev = view !== "week" || weekStart.getTime() > TOUR_FIRST_WEEK.getTime();
+  const canGoNext = view !== "week" || weekStart.getTime() < TOUR_LAST_WEEK.getTime();
+
   const step = (dir: 1 | -1) => {
     setViewDate((prev) => {
-      const d = new Date(prev);
-      if (view === "week") d.setDate(d.getDate() + dir * 7);
-      else d.setDate(d.getDate() + dir);
-      return d;
+      if (view === "week") {
+        const next = addDays(startOfWeek(prev), dir * 7);
+        if (next.getTime() < TOUR_FIRST_WEEK.getTime()) return new Date(TOUR_FIRST_WEEK);
+        if (next.getTime() > TOUR_LAST_WEEK.getTime())  return new Date(TOUR_LAST_WEEK);
+        return next;
+      }
+      return addDays(prev, dir);
     });
+  };
+
+  const goToday = () => {
+    const today = new Date();
+    if (view === "week") {
+      const ws = startOfWeek(today);
+      if (ws.getTime() < TOUR_FIRST_WEEK.getTime()) { setViewDate(new Date(TOUR_FIRST_WEEK)); return; }
+      if (ws.getTime() > TOUR_LAST_WEEK.getTime())  { setViewDate(new Date(TOUR_LAST_WEEK));  return; }
+    }
+    setViewDate(today);
   };
 
   const handleDayClick = (day: Date) => {
@@ -495,72 +533,94 @@ export function CalendarPage() {
     });
   };
 
+  const ViewToggle = ({ extraClass }: { extraClass?: string }) => (
+    <div className={`seg-toggle${extraClass ? ` ${extraClass}` : ""}`}>
+      <button className={view === "week" ? "on" : ""} onClick={() => setView("week")}>
+        {t("calendar.week")}
+      </button>
+      <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>
+        {t("calendar.day")}
+      </button>
+    </div>
+  );
+
+  const FilterToggle = () => (
+    <div className="seg-toggle">
+      {(["watching", "all"] as CalFilter[]).map((f) => (
+        <button key={f} className={calFilter === f ? "on" : ""} onClick={() => setCalFilter(f)}>
+          {f === "watching" ? t("calendar.watching") : t("calendar.all")}
+        </button>
+      ))}
+    </div>
+  );
+
   const isEmpty = !loading && watchMatches.length === 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 6.5rem)" }}>
-      {/* Screen head */}
-      <div className="screen-head">
-        <div className="screen-title">
-          <h1>{t("calendar.title")}</h1>
-        </div>
-        <div className="seg-toggle">
-          <button className={view === "week" ? "on" : ""} onClick={() => setView("week")}>
-            {t("calendar.week")}
-          </button>
-          <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>
-            {t("calendar.day")}
-          </button>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="cal-toolbar">
-        <div className="cal-nav">
-          <button className="mn-icon-btn" onClick={() => step(-1)} aria-label="Previous">
-            <ChevL />
-          </button>
-          <span className="cal-range">{loading ? "…" : headerLabel()}</span>
-          <button className="mn-icon-btn" onClick={() => step(1)} aria-label="Next">
-            <ChevR />
-          </button>
+    <div>
+      {/* ── Calendar header ────────────────────────────────────────────── */}
+      <div className="cal-header">
+        {/* Row 1: title (+ view toggle on mobile) */}
+        <div className="cal-hdr-r1">
+          <div className="screen-title">
+            <h1>{t("calendar.title")}</h1>
+          </div>
+          {/* Mobile-only: view toggle sits on row 1 right */}
+          <ViewToggle extraClass="cal-r1-toggle" />
         </div>
 
-        <button className="btn-ghost" onClick={() => setViewDate(new Date())}>
-          {t("calendar.today")}
-        </button>
+        {/* Row 2: [Week|Day] · < label > · [Today] · [Watching|All]
+            On mobile only the nav stays here; other controls move to row 3 */}
+        <div className="cal-hdr-r2">
+          {/* Desktop-only: view toggle left of nav */}
+          <ViewToggle extraClass="cal-r2-toggle" />
 
-        <span style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>
-          {t("calendar.timesLocal")}
-        </span>
-
-        {/* Watching/All toggle */}
-        <div className="seg-toggle" style={{ marginLeft: "auto" }}>
-          {(["watching", "all"] as CalFilter[]).map((f) => (
+          {/* Navigation — always present */}
+          <div className="cal-nav">
             <button
-              key={f}
-              className={calFilter === f ? "on" : ""}
-              onClick={() => setCalFilter(f)}
+              className="mn-icon-btn"
+              onClick={() => step(-1)}
+              disabled={!canGoPrev}
+              aria-label={t("common.cancel")}
             >
-              {f === "watching" ? t("calendar.watching") : t("calendar.all")}
+              <ChevL />
             </button>
-          ))}
+            <span className="cal-range">{loading ? "…" : headerLabel()}</span>
+            <button
+              className="mn-icon-btn"
+              onClick={() => step(1)}
+              disabled={!canGoNext}
+              aria-label="Next"
+            >
+              <ChevR />
+            </button>
+          </div>
+
+          {/* Desktop-only: Today button inline */}
+          <button className="btn-ghost cal-r2-today" onClick={goToday}>
+            {t("calendar.today")}
+          </button>
+
+          {/* Desktop-only: filter aligned to right */}
+          <div className="cal-r2-filter">
+            <FilterToggle />
+          </div>
         </div>
 
-        {!loading && watchMatches.length > 0 && (
-          <button className="btn-gold" onClick={() => { void downloadICal(); }}>
-            <DownloadIcon />
-            {t("calendar.downloadIcs")}
+        {/* Row 3 — mobile only: [Today left] [Watching|All right] */}
+        <div className="cal-hdr-r3">
+          <button className="btn-ghost" onClick={goToday}>
+            {t("calendar.today")}
           </button>
-        )}
+          <FilterToggle />
+        </div>
       </div>
 
-      {/* Content */}
+      {/* ── Content ───────────────────────────────────────────────────── */}
       {loading ? (
         <div
           style={{
-            flex: 1,
-            minHeight: 0,
+            height: 400,
             borderRadius: "var(--radius)",
             border: "1px solid var(--border)",
             background: "var(--surface)",
@@ -570,7 +630,7 @@ export function CalendarPage() {
       ) : isEmpty ? (
         <div
           style={{
-            flex: 1,
+            padding: "60px 20px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -581,32 +641,35 @@ export function CalendarPage() {
         >
           <div style={{ fontSize: 40 }}>📅</div>
           <div style={{ fontWeight: 700, color: "var(--text-2)" }}>{t("calendar.emptyWatchlist")}</div>
-          <div style={{ fontSize: 13 }}>
-            {t("calendar.emptyWatchlistNote")}
-          </div>
+          <div style={{ fontSize: 13 }}>{t("calendar.emptyWatchlistNote")}</div>
         </div>
+      ) : view === "week" ? (
+        <WeekView
+          viewDate={viewDate}
+          matches={displayMatches}
+          onDayClick={handleDayClick}
+          locale={locale}
+          eveningLabel={t("calendar.evening")}
+          lateLabel={t("calendar.late")}
+        />
       ) : (
-        <div style={{ flex: 1, minHeight: 0 }}>
-          {view === "week" && (
-            <WeekView
-              viewDate={viewDate}
-              matches={displayMatches}
-              onDayClick={handleDayClick}
-              locale={locale}
-              eveningLabel={t("calendar.evening")}
-              lateLabel={t("calendar.late")}
-            />
-          )}
-          {view === "day" && (
-            <DayView
-              viewDate={viewDate}
-              matches={displayMatches}
-              locale={locale}
-              eveningLabel={t("calendar.evening")}
-              lateNightLabel={t("calendar.lateNight")}
-              noMatchesDayLabel={t("calendar.noMatchesDay")}
-            />
-          )}
+        <DayView
+          viewDate={viewDate}
+          matches={displayMatches}
+          locale={locale}
+          eveningLabel={t("calendar.evening")}
+          lateNightLabel={t("calendar.lateNight")}
+          noMatchesDayLabel={t("calendar.noMatchesDay")}
+        />
+      )}
+
+      {/* ── Download .ics — secondary action below the grid ───────────── */}
+      {!loading && watchMatches.length > 0 && (
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+          <button className="btn-gold" onClick={() => { void downloadICal(); }}>
+            <DownloadIcon />
+            {t("calendar.downloadIcs")}
+          </button>
         </div>
       )}
     </div>
