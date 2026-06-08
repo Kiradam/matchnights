@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 import type { SyncState } from "../../types";
 
@@ -15,6 +16,7 @@ interface SyncResult {
 }
 
 export function AdminSyncPage() {
+  const { t } = useTranslation();
   const [state, setState] = useState<SyncState | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingOdds, setSyncingOdds] = useState(false);
@@ -75,19 +77,19 @@ export function AdminSyncPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Match Sync</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t("admin.syncPage.title")}</h2>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-4">
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last sync</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.syncPage.lastSync")}</div>
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-              {loading ? "…" : state?.last_sync_at ? new Date(state.last_sync_at).toLocaleString() : "Never"}
+              {loading ? "…" : state?.last_sync_at ? new Date(state.last_sync_at).toLocaleString() : t("admin.syncPage.never")}
             </div>
           </div>
           <div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              API requests today ({DAILY_QUOTA}/day limit)
+              {t("admin.syncPage.apiRequests")} ({DAILY_QUOTA}{t("admin.syncPage.dayLimit")})
             </div>
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
               {loading ? "…" : `${usedToday} / ${DAILY_QUOTA}`}
@@ -107,18 +109,18 @@ export function AdminSyncPage() {
             disabled={syncing || quotaExhausted}
             className="px-5 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded hover:bg-gray-700 dark:hover:bg-white disabled:opacity-50"
           >
-            {syncing ? "Syncing…" : "Sync matches now"}
+            {syncing ? t("admin.syncPage.syncing") : t("admin.syncPage.syncNow")}
           </button>
           <button
             onClick={triggerOddsSync}
             disabled={syncingOdds}
             className="px-5 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
           >
-            {syncingOdds ? "Syncing odds…" : "Sync odds"}
+            {syncingOdds ? t("admin.syncPage.syncingOdds") : t("admin.syncPage.syncOdds")}
           </button>
         </div>
         {quotaExhausted && (
-          <p className="mt-2 text-xs text-red-600 dark:text-red-400">Daily API quota exhausted. Try again tomorrow.</p>
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400">{t("admin.syncPage.quotaExhausted")}</p>
         )}
       </div>
 
@@ -144,13 +146,13 @@ export function AdminSyncPage() {
 
       {syncResult && (
         <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 mb-4">
-          <div className="text-sm font-medium text-green-800 dark:text-green-400 mb-2">Sync complete</div>
+          <div className="text-sm font-medium text-green-800 dark:text-green-400 mb-2">{t("admin.syncPage.syncComplete")}</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             {([
-              ["Synced", syncResult.synced],
-              ["Rescheduled", syncResult.rescheduled],
-              ["Cancelled", syncResult.cancelled],
-              ["Parse errors", syncResult.skipped_parse_errors],
+              [t("admin.syncPage.synced"), syncResult.synced],
+              [t("admin.syncPage.rescheduled"), syncResult.rescheduled],
+              [t("admin.syncPage.cancelled"), syncResult.cancelled],
+              [t("admin.syncPage.parseErrors"), syncResult.skipped_parse_errors],
             ] as [string, number][]).map(([label, val]) => (
               <div key={label}>
                 <span className="text-gray-500 dark:text-gray-400">{label}: </span>
@@ -161,7 +163,7 @@ export function AdminSyncPage() {
           {syncResult.errors && syncResult.errors.length > 0 && (
             <details className="mt-2">
               <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
-                {syncResult.errors.length} error(s)
+                {syncResult.errors.length} {t("admin.syncPage.errors")}
               </summary>
               <ul className="mt-1 text-xs text-red-600 dark:text-red-400 space-y-0.5">
                 {syncResult.errors.map((e, i) => <li key={i}>{e}</li>)}
@@ -173,7 +175,7 @@ export function AdminSyncPage() {
 
       {state?.last_sync_result && !syncResult && (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Last sync result</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("admin.syncPage.lastResult")}</div>
           <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {JSON.stringify(state.last_sync_result, null, 2)}
           </pre>

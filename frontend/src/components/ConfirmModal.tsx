@@ -1,6 +1,8 @@
+import { useTranslation } from "react-i18next";
+
 export function ConfirmModal({
   message,
-  confirmLabel = "Confirm",
+  confirmLabel,
   onConfirm,
   onCancel,
 }: {
@@ -9,6 +11,8 @@ export function ConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
@@ -24,13 +28,13 @@ export function ConfirmModal({
             onClick={onCancel}
             className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={onConfirm}
             className="px-3 py-1.5 text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
           >
-            {confirmLabel}
+            {confirmLabel ?? t("common.confirm")}
           </button>
         </div>
       </div>

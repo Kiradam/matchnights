@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import { useTheme } from "../contexts/ThemeContext";
 import type { Match } from "../types";
@@ -32,8 +33,8 @@ function addDays(d: Date, n: number): Date {
   return r;
 }
 
-function fmtTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("en-GB", {
+function fmtTime(dateStr: string, locale = "en-GB") {
+  return new Date(dateStr).toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -103,12 +104,12 @@ function DownloadIcon() {
 
 // ── Match pill (week view) ────────────────────────────────────────────────────
 
-function MatchPill({ match }: { match: Match }) {
+function MatchPill({ match, locale }: { match: Match; locale: string }) {
   const prefClass = matchPrefClass(match);
   return (
     <Link to={`/matches/${match.id}`} style={{ textDecoration: "none", display: "block" }}>
       <div className={`cal-match ${prefClass}`}>
-        <div className="cm-time tnum">{fmtTime(match.match_datetime)}</div>
+        <div className="cm-time tnum">{fmtTime(match.match_datetime, locale)}</div>
         <div className="cm-teams">
           {match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}
           <span className="cm-vs">v</span>
@@ -125,7 +126,7 @@ function MatchPill({ match }: { match: Match }) {
 
 // ── Day match card ────────────────────────────────────────────────────────────
 
-function DayMatchCard({ match }: { match: Match }) {
+function DayMatchCard({ match, locale }: { match: Match; locale: string }) {
   const prefClass = matchPrefClass(match);
   const homeTla = match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase();
   const awayTla = match.away_team_tla ?? match.away_team.slice(0, 3).toUpperCase();
@@ -133,7 +134,7 @@ function DayMatchCard({ match }: { match: Match }) {
   return (
     <Link to={`/matches/${match.id}`} style={{ textDecoration: "none", display: "block" }}>
       <div className={`day-row ${prefClass}`}>
-        <span className="dr-time tnum">{fmtTime(match.match_datetime)}</span>
+        <span className="dr-time tnum">{fmtTime(match.match_datetime, locale)}</span>
         <span className="dr-teams">
           <span className="dr-team">{homeTla}</span>
           <span className="dr-vs">vs</span>
@@ -185,10 +186,16 @@ function WeekView({
   viewDate,
   matches,
   onDayClick,
+  locale,
+  eveningLabel,
+  lateLabel,
 }: {
   viewDate: Date;
   matches: Match[];
   onDayClick: (d: Date) => void;
+  locale: string;
+  eveningLabel: string;
+  lateLabel: string;
 }) {
   const { dark } = useTheme();
   const today = new Date();
@@ -275,7 +282,7 @@ function WeekView({
                   letterSpacing: "0.06em",
                   color: isToday ? "var(--gold)" : "var(--text-3)",
                 }}>
-                  {day.toLocaleDateString("en-GB", { weekday: "short" })}
+                  {day.toLocaleDateString(locale, { weekday: "short" })}
                 </div>
                 <div style={{
                   fontFamily: "Archivo, sans-serif",
@@ -288,14 +295,14 @@ function WeekView({
                   {day.getDate()}
                 </div>
                 <div style={{ fontSize: 9, color: isToday ? "var(--gold)" : "var(--text-3)", marginTop: 2 }}>
-                  {day.toLocaleDateString("en-GB", { month: "short" })}
+                  {day.toLocaleDateString(locale, { month: "short" })}
                 </div>
               </button>
             );
           })}
 
           {/* Evening row */}
-          <SectionLabel label="Evening" />
+          <SectionLabel label={eveningLabel} />
           {days.map((day, i) => {
             const { evening } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
             const isToday = sameDay(day, today);
@@ -317,14 +324,14 @@ function WeekView({
                 }}
               >
                 {evening.map((m) => (
-                  <MatchPill key={m.id} match={m} />
+                  <MatchPill key={m.id} match={m} locale={locale} />
                 ))}
               </div>
             );
           })}
 
           {/* Late night row */}
-          <SectionLabel label="Late" muted />
+          <SectionLabel label={lateLabel} muted />
           {days.map((day, i) => {
             const { dawn } = assigned[dayKey(day)] ?? { evening: [], dawn: [] };
             const isToday = sameDay(day, today);
@@ -345,7 +352,7 @@ function WeekView({
                 }}
               >
                 {dawn.map((m) => (
-                  <MatchPill key={m.id} match={m} />
+                  <MatchPill key={m.id} match={m} locale={locale} />
                 ))}
               </div>
             );
@@ -358,7 +365,21 @@ function WeekView({
 
 // ── Day view ──────────────────────────────────────────────────────────────────
 
-function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
+function DayView({
+  viewDate,
+  matches,
+  locale,
+  eveningLabel,
+  lateNightLabel,
+  noMatchesDayLabel,
+}: {
+  viewDate: Date;
+  matches: Match[];
+  locale: string;
+  eveningLabel: string;
+  lateNightLabel: string;
+  noMatchesDayLabel: string;
+}) {
   const { evening, dawn } = useMemo(() => {
     const ev: Match[] = [];
     const dw: Match[] = [];
@@ -376,7 +397,7 @@ function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
   }, [matches, viewDate]);
 
   if (evening.length === 0 && dawn.length === 0) {
-    return <div className="empty-day">No matches on this day.</div>;
+    return <div className="empty-day">{noMatchesDayLabel}</div>;
   }
 
   const SectionHead = ({ label, muted }: { label: string; muted?: boolean }) => (
@@ -403,17 +424,17 @@ function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
     <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
       {evening.length > 0 && (
         <div>
-          <SectionHead label="Evening" />
+          <SectionHead label={eveningLabel} />
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {evening.map((m) => <DayMatchCard key={m.id} match={m} />)}
+            {evening.map((m) => <DayMatchCard key={m.id} match={m} locale={locale} />)}
           </div>
         </div>
       )}
       {dawn.length > 0 && (
         <div>
-          <SectionHead label="Late night" muted />
+          <SectionHead label={lateNightLabel} muted />
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {dawn.map((m) => <DayMatchCard key={m.id} match={m} />)}
+            {dawn.map((m) => <DayMatchCard key={m.id} match={m} locale={locale} />)}
           </div>
         </div>
       )}
@@ -424,6 +445,9 @@ function DayView({ viewDate, matches }: { viewDate: Date; matches: Match[] }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function CalendarPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "hu" ? "hu-HU" : "en-GB";
+
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("week");
@@ -459,11 +483,11 @@ export function CalendarPage() {
       const mon = startOfWeek(viewDate);
       const sun = addDays(mon, 6);
       if (mon.getMonth() === sun.getMonth()) {
-        return `${mon.getDate()}–${sun.getDate()} ${mon.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
+        return `${mon.getDate()}–${sun.getDate()} ${mon.toLocaleDateString(locale, { month: "long", year: "numeric" })}`;
       }
-      return `${mon.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${sun.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+      return `${mon.toLocaleDateString(locale, { day: "numeric", month: "short" })} – ${sun.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}`;
     }
-    return viewDate.toLocaleDateString("en-GB", {
+    return viewDate.toLocaleDateString(locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -478,14 +502,14 @@ export function CalendarPage() {
       {/* Screen head */}
       <div className="screen-head">
         <div className="screen-title">
-          <h1>Calendar</h1>
+          <h1>{t("calendar.title")}</h1>
         </div>
         <div className="seg-toggle">
           <button className={view === "week" ? "on" : ""} onClick={() => setView("week")}>
-            Week
+            {t("calendar.week")}
           </button>
           <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>
-            Day
+            {t("calendar.day")}
           </button>
         </div>
       </div>
@@ -503,11 +527,11 @@ export function CalendarPage() {
         </div>
 
         <button className="btn-ghost" onClick={() => setViewDate(new Date())}>
-          Today
+          {t("calendar.today")}
         </button>
 
         <span style={{ fontSize: 12, color: "var(--text-3)", fontWeight: 600 }}>
-          Times shown in your local time
+          {t("calendar.timesLocal")}
         </span>
 
         {/* Watching/All toggle */}
@@ -518,7 +542,7 @@ export function CalendarPage() {
               className={calFilter === f ? "on" : ""}
               onClick={() => setCalFilter(f)}
             >
-              {f === "watching" ? "Watching" : "All"}
+              {f === "watching" ? t("calendar.watching") : t("calendar.all")}
             </button>
           ))}
         </div>
@@ -526,7 +550,7 @@ export function CalendarPage() {
         {!loading && watchMatches.length > 0 && (
           <button className="btn-gold" onClick={() => { void downloadICal(); }}>
             <DownloadIcon />
-            Download .ics
+            {t("calendar.downloadIcs")}
           </button>
         )}
       </div>
@@ -556,9 +580,9 @@ export function CalendarPage() {
           }}
         >
           <div style={{ fontSize: 40 }}>📅</div>
-          <div style={{ fontWeight: 700, color: "var(--text-2)" }}>Your watchlist is empty</div>
+          <div style={{ fontWeight: 700, color: "var(--text-2)" }}>{t("calendar.emptyWatchlist")}</div>
           <div style={{ fontSize: 13 }}>
-            Mark matches as <strong>Watch</strong> or <strong>Together</strong> to see them here.
+            {t("calendar.emptyWatchlistNote")}
           </div>
         </div>
       ) : (
@@ -568,10 +592,20 @@ export function CalendarPage() {
               viewDate={viewDate}
               matches={displayMatches}
               onDayClick={handleDayClick}
+              locale={locale}
+              eveningLabel={t("calendar.evening")}
+              lateLabel={t("calendar.late")}
             />
           )}
           {view === "day" && (
-            <DayView viewDate={viewDate} matches={displayMatches} />
+            <DayView
+              viewDate={viewDate}
+              matches={displayMatches}
+              locale={locale}
+              eveningLabel={t("calendar.evening")}
+              lateNightLabel={t("calendar.lateNight")}
+              noMatchesDayLabel={t("calendar.noMatchesDay")}
+            />
           )}
         </div>
       )}

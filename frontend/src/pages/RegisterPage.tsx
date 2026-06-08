@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -7,6 +8,7 @@ const inputCls =
   "w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 export function RegisterPage() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const token = params.get("token");
   const navigate = useNavigate();
@@ -23,8 +25,8 @@ export function RegisterPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-gray-700 dark:text-gray-300 font-medium">Invalid invite link.</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Ask an admin for a new invite.</p>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">{t("register.invalidInvite")}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("register.askAdmin")}</p>
         </div>
       </div>
     );
@@ -36,11 +38,11 @@ export function RegisterPage() {
     e.preventDefault();
     setError("");
     if (!usernameValid) {
-      setError("Username may only contain letters and numbers — no spaces or special characters.");
+      setError(t("register.usernameError"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("register.passwordMismatch"));
       return;
     }
     setLoading(true);
@@ -50,13 +52,13 @@ export function RegisterPage() {
       navigate("/matches", { replace: true });
     } catch (err: unknown) {
       const res = (err as { response?: { status?: number; data?: { detail?: string } } })?.response;
-      if (res?.status === 400 || res?.status === 410) setError("Invite link is invalid or expired.");
+      if (res?.status === 400 || res?.status === 410) setError(t("register.inviteExpired"));
       else if (res?.status === 409) {
         const detail = res.data?.detail ?? "";
-        if (detail.toLowerCase().includes("username")) setError("That username is already taken.");
-        else setError("An account with this email already exists.");
+        if (detail.toLowerCase().includes("username")) setError(t("register.usernameTaken"));
+        else setError(t("register.emailTaken"));
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t("register.genericError"));
       }
     } finally {
       setLoading(false);
@@ -66,10 +68,10 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Create account</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{t("register.title")}</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username / Nickname</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.username")}</label>
             <input
               type="text"
               required
@@ -79,19 +81,19 @@ export function RegisterPage() {
               autoComplete="username"
             />
             {fullName && !usernameValid && (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-1">Letters and numbers only — no spaces or special characters.</p>
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">{t("register.usernameHint")}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.email")}</label>
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.password")}</label>
             <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.confirmPassword")}</label>
             <input type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} />
           </div>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -100,7 +102,7 @@ export function RegisterPage() {
             disabled={loading}
             className="w-full bg-blue-600 dark:bg-blue-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
           >
-            {loading ? "Creating account…" : "Create account"}
+            {loading ? t("register.creating") : t("register.create")}
           </button>
         </form>
       </div>

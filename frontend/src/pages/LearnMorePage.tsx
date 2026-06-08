@@ -1,62 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-
-const steps = [
-  {
-    title: "1. Pick the matches",
-    text: "Choose the fixtures you care about before kick-off.",
-  },
-  {
-    title: "2. See who’s in",
-    text: "Check which friends want to watch the same match.",
-  },
-  {
-    title: "3. Make it a night",
-    text: "Turn match preferences into shared plans.",
-  },
-];
-
-const features = [
-  {
-    title: "Invite-only access",
-    text: "No public sign-ups. Groups are managed through invitations.",
-  },
-  {
-    title: "Group preferences",
-    text: "See what your friends want to watch in each group.",
-  },
-  {
-    title: "Match planning",
-    text: "Keep football nights organized around real fixtures.",
-  },
-  {
-    title: "Calendar-friendly",
-    text: "Designed to make upcoming matches easier to follow.",
-  },
-  {
-    title: "Admin-managed groups",
-    text: "Group access and invitations stay controlled.",
-  },
-  {
-    title: "World Cup ready",
-    text: "Built with football tournaments and shared viewing in mind.",
-  },
-];
-
-const noBettingFeatures = [
-  {
-    title: "No prizes",
-    text: "MatchNights does not offer prizes, payouts, or rewards for predictions.",
-  },
-  {
-    title: "Friendly competition",
-    text: "Compete with friends, compare opinions, and enjoy match nights together.",
-  },
-  {
-    title: "Your group, your rules",
-    text: "If your group wants to celebrate the winner, that's entirely up to you and outside the platform.",
-  },
-];
+import { useTranslation } from "react-i18next";
 
 function PrimaryLink({ children, to }: { children: string; to: string }) {
   return (
@@ -92,6 +36,65 @@ function Section({ children, title }: { children: ReactNode; title: string }) {
 }
 
 export function LearnMorePage() {
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      title: t("learnMore.step1Title"),
+      text: t("learnMore.step1Desc"),
+    },
+    {
+      title: t("learnMore.step2Title"),
+      text: t("learnMore.step2Desc"),
+    },
+    {
+      title: t("learnMore.step3Title"),
+      text: t("learnMore.step3Desc"),
+    },
+  ];
+
+  const features = [
+    {
+      title: t("learnMore.supportInvite"),
+      text: t("learnMore.supportInviteDesc"),
+    },
+    {
+      title: t("learnMore.supportGroup"),
+      text: t("learnMore.supportGroupDesc"),
+    },
+    {
+      title: t("learnMore.supportPlanning"),
+      text: t("learnMore.supportPlanningDesc"),
+    },
+    {
+      title: t("learnMore.supportCalendar"),
+      text: t("learnMore.supportCalendarDesc"),
+    },
+    {
+      title: t("learnMore.supportAdmin"),
+      text: t("learnMore.supportAdminDesc"),
+    },
+    {
+      title: t("learnMore.supportWC"),
+      text: t("learnMore.supportWCDesc"),
+    },
+  ];
+
+  const noBettingFeatures = [
+    {
+      title: t("learnMore.noPrizes"),
+      text: t("learnMore.noPrizesDesc"),
+    },
+    {
+      title: t("learnMore.friendlyComp"),
+      text: t("learnMore.friendlyCompDesc"),
+    },
+    {
+      title: t("learnMore.yourRules"),
+      text: t("learnMore.yourRulesDesc"),
+    },
+  ];
+
   return (
     <main
       className="min-h-screen overflow-hidden text-white"
@@ -109,44 +112,40 @@ export function LearnMorePage() {
         </Link>
         <nav className="flex items-center gap-3 text-sm font-bold">
           <Link className="text-[#9bb1d1] transition hover:text-white" to="/">
-            Home
+            {t("learnMore.home")}
           </Link>
           <Link
             className="rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-4 py-2 text-white transition hover:border-[#69c9ff] hover:bg-[#10295b]"
             to="/login"
           >
-            Enter MatchNights
+            {t("learnMore.enter")}
           </Link>
         </nav>
       </header>
 
       <section className="mx-auto w-full max-w-5xl px-5 py-16 text-center sm:px-8 lg:px-10">
         <h1 className="font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:text-6xl">
-          How MatchNights
+          {t("learnMore.title")}
           <span className="block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
             works
           </span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
-          MatchNights helps private groups of friends coordinate which football
-          matches they want to watch together — without endless group chat
-          confusion.
+          {t("learnMore.builtForFriendsDesc")}
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <PrimaryLink to="/login">Enter MatchNights</PrimaryLink>
-          <SecondaryLink to="/">Back to home</SecondaryLink>
+          <PrimaryLink to="/login">{t("learnMore.enter")}</PrimaryLink>
+          <SecondaryLink to="/">{t("learnMore.back")}</SecondaryLink>
         </div>
       </section>
 
-      <Section title="Built for friend groups">
+      <Section title={t("learnMore.builtForFriends")}>
         <p className="max-w-3xl text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
-          MatchNights is invite-only by design. Each group has its own shared
-          space to pick matches, compare preferences, and plan football nights
-          together.
+          {t("learnMore.builtForFriendsDesc")}
         </p>
       </Section>
 
-      <Section title="How it works">
+      <Section title={t("learnMore.howItWorks")}>
         <div className="grid gap-4 md:grid-cols-3">
           {steps.map((step) => (
             <article
@@ -164,32 +163,19 @@ export function LearnMorePage() {
         </div>
       </Section>
 
-      <Section title="Why not just use a group chat?">
+      <Section title={t("learnMore.whyNotChat")}>
         <p className="max-w-3xl text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
-          Group chats are great for conversation. They are not great for
-          coordination. MatchNights gives every group a clear place to see match
-          preferences without scrolling through old messages.
+          {t("learnMore.whyNotChatDesc")}
         </p>
       </Section>
 
-      <Section title="How match prediction insights work?">
+      <Section title={t("learnMore.insightsTitle")}>
         <p className="max-w-3xl text-base font-medium leading-7 text-[#9bb1d1] sm:text-lg">
-          The prediction insights shown in MatchNights are based on publicly
-          available market data and probability calculations.
-          <br />
-          <br />
-          Instead of displaying complex numbers, we convert those estimates into
-          simple win, draw, and away-win probabilities that are easier to
-          understand and discuss with friends.
-          <br />
-          <br />
-          They're not guarantees and they're not betting advice — they're simply
-          a helpful way to spark conversation and compare opinions before
-          kickoff.
+          {t("learnMore.insightsDesc")}
         </p>
       </Section>
 
-      <Section title="What MatchNights supports">
+      <Section title={t("learnMore.supports")}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <article
@@ -207,7 +193,7 @@ export function LearnMorePage() {
         </div>
       </Section>
 
-      <Section title="No betting. Just friendly competition.">
+      <Section title={t("learnMore.noBetting")}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {noBettingFeatures.map((feature) => (
             <article
@@ -228,16 +214,16 @@ export function LearnMorePage() {
       <section className="mx-auto w-full max-w-5xl px-5 py-14 text-center sm:px-8 lg:px-10">
         <div className="rounded-lg border border-[#2d8cff]/30 bg-[#071a3a]/70 px-5 py-10 shadow-[0_22px_70px_rgba(18,108,255,0.18)]">
           <h2 className="font-display text-3xl font-black uppercase leading-none tracking-normal text-white sm:text-4xl">
-            Ready for the next
+            {t("learnMore.readyCta")}
             <span className="block bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
               match night?
             </span>
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300">
-            Start with your group, pick the matches, and make every night count.
+            {t("learnMore.readyDesc")}
           </p>
           <div className="mt-7">
-            <PrimaryLink to="/login">Enter MatchNights</PrimaryLink>
+            <PrimaryLink to="/login">{t("learnMore.enter")}</PrimaryLink>
           </div>
         </div>
       </section>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -11,12 +12,6 @@ import type {
   MatchPrediction,
   PreferenceChoice,
 } from "../types";
-
-const STATUS_LABEL: Record<string, string> = {
-  watch_together: "Together",
-  watch: "At home",
-  skip: "Skip",
-};
 
 function dicebearUrl(seed: number | string): string {
   return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
@@ -77,6 +72,47 @@ function FlagChip({ src, alt, tla }: { src: string | null; alt: string; tla: str
   );
 }
 
+// ── Pref control ──────────────────────────────────────────────────────────────
+
+function PrefControl({
+  choice,
+  label: _label,
+  Icon,
+  on,
+  locked,
+  saving,
+  onClick,
+}: {
+  choice: string;
+  label: string;
+  Icon: () => JSX.Element;
+  on: boolean;
+  locked: boolean;
+  saving: boolean;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const translatedLabel =
+    choice === "watch_together"
+      ? t("watchMode.together")
+      : choice === "watch"
+      ? t("watchMode.atHome")
+      : t("watchMode.skip");
+
+  return (
+    <button
+      className={`seg-btn ${choice}${on ? " on" : ""}`}
+      disabled={locked || saving}
+      aria-pressed={on}
+      onClick={onClick}
+    >
+      <Icon />
+      <span>{translatedLabel}</span>
+    </button>
+  );
+}
+
 // ── Group selector modal ──────────────────────────────────────────────────────
 
 function GroupSelectorModal({
@@ -90,6 +126,8 @@ function GroupSelectorModal({
   onSelect: (groupId: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();
@@ -104,9 +142,9 @@ function GroupSelectorModal({
   return (
     <div className="popover-scrim" onClick={onCancel}>
       <div className="popover" onClick={(e) => e.stopPropagation()}>
-        <h3>Who are you watching with?</h3>
+        <h3>{t("groupSelector.title")}</h3>
         <p>
-          {homeTla} vs {awayTla} — pick the group you'll be Together with.
+          {t("groupSelector.subtitle", { home: homeTla, away: awayTla })}
         </p>
         {groups.map((g) => {
           const sel = match.my_preferences.some(
@@ -122,7 +160,7 @@ function GroupSelectorModal({
               <span className="go-ic">{g.name.slice(0, 2).toUpperCase()}</span>
               <span style={{ flex: 1 }}>
                 <span className="go-name">{g.name}</span>
-                <span className="go-sub">{g.member_count} members</span>
+                <span className="go-sub">{g.member_count} {t("common.members")}</span>
               </span>
               {sel && (
                 <span style={{ color: "var(--together)", fontWeight: 800, fontSize: 13 }}>
@@ -146,10 +184,17 @@ function GroupPanel({
   summary: GroupPreferenceSummary;
   currentUserId: number;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const total =
     summary.watch_together + summary.watch + summary.skip + summary.no_response;
   const pct = total > 0 ? Math.round((summary.watch_together / total) * 100) : 0;
+
+  const STATUS_LABEL: Record<string, string> = {
+    watch_together: t("watchMode.together"),
+    watch: t("watchMode.atHome"),
+    skip: t("watchMode.skip"),
+  };
 
   return (
     <div className={`gpanel${open ? " open" : ""}`}>
@@ -160,7 +205,7 @@ function GroupPanel({
         </span>
         <span className={`gp-count${summary.watch_together > 0 ? " has" : ""}`}>
           <span>
-            {summary.watch_together}/{total} together
+            {summary.watch_together}/{total} {t("watchMode.together").toLowerCase()}
           </span>
           <span className="chev">
             <ChevronIcon />
@@ -180,12 +225,12 @@ function GroupPanel({
                   {m.full_name}
                   {isMe && (
                     <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4 }}>
-                      (you)
+                      {t("common.you")}
                     </span>
                   )}
                 </span>
                 <span className={`mstatus ${statusKey}`}>
-                  {m.choice ? STATUS_LABEL[m.choice] ?? m.choice : "Not set"}
+                  {m.choice ? STATUS_LABEL[m.choice] ?? m.choice : t("watchMode.notSet")}
                 </span>
               </div>
             );
@@ -211,6 +256,7 @@ function boostAllowance(stage: string): number {
   return 0; // semi, final, etc.
 }
 
+
 // ── Prediction popup ──────────────────────────────────────────────────────────
 
 function PredictionPopup({
@@ -226,6 +272,7 @@ function PredictionPopup({
   onClose: () => void;
   onSaved: (p: MatchPrediction) => void;
 }) {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [homeGoals, setHomeGoals] = useState<number>(prediction?.home_goals ?? 0);
   const [awayGoals, setAwayGoals] = useState<number>(prediction?.away_goals ?? 0);
@@ -290,12 +337,12 @@ function PredictionPopup({
   };
 
   const stateLabel = (state: MatchPrediction["state"]): string => {
-    if (state === "tip_locked") return "Locked";
+    if (state === "tip_locked") return t("prediction.locked");
     if (state === "evaluated")
       return prediction?.points_awarded != null
         ? `${prediction.points_awarded} pts`
-        : "Evaluated";
-    if (state === "manual_review") return "Reviewing...";
+        : t("prediction.evaluated");
+    if (state === "manual_review") return t("prediction.reviewing");
     return state;
   };
 
@@ -367,7 +414,7 @@ function PredictionPopup({
                   fontSize: 11,
                 }}
               >
-                Your prediction
+                {t("prediction.yourPrediction")}
               </div>
               <div
                 style={{
@@ -388,7 +435,7 @@ function PredictionPopup({
                 <div
                   style={{ fontSize: 13, color: "var(--text-2)", marginTop: 4 }}
                 >
-                  Qualifier: {prediction.predicted_qualifier}
+                  {t("prediction.qualifierLabel")}: {prediction.predicted_qualifier}
                 </div>
               )}
               <div
@@ -410,7 +457,7 @@ function PredictionPopup({
               onClick={onClose}
               style={{ width: "100%", textAlign: "center" }}
             >
-              Close
+              {t("prediction.close")}
             </button>
           </div>
         ) : (
@@ -428,7 +475,7 @@ function PredictionPopup({
                   marginBottom: 10,
                 }}
               >
-                Predicted score
+                {t("prediction.predictedScore")}
               </div>
               <div
                 style={{
@@ -531,11 +578,13 @@ function PredictionPopup({
                     marginBottom: 6,
                   }}
                 >
-                  Qualifier (after extra time / penalties)
+                  {t("prediction.qualifier")}
                 </label>
                 <input
                   type="text"
-                  placeholder={`e.g. ${match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}`}
+                  placeholder={t("prediction.qualifierPlaceholder", {
+                    tla: match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase(),
+                  })}
                   value={qualifier}
                   onChange={(e) => setQualifier(e.target.value)}
                   style={{
@@ -580,7 +629,7 @@ function PredictionPopup({
                     style={{ width: 16, height: 16, cursor: canBoost ? "pointer" : "not-allowed" }}
                   />
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-                    ⚡ Double points (Boost)
+                    {t("prediction.boost")}
                   </span>
                 </label>
                 <div
@@ -592,8 +641,8 @@ function PredictionPopup({
                     fontWeight: 600,
                   }}
                 >
-                  {boostedElsewhere} of {allowance} boosts used for this stage
-                  {boostsLeft > 0 && ` · ${boostsLeft} left`}
+                  {t("prediction.boostsUsed", { used: boostedElsewhere, total: allowance })}
+                  {boostsLeft > 0 && ` · ${t("prediction.boostsLeft", { count: boostsLeft })}`}
                 </div>
               </div>
             )}
@@ -633,14 +682,18 @@ function PredictionPopup({
                   transition: "opacity 0.15s",
                 }}
               >
-                {submitting ? "Saving..." : prediction ? "Update" : "Submit"}
+                {submitting
+                  ? t("prediction.saving")
+                  : prediction
+                  ? t("prediction.update")
+                  : t("prediction.submit")}
               </button>
               <button
                 className="btn-ghost"
                 onClick={onClose}
                 disabled={submitting}
               >
-                Cancel
+                {t("prediction.cancel")}
               </button>
             </div>
           </div>
@@ -657,6 +710,7 @@ export function MatchDetailPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { t, i18n } = useTranslation();
   const [match, setMatch] = useState<Match | null>(null);
   const [summaries, setSummaries] = useState<GroupPreferenceSummary[]>([]);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
@@ -858,9 +912,9 @@ export function MatchDetailPage() {
   if (!match) {
     return (
       <div className="empty-day">
-        Match not found.{" "}
+        {t("matchDetail.matchNotFound")}{" "}
         <Link to="/matches" style={{ color: "var(--text-2)", textDecoration: "underline" }}>
-          Back to matches
+          {t("matchDetail.backToMatches")}
         </Link>
       </div>
     );
@@ -873,14 +927,16 @@ export function MatchDetailPage() {
 
   const isPast = new Date(match.match_datetime).getTime() <= Date.now() - 2 * 3_600_000;
 
+  const locale = i18n.language === "hu" ? "hu-HU" : "en-GB";
+
   const dt = new Date(match.match_datetime);
-  const dateStr = dt.toLocaleDateString("en-GB", {
+  const dateStr = dt.toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const timeStr = dt.toLocaleTimeString("en-GB", {
+  const timeStr = dt.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -892,20 +948,23 @@ export function MatchDetailPage() {
 
   const hasOdds = match.home_odds != null || match.draw_odds != null || match.away_odds != null;
   const rawProbs = [
-    { label: "Home Win", v: match.home_odds ? 1 / match.home_odds : null },
-    { label: "Draw", v: match.draw_odds ? 1 / match.draw_odds : null },
-    { label: "Away Win", v: match.away_odds ? 1 / match.away_odds : null },
+    { label: t("prediction.homeWin"), v: match.home_odds ? 1 / match.home_odds : null },
+    { label: t("prediction.draw"), v: match.draw_odds ? 1 / match.draw_odds : null },
+    { label: t("prediction.awayWin"), v: match.away_odds ? 1 / match.away_odds : null },
   ];
   const probSum = rawProbs.reduce((s, p) => s + (p.v ?? 0), 0);
   const probabilities = hasOdds && probSum > 0 ? rawProbs.map((p) => ({
     label: p.label,
     pct: Math.round(((p.v ?? 0) / probSum) * 100),
   })) : null;
+
   const opts = [
     { choice: "watch_together" as const, label: "Together", Icon: TogetherIcon },
     { choice: "watch" as const, label: "At home", Icon: WatchIcon },
     { choice: "skip" as const, label: "Skip", Icon: SkipIcon },
   ];
+
+  const matchday = match.matchday;
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -938,7 +997,7 @@ export function MatchDetailPage() {
           marginBottom: 16,
         }}
       >
-        ← Back to matches
+        ← {t("matchDetail.backToMatches")}
       </Link>
 
       {/* Match card */}
@@ -949,8 +1008,8 @@ export function MatchDetailPage() {
         {/* Stage */}
         <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
           {match.stage}
-          {match.matchday != null && match.stage.toLowerCase().startsWith("group") && (
-            <span> · MD {match.matchday}</span>
+          {matchday != null && match.stage.toLowerCase().startsWith("group") && (
+            <span> · {t("match.md")} {matchday}</span>
           )}
         </div>
 
@@ -992,21 +1051,18 @@ export function MatchDetailPage() {
         {/* Preference control */}
         {userGroups.length > 0 && (
           <div className="pref-seg" role="group">
-            {opts.map(({ choice, label, Icon }) => {
-              const on = isButtonActive(choice);
-              return (
-                <button
-                  key={choice}
-                  className={`seg-btn ${choice}${on ? " on" : ""}`}
-                  disabled={locked || saving}
-                  aria-pressed={on}
-                  onClick={() => handleChoice(choice)}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                </button>
-              );
-            })}
+            {opts.map(({ choice, label, Icon }) => (
+              <PrefControl
+                key={choice}
+                choice={choice}
+                label={label}
+                Icon={Icon}
+                on={isButtonActive(choice)}
+                locked={locked}
+                saving={saving}
+                onClick={() => handleChoice(choice)}
+              />
+            ))}
           </div>
         )}
 
@@ -1027,14 +1083,14 @@ export function MatchDetailPage() {
             }}
           >
             {predLoading ? (
-              "Loading..."
+              t("common.loading")
             ) : prediction ? (
               <>
                 {prediction.home_goals}–{prediction.away_goals}
                 {prediction.boosted && " ⚡"}
               </>
             ) : (
-              "Submit Tip"
+              t("prediction.submitTip")
             )}
           </button>
         )}
@@ -1044,7 +1100,7 @@ export function MatchDetailPage() {
       {summaries.length > 0 && (
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>
-            Group preferences
+            {t("matchDetail.groupPreferences")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {summaries.map((gs) => (

@@ -1,8 +1,10 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const navigate = useNavigate();
@@ -17,15 +19,15 @@ export function ResetPasswordPage() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("resetPassword.minLength"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("resetPassword.mismatch"));
       return;
     }
     if (!token) {
-      setError("Missing or invalid reset token.");
+      setError(t("resetPassword.invalidToken"));
       return;
     }
 
@@ -36,11 +38,11 @@ export function ResetPasswordPage() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 410) {
-        setError("This reset link has expired. Please request a new one.");
+        setError(t("resetPassword.expired"));
       } else if (status === 400) {
-        setError("This reset link has already been used.");
+        setError(t("resetPassword.alreadyUsed"));
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t("resetPassword.genericError"));
       }
     } finally {
       setLoading(false);
@@ -53,11 +55,11 @@ export function ResetPasswordPage() {
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
           MatchNights
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Set a new password</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t("resetPassword.title")}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              New password
+              {t("resetPassword.newPassword")}
             </label>
             <input
               type="password"
@@ -69,7 +71,7 @@ export function ResetPasswordPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Confirm password
+              {t("resetPassword.confirmPassword")}
             </label>
             <input
               type="password"
@@ -82,7 +84,7 @@ export function ResetPasswordPage() {
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           {!token && !error && (
             <p className="text-sm text-red-600 dark:text-red-400">
-              No reset token found. Make sure you opened the full link from your email.
+              {t("resetPassword.noToken")}
             </p>
           )}
           <button
@@ -90,12 +92,12 @@ export function ResetPasswordPage() {
             disabled={loading || !token}
             className="w-full bg-blue-600 dark:bg-blue-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
           >
-            {loading ? "Saving…" : "Set new password"}
+            {loading ? t("resetPassword.saving") : t("resetPassword.submit")}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
           <a href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
-            Back to sign in
+            {t("resetPassword.backToLogin")}
           </a>
         </p>
       </div>

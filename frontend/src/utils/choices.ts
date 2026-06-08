@@ -1,9 +1,9 @@
 import type { PreferenceChoice } from "../types";
 
-export const CHOICE_LABELS: Record<PreferenceChoice, string> = {
-  watch_together: "Together",
-  watch: "At home",
-  skip: "Skip",
+export const CHOICE_I18N_KEYS: Record<PreferenceChoice, string> = {
+  watch_together: "watchMode.together",
+  watch: "watchMode.atHome",
+  skip: "watchMode.skip",
 };
 
 export const CHOICE_DOT: Record<PreferenceChoice, string> = {

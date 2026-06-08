@@ -1,8 +1,10 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,7 +25,7 @@ export function LoginPage() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch {
-      setError("Invalid email or password.");
+      setError(t("login.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -41,7 +43,7 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className={notice ? "space-y-4" : "space-y-4 mt-6"}>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
+              {t("login.email")}
             </label>
             <input
               type="email"
@@ -53,7 +55,7 @@ export function LoginPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
+              {t("login.password")}
             </label>
             <input
               type="password"
@@ -69,7 +71,7 @@ export function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 dark:bg-blue-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? t("login.signingIn") : t("login.signIn")}
           </button>
         </form>
       </div>

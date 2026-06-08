@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -153,6 +154,7 @@ function CountrySelector({
   disabled?: boolean;
   crestMap: Record<string, string>;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -160,7 +162,7 @@ function CountrySelector({
 
   const selected = WC2026_TEAMS.includes(value) ? value : null;
   const filtered = query
-    ? WC2026_TEAMS.filter((t) => t.toLowerCase().includes(query.toLowerCase()))
+    ? WC2026_TEAMS.filter((tm) => tm.toLowerCase().includes(query.toLowerCase()))
     : WC2026_TEAMS;
 
   useEffect(() => {
@@ -210,7 +212,7 @@ function CountrySelector({
           <span style={{ fontSize: 20, lineHeight: 1 }}>🌍</span>
         )}
         <span style={{ flex: 1 }}>
-          {selected ?? "Select a team…"}
+          {selected ?? t("tips.wcDescription")}
         </span>
         <span
           style={{
@@ -246,7 +248,7 @@ function CountrySelector({
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search countries…"
+              placeholder={t("tips.wcSearch")}
               style={{
                 width: "100%",
                 padding: "7px 10px",
@@ -266,15 +268,15 @@ function CountrySelector({
           <div style={{ maxHeight: 240, overflowY: "auto" }}>
             {filtered.length === 0 ? (
               <div style={{ padding: "12px 14px", color: "var(--text-3)", fontSize: 13 }}>
-                No team found
+                {t("tips.wcNoTeam")}
               </div>
             ) : (
-              filtered.map((t) => (
+              filtered.map((tm) => (
                 <button
-                  key={t}
+                  key={tm}
                   type="button"
                   onClick={() => {
-                    onChange(t);
+                    onChange(tm);
                     setOpen(false);
                     setQuery("");
                   }}
@@ -285,28 +287,28 @@ function CountrySelector({
                     width: "100%",
                     padding: "9px 14px",
                     border: "none",
-                    background: t === value
+                    background: tm === value
                       ? "color-mix(in oklab, var(--gold) 12%, transparent)"
                       : "transparent",
-                    color: t === value ? "var(--gold)" : "var(--text)",
+                    color: tm === value ? "var(--gold)" : "var(--text)",
                     fontSize: 13,
-                    fontWeight: t === value ? 700 : 500,
+                    fontWeight: tm === value ? 700 : 500,
                     cursor: "pointer",
                     textAlign: "left" as const,
                     transition: "background 0.1s",
                   }}
                   onMouseEnter={(e) => {
-                    if (t !== value)
+                    if (tm !== value)
                       (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)";
                   }}
                   onMouseLeave={(e) => {
-                    if (t !== value)
+                    if (tm !== value)
                       (e.currentTarget as HTMLButtonElement).style.background = "transparent";
                   }}
                 >
-                  <CrestImg src={crestMap[t]} name={t} size={24} style={{ flexShrink: 0 }} />
-                  <span>{t}</span>
-                  {t === value && (
+                  <CrestImg src={crestMap[tm]} name={tm} size={24} style={{ flexShrink: 0 }} />
+                  <span>{tm}</span>
+                  {tm === value && (
                     <span style={{ marginLeft: "auto", fontSize: 12 }}>✓</span>
                   )}
                 </button>
@@ -334,13 +336,6 @@ const STATE_ORDER: Record<PredictionState, number> = {
 
 // ── State badge ───────────────────────────────────────────────────────────────
 
-const STATE_LABEL: Record<PredictionState, string> = {
-  tip_available: "Open",
-  tip_locked: "Locked",
-  manual_review: "Review",
-  evaluated: "Evaluated",
-};
-
 const STATE_STYLE: Record<PredictionState, React.CSSProperties> = {
   tip_available: {
     background: "color-mix(in oklab, var(--watch) 15%, transparent)",
@@ -361,6 +356,15 @@ const STATE_STYLE: Record<PredictionState, React.CSSProperties> = {
 };
 
 function StateBadge({ state }: { state: PredictionState }) {
+  const { t } = useTranslation();
+
+  const STATE_LABEL: Record<PredictionState, string> = {
+    tip_available: t("tips.open"),
+    tip_locked: t("tips.locked"),
+    manual_review: t("tips.review"),
+    evaluated: t("tips.evaluated"),
+  };
+
   return (
     <span
       style={{
@@ -430,14 +434,15 @@ function DistributionCharts({
   stats: MatchPredictionStats;
   prediction: MatchPrediction;
 }) {
+  const { t } = useTranslation();
   const { outcome_counts, total } = stats;
   if (total === 0) return null;
 
   const myOutcome = prediction.predicted_outcome;
   const outcomes = [
-    { key: "home_win" as const, label: "Home Win", count: outcome_counts.home_win },
-    { key: "draw" as const, label: "Draw", count: outcome_counts.draw },
-    { key: "away_win" as const, label: "Away Win", count: outcome_counts.away_win },
+    { key: "home_win" as const, label: t("prediction.homeWin"), count: outcome_counts.home_win },
+    { key: "draw" as const, label: t("prediction.draw"), count: outcome_counts.draw },
+    { key: "away_win" as const, label: t("prediction.awayWin"), count: outcome_counts.away_win },
   ];
   const maxCount = Math.max(...outcomes.map((o) => o.count), 1);
 
@@ -459,7 +464,7 @@ function DistributionCharts({
           marginBottom: 10,
         }}
       >
-        Others' picks
+        {t("tips.othersPicks")}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {outcomes.map(({ key, label, count }) => {
@@ -544,6 +549,7 @@ function PodiumSlot({
   rank: 1 | 2 | 3;
   isMe: boolean;
 }) {
+  const { t } = useTranslation();
   const medal = MEDAL_COLORS[rank];
   const avatarSize = rank === 1 ? 60 : 48;
   const label = rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉";
@@ -594,7 +600,11 @@ function PodiumSlot({
           }}
         >
           {entry.full_name}
-          {isMe && <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 3, fontSize: 10 }}>(you)</span>}
+          {isMe && (
+            <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 3, fontSize: 10 }}>
+              {t("common.you")}
+            </span>
+          )}
         </div>
         <div
           style={{
@@ -611,7 +621,7 @@ function PodiumSlot({
         </div>
         {entry.exact_score_count > 0 && (
           <div style={{ fontSize: 9, fontWeight: 700, color: "var(--gold)", fontVariantNumeric: "tabular-nums" }}>
-            {entry.exact_score_count} exact
+            {entry.exact_score_count} {t("tips.exact")}
           </div>
         )}
       </div>
@@ -646,8 +656,10 @@ function LeaderboardBarChart({
   entries: LeaderboardEntry[];
   currentUserId: number;
 }) {
+  const { t } = useTranslation();
+
   if (entries.length === 0) {
-    return <div className="empty-day">No leaderboard data yet.</div>;
+    return <div className="empty-day">{t("tips.noLeaderboardData")}</div>;
   }
 
   const top3 = entries.slice(0, 3);
@@ -754,7 +766,7 @@ function LeaderboardBarChart({
                     {entry.full_name}
                     {isMe && (
                       <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4, fontSize: 11 }}>
-                        (you)
+                        {t("common.you")}
                       </span>
                     )}
                   </div>
@@ -805,7 +817,7 @@ function LeaderboardBarChart({
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    {entry.exact_score_count} exact
+                    {entry.exact_score_count} {t("tips.exact")}
                   </div>
                 </div>
               </div>
@@ -836,6 +848,8 @@ function PredictionCard({
   match: Match | undefined;
   stats: MatchPredictionStats | undefined;
 }) {
+  const { t } = useTranslation();
+
   const homeTla = match
     ? (match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase())
     : "???";
@@ -925,7 +939,7 @@ function PredictionCard({
               whiteSpace: "nowrap",
             }}
           >
-            ⚡ Boost
+            {t("tips.boost")}
           </span>
         </div>
 
@@ -957,18 +971,12 @@ function PredictionCard({
 
 type TabId = "predictions" | "winner" | "group" | "global";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "predictions", label: "My Predictions" },
-  { id: "winner", label: "WC Winner" },
-  { id: "group", label: "Group Leaderboard" },
-  { id: "global", label: "Global Leaderboard" },
-];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function MyTipsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabId>("predictions");
 
   // ── Tab 1: Predictions ─────────────────────────────────────────────────────
@@ -1048,7 +1056,7 @@ export function MyTipsPage() {
           setStatsMap(newMap);
         }
       } catch {
-        if (!cancelled) setPredsError("Failed to load predictions.");
+        if (!cancelled) setPredsError(t("tips.failedPredictions"));
       } finally {
         if (!cancelled) setPredsLoading(false);
       }
@@ -1056,6 +1064,7 @@ export function MyTipsPage() {
 
     fetchAll();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load winner prediction ─────────────────────────────────────────────────
@@ -1076,7 +1085,7 @@ export function MyTipsPage() {
         if (err?.response?.status === 404) {
           setWinner(null);
         } else {
-          setWinnerError("Failed to load winner prediction.");
+          setWinnerError(t("tips.failedPredictions"));
         }
       })
       .finally(() => {
@@ -1084,6 +1093,7 @@ export function MyTipsPage() {
       });
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load groups + global leaderboard ──────────────────────────────────────
@@ -1103,13 +1113,14 @@ export function MyTipsPage() {
         setGlobalLeaderboard(globalRes.data);
       })
       .catch(() => {
-        if (!cancelled) setGlobalLbError("Failed to load leaderboard.");
+        if (!cancelled) setGlobalLbError(t("tips.failedLeaderboard"));
       })
       .finally(() => {
         if (!cancelled) setGlobalLbLoading(false);
       });
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load group leaderboard when selectedGroupId changes ─────────────────
@@ -1126,13 +1137,14 @@ export function MyTipsPage() {
         if (!cancelled) setGroupLeaderboard(data);
       })
       .catch(() => {
-        if (!cancelled) setGroupLbError("Failed to load group leaderboard.");
+        if (!cancelled) setGroupLbError(t("tips.failedGroupLeaderboard"));
       })
       .finally(() => {
         if (!cancelled) setGroupLbLoading(false);
       });
 
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId]);
 
   // ── Winner form submit ─────────────────────────────────────────────────────
@@ -1151,7 +1163,7 @@ export function MyTipsPage() {
       setWinnerInput(data.team_name);
       showToast(`Pick saved: ${data.team_name} 🏆`);
     } catch {
-      setWinnerError("Failed to save winner prediction.");
+      setWinnerError(t("tips.failedPredictions"));
     } finally {
       setWinnerSaving(false);
     }
@@ -1167,12 +1179,19 @@ export function MyTipsPage() {
     if (m.away_team_crest) crestMap[m.away_team] = m.away_team_crest;
   }
 
+  const TABS: { id: TabId; label: string }[] = [
+    { id: "predictions", label: t("tips.tabMyPredictions") },
+    { id: "winner", label: t("tips.tabWCWinner") },
+    { id: "group", label: t("tips.tabGroupLeaderboard") },
+    { id: "global", label: t("tips.tabGlobalLeaderboard") },
+  ];
+
   return (
     <div>
       {/* Screen head */}
       <div className="screen-head">
         <div className="screen-title">
-          <h1>My Tips</h1>
+          <h1>{t("tips.pageTitle")}</h1>
           {!predsLoading && (
             <span className="count-pill">{predictions.length}</span>
           )}
@@ -1200,7 +1219,7 @@ export function MyTipsPage() {
           ) : predsError ? (
             <div className="empty-day" style={{ color: "var(--skip)" }}>{predsError}</div>
           ) : predictions.length === 0 ? (
-            <div className="empty-day">No predictions submitted yet.</div>
+            <div className="empty-day">{t("tips.noPredictions")}</div>
           ) : (
             <div
               style={{
@@ -1226,11 +1245,11 @@ export function MyTipsPage() {
                   color: "var(--text-3)",
                 }}
               >
-                <span style={{ flex: 1 }}>Match</span>
-                <span style={{ width: COL.score, flexShrink: 0, textAlign: "center" }}>Tip</span>
+                <span style={{ flex: 1 }}>{t("tips.colMatch")}</span>
+                <span style={{ width: COL.score, flexShrink: 0, textAlign: "center" }}>{t("tips.colTip")}</span>
                 <span style={{ width: COL.boost, flexShrink: 0 }}></span>
-                <span style={{ width: COL.status, flexShrink: 0 }}>Status</span>
-                <span style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>Points</span>
+                <span style={{ width: COL.status, flexShrink: 0 }}>{t("tips.colStatus")}</span>
+                <span style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>{t("tips.colPoints")}</span>
               </div>
 
               {predictions.map((pred) => (
@@ -1293,7 +1312,7 @@ export function MyTipsPage() {
                     marginBottom: 20,
                   }}
                 >
-                  World Cup 2026 · Winner Prediction
+                  {t("tips.wcTitle")}
                 </div>
 
                 {/* Trophies + flag row */}
@@ -1357,7 +1376,7 @@ export function MyTipsPage() {
                             letterSpacing: "0.06em",
                           }}
                         >
-                          {winnerReadOnly ? "🔒 Pick locked in" : "★ Your current pick ★"}
+                          {winnerReadOnly ? t("tips.wcPickLocked") : t("tips.wcCurrentPick")}
                         </div>
                       </>
                     ) : (
@@ -1374,12 +1393,12 @@ export function MyTipsPage() {
                             color: "var(--text-3)",
                           }}
                         >
-                          No pick yet
+                          {t("tips.wcNoPick")}
                         </div>
                         <div
                           style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4 }}
                         >
-                          Who will lift the trophy?
+                          {t("tips.wcWhoWins")}
                         </div>
                       </>
                     )}
@@ -1444,8 +1463,8 @@ export function MyTipsPage() {
                       </div>
                       <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>
                         {winner!.evaluated_at
-                          ? "Prediction evaluated — final result recorded."
-                          : "Your pick is locked. Good luck!"}
+                          ? t("tips.wcEvaluated")
+                          : t("tips.wcPickLockedMsg")}
                       </div>
                     </div>
                     <div style={{ marginLeft: "auto" }}>
@@ -1461,7 +1480,7 @@ export function MyTipsPage() {
                           letterSpacing: "0.05em",
                         }}
                       >
-                        🔒 Locked
+                        {t("tips.wcLocked")}
                       </span>
                     </div>
                   </div>
@@ -1480,11 +1499,10 @@ export function MyTipsPage() {
                         marginBottom: 8,
                       }}
                     >
-                      {winner ? "Change your pick" : "Choose a team"}
+                      {winner ? t("tips.wcChange") : t("tips.wcChoose")}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>
-                      Select the country you think will win the 2026 World Cup.
-                      Locked when the knockout stage begins.
+                      {t("tips.wcDescription")}
                     </div>
                     <CountrySelector
                       value={winnerInput}
@@ -1500,7 +1518,11 @@ export function MyTipsPage() {
                     className="btn-gold"
                     style={{ alignSelf: "flex-end" }}
                   >
-                    {winnerSaving ? "Saving…" : winner ? "Update pick" : "Submit pick"}
+                    {winnerSaving
+                      ? t("common.saving")
+                      : winner
+                      ? t("tips.wcUpdate")
+                      : t("tips.wcSubmit")}
                   </button>
                 </form>
               )}
@@ -1513,7 +1535,7 @@ export function MyTipsPage() {
       {activeTab === "group" && (
         <div>
           {groups.length === 0 && !groupLbLoading ? (
-            <div className="empty-day">You are not a member of any group yet.</div>
+            <div className="empty-day">{t("tips.notInGroup")}</div>
           ) : (
             <>
               {/* Group selector — shown when user is in multiple groups */}
