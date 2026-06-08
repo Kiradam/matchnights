@@ -1040,10 +1040,16 @@ export function MatchDetailPage() {
         {hasOdds && probabilities && (
           <div className="pred-insights">
             {probabilities.map(({ label, pct }) => (
-              <div key={label} className="pi-item" style={{ cursor: "default" }}>
+              <button
+                key={label}
+                className="pi-item"
+                onClick={handleOpenTip}
+                disabled={predLoading}
+                style={{ background: `linear-gradient(to right, color-mix(in oklab, var(--text) 12%, transparent) ${pct}%, var(--surface-2) ${pct}%)` }}
+              >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>
-              </div>
+              </button>
             ))}
           </div>
         )}

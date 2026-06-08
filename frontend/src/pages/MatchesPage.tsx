@@ -1109,6 +1109,7 @@ function MatchCard({
                 className="pi-item"
                 onClick={(e) => { e.stopPropagation(); handleOpenTip(); }}
                 disabled={predLoading || isTbdMatch}
+                style={{ background: `linear-gradient(to right, color-mix(in oklab, var(--text) 12%, transparent) ${pct}%, var(--surface-2) ${pct}%)` }}
               >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>

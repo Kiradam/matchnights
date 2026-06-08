@@ -65,7 +65,7 @@
   },
   "matches": {
     "title": "Mérkőzések",
-    "upcoming": "Következő",
+    "upcoming": "Hátralévő",
     "today": "Ma",
     "tomorrow": "Holnap",
     "all": "Összes",
@@ -193,7 +193,7 @@
     "feature2Title": "Lásd, ki jön",
     "feature2Desc": "Tudd meg, melyik barátaid csatlakoznak a kezdőrúgás előtt.",
     "feature3Title": "Csináljatok estét belőle",
-    "feature3Desc": "Alakítsátok a meccsválasztást közös tervvé.",
+    "feature3Desc": "Alakítsátok a meccsnézést közös tervvé.",
     "cta": "Koordináljátok a meccseket, csoportokat és a közös nézéseket."
   },
   "learnMore": {
@@ -209,7 +209,7 @@
     "step2Title": "2. Lásd, ki jön",
     "step2Desc": "Nézd meg, melyik barátaid akarják ugyanazt a meccset nézni.",
     "step3Title": "3. Csináljatok estét belőle",
-    "step3Desc": "Alakítsátok a meccsválasztást közös tervvé.",
+    "step3Desc": "Alakítsátok a meccsnézést közös tervvé.",
     "whyNotChat": "Miért nem elég egy csoportos chat?",
     "whyNotChatDesc": "A csoportos üzenetek remekek a beszélgetéshez, de nem a koordinációhoz. A MatchNights minden csoportnak áttekinthető helyet ad a mérkőzés-preferenciák megtekintéséhez, régi üzenetek görgetése nélkül.",
     "insightsTitle": "Hogyan működnek a meccs-előrejelzések?",
