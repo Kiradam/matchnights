@@ -1265,7 +1265,7 @@ body {
   /* Row 1: title left already, view toggle right — already in JSX */
 
   /* Row 2 becomes full-width nav only */
-  .cal-r2-toggle,
+  .seg-toggle.cal-r2-toggle,
   .cal-r2-today,
   .cal-r2-filter {
     display: none;
