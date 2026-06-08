@@ -2,6 +2,16 @@
 
 A web application for small groups (~100 users) to coordinate which FIFA World Cup 2026 matches they want to watch — solo, together, or skip. Users belong to admin-managed groups and see each other's preferences within their group(s).
 
+## Visual Introduction
+
+![MatchNights landing page with the Every Match, Every Night hero](docs/screenshots/landing-page.png)
+
+| Match dashboard | Match detail |
+| --- | --- |
+| ![MatchNights match dashboard showing upcoming fixtures and group watch choices](docs/screenshots/matches-page.png) | ![MatchNights match detail view showing group preferences for a selected fixture](docs/screenshots/match-detail.png) |
+
+MatchNights brings upcoming fixtures, group attendance, and watch preferences into one shared place so everyone can see what is coming up, who is joining, and which matches are turning into a group night.
+
 ## Features
 
 - **Invite-only** — admin generates multi-use invite links (up to 100 registrations per link, configurable per link); no self-registration
