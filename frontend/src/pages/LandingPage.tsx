@@ -1,24 +1,26 @@
 import { Link, Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../contexts/AuthContext";
 
-const moments = [
-  {
-    label: "Pick the matches",
-    text: "Choose the fixtures your group actually wants to watch.",
-  },
-  {
-    label: "See who’s in",
-    text: "Know which friends are joining before kick-off.",
-  },
-  {
-    label: "Make it a night",
-    text: "Turn match decisions into shared plans.",
-  },
-];
-
 export function LandingPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
+
+  const moments = [
+    {
+      label: t("landing.feature1Title"),
+      text: t("landing.feature1Desc"),
+    },
+    {
+      label: t("landing.feature2Title"),
+      text: t("landing.feature2Desc"),
+    },
+    {
+      label: t("landing.feature3Title"),
+      text: t("landing.feature3Desc"),
+    },
+  ];
 
   if (user) {
     return <Navigate to="/matches" replace />;
@@ -47,13 +49,13 @@ export function LandingPage() {
             className="text-[#9bb1d1] transition hover:text-white"
             to="/learn-more"
           >
-            Learn More
+            {t("landing.learnMore")}
           </Link>
           <Link
             className="rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-4 py-2 text-white transition hover:border-[#69c9ff] hover:bg-[#10295b]"
             to="/login"
           >
-            Enter MatchNights
+            {t("landing.enter")}
           </Link>
         </nav>
       </header>
@@ -72,13 +74,13 @@ export function LandingPage() {
 
         <div className="mt-6 w-full max-w-5xl text-center">
           <h1 className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center font-display text-4xl font-black uppercase leading-none tracking-normal text-white sm:text-5xl lg:text-6xl xl:text-7xl">
-            <span>Every Match.</span>
+            <span>{t("landing.headline1")}</span>
             <span className="bg-gradient-to-r from-[#247dff] via-[#318cff] to-[#6dcbff] bg-clip-text text-transparent">
-              Every Night.
+              {t("landing.headline2")}
             </span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg">
-            Plan football nights with your friends — without endless group chats.
+            {t("landing.tagline")}
           </p>
           <div className="mt-7 flex flex-col items-center gap-3">
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -86,17 +88,17 @@ export function LandingPage() {
                 to="/login"
                 className="inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-to-r from-[#126cff] to-[#5fc7ff] px-6 text-sm font-black uppercase tracking-normal text-white shadow-[0_18px_48px_rgba(18,108,255,0.32)] transition hover:from-[#247dff] hover:to-[#7bd4ff] focus:outline-none focus:ring-2 focus:ring-[#84d7ff]"
               >
-                Enter MatchNights
+                {t("landing.enter")}
               </Link>
               <Link
                 to="/learn-more"
                 className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#2d8cff]/45 bg-[#0a1b3d]/70 px-6 text-sm font-black uppercase tracking-normal text-white transition hover:border-[#69c9ff] hover:bg-[#10295b] focus:outline-none focus:ring-2 focus:ring-[#4aa3ff]"
               >
-                Learn More
+                {t("landing.learnMore")}
               </Link>
             </div>
             <p className="text-sm font-semibold text-[#8ba6cf]">
-              Coordinate matches, groups, and watch parties.
+              {t("landing.cta")}
             </p>
           </div>
         </div>

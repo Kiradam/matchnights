@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import { MatchCardSkeleton } from "../components/MatchCardSkeleton";
 import { useAuth } from "../contexts/AuthContext";
@@ -50,17 +51,17 @@ function hasMyChoice(m: Match, choices: PreferenceChoice[]): boolean {
   );
 }
 
-function relativeKick(dt: Date): string {
+function relativeKick(dt: Date, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const now = new Date();
   const diffMs = dt.getTime() - now.getTime();
   const diffH = diffMs / 3_600_000;
-  if (diffH < -2) return "Finished";
-  if (diffH < 0) return "Live / done";
-  if (diffH < 1) return `in ${Math.round(diffMs / 60_000)} min`;
+  if (diffH < -2) return t("match.finished");
+  if (diffH < 0) return t("match.live");
+  if (diffH < 1) return t("match.inMin", { count: Math.round(diffMs / 60_000) });
   if (diffH < 24 && isToday({ match_datetime: dt.toISOString() } as Match))
-    return "Today";
-  if (diffH < 48) return "Tomorrow";
-  return `in ${Math.round(diffH / 24)} days`;
+    return t("match.today");
+  if (diffH < 48) return t("match.tomorrow");
+  return t("match.inDays", { count: Math.round(diffH / 24) });
 }
 
 function dicebearUrl(seed: number | string): string {
@@ -137,6 +138,8 @@ function PrefControl({
   saving: boolean;
   onChoice: (choice: PreferenceChoice) => void;
 }) {
+  const { t } = useTranslation();
+
   const isActive = (choice: PreferenceChoice): boolean => {
     if (userGroups.length === 0) return false;
     if (choice === "watch_together") {
@@ -148,9 +151,9 @@ function PrefControl({
   };
 
   const opts = [
-    { choice: "watch_together" as const, label: "Together", Icon: TogetherIcon },
-    { choice: "watch" as const, label: "At home", Icon: WatchIcon },
-    { choice: "skip" as const, label: "Skip", Icon: SkipIcon },
+    { choice: "watch_together" as const, label: t("watchMode.together"), Icon: TogetherIcon },
+    { choice: "watch" as const, label: t("watchMode.atHome"), Icon: WatchIcon },
+    { choice: "skip" as const, label: t("watchMode.skip"), Icon: SkipIcon },
   ];
 
   return (
@@ -187,6 +190,8 @@ function GroupSelectorModal({
   onSelect: (groupId: number) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();
@@ -201,10 +206,8 @@ function GroupSelectorModal({
   return (
     <div className="popover-scrim" onClick={onCancel}>
       <div className="popover" onClick={(e) => e.stopPropagation()}>
-        <h3>Who are you watching with?</h3>
-        <p>
-          {homeTla} vs {awayTla} — pick the group you'll be Together with. The rest see you're watching at home.
-        </p>
+        <h3>{t("groupSelector.title")}</h3>
+        <p>{t("groupSelector.subtitle", { home: homeTla, away: awayTla })}</p>
         {groups.map((g) => {
           const sel = match.my_preferences.some(
             (p) => p.group_id === g.id && p.choice === "watch_together"
@@ -219,7 +222,7 @@ function GroupSelectorModal({
               <span className="go-ic">{g.name.slice(0, 2).toUpperCase()}</span>
               <span style={{ flex: 1 }}>
                 <span className="go-name">{g.name}</span>
-                <span className="go-sub">{g.member_count} members</span>
+                <span className="go-sub">{g.member_count} {t("common.members")}</span>
               </span>
               {sel && (
                 <span style={{ color: "var(--together)", fontWeight: 800, fontSize: 13 }}>
@@ -243,6 +246,7 @@ function GroupPanel({
   summary: GroupPreferenceSummary;
   currentUserId: number;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const total =
@@ -250,9 +254,9 @@ function GroupPanel({
   const pct = total > 0 ? Math.round((summary.watch_together / total) * 100) : 0;
 
   const STATUS_LABEL: Record<string, string> = {
-    watch_together: "Together",
-    watch: "At home",
-    skip: "Skip",
+    watch_together: t("watchMode.together"),
+    watch: t("watchMode.atHome"),
+    skip: t("watchMode.skip"),
   };
 
   return (
@@ -267,7 +271,7 @@ function GroupPanel({
             <span style={{ fontVariantNumeric: "tabular-nums" }}>
               {summary.watch_together}/{total}
             </span>{" "}
-            together
+            {t("watchMode.together").toLowerCase()}
           </span>
           <span className="chev">
             <ChevronIcon />
@@ -287,12 +291,12 @@ function GroupPanel({
                   {m.full_name}
                   {isMe && (
                     <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 4 }}>
-                      (you)
+                      {t("common.you")}
                     </span>
                   )}
                 </span>
                 <span className={`mstatus ${statusKey}`}>
-                  {m.choice ? STATUS_LABEL[m.choice] ?? m.choice : "Not set"}
+                  {m.choice ? STATUS_LABEL[m.choice] ?? m.choice : t("watchMode.notSet")}
                 </span>
               </div>
             );
@@ -333,6 +337,7 @@ function PredictionPopup({
   onClose: () => void;
   onSaved: (p: MatchPrediction) => void;
 }) {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [homeGoals, setHomeGoals] = useState<number>(prediction?.home_goals ?? 0);
   const [awayGoals, setAwayGoals] = useState<number>(prediction?.away_goals ?? 0);
@@ -397,12 +402,12 @@ function PredictionPopup({
   };
 
   const stateLabel = (state: MatchPrediction["state"]): string => {
-    if (state === "tip_locked") return "Locked";
+    if (state === "tip_locked") return t("prediction.locked");
     if (state === "evaluated")
       return prediction?.points_awarded != null
         ? `${prediction.points_awarded} pts`
-        : "Evaluated";
-    if (state === "manual_review") return "Reviewing...";
+        : t("prediction.evaluated");
+    if (state === "manual_review") return t("prediction.reviewing");
     return state;
   };
 
@@ -474,7 +479,7 @@ function PredictionPopup({
                   fontSize: 11,
                 }}
               >
-                Your prediction
+                {t("prediction.yourPrediction")}
               </div>
               <div
                 style={{
@@ -495,7 +500,7 @@ function PredictionPopup({
                 <div
                   style={{ fontSize: 13, color: "var(--text-2)", marginTop: 4 }}
                 >
-                  Qualifier: {prediction.predicted_qualifier}
+                  {t("prediction.qualifierLabel", { team: prediction.predicted_qualifier })}
                 </div>
               )}
               <div
@@ -517,7 +522,7 @@ function PredictionPopup({
               onClick={onClose}
               style={{ width: "100%", textAlign: "center" }}
             >
-              Close
+              {t("common.close")}
             </button>
           </div>
         ) : (
@@ -535,7 +540,7 @@ function PredictionPopup({
                   marginBottom: 10,
                 }}
               >
-                Predicted score
+                {t("prediction.predictedScore")}
               </div>
               <div
                 style={{
@@ -638,11 +643,11 @@ function PredictionPopup({
                     marginBottom: 6,
                   }}
                 >
-                  Qualifier (after extra time / penalties)
+                  {t("prediction.qualifier")}
                 </label>
                 <input
                   type="text"
-                  placeholder={`e.g. ${match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase()}`}
+                  placeholder={t("prediction.qualifierPlaceholder", { tla: match.home_team_tla ?? match.home_team.slice(0, 3).toUpperCase() })}
                   value={qualifier}
                   onChange={(e) => setQualifier(e.target.value)}
                   style={{
@@ -687,7 +692,7 @@ function PredictionPopup({
                     style={{ width: 16, height: 16, cursor: canBoost ? "pointer" : "not-allowed" }}
                   />
                   <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
-                    ⚡ Double points (Boost)
+                    {t("prediction.boost")}
                   </span>
                 </label>
                 <div
@@ -699,8 +704,8 @@ function PredictionPopup({
                     fontWeight: 600,
                   }}
                 >
-                  {boostedElsewhere} of {allowance} boosts used for this stage
-                  {boostsLeft > 0 && ` · ${boostsLeft} left`}
+                  {t("prediction.boostsUsed", { used: boostedElsewhere, total: allowance })}
+                  {boostsLeft > 0 && ` · ${t("prediction.boostsLeft", { count: boostsLeft })}`}
                 </div>
               </div>
             )}
@@ -740,14 +745,14 @@ function PredictionPopup({
                   transition: "opacity 0.15s",
                 }}
               >
-                {submitting ? "Saving..." : prediction ? "Update" : "Submit"}
+                {submitting ? t("prediction.saving") : prediction ? t("prediction.update") : t("prediction.submit")}
               </button>
               <button
                 className="btn-ghost"
                 onClick={onClose}
                 disabled={submitting}
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -791,6 +796,7 @@ function MatchCard({
   onPredictionSaved?: (matchId: number, p: MatchPrediction) => void;
   initialPrediction?: MatchPrediction;
 }) {
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
   const [pendingChoice, setPendingChoice] = useState<PreferenceChoice | null>(null);
@@ -815,12 +821,13 @@ function MatchCard({
   const isPast = !isUpcoming(match);
 
   const dt = new Date(match.match_datetime);
-  const dateStr = dt.toLocaleDateString("en-GB", {
+  const locale = i18n.language === "hu" ? "hu-HU" : "en-GB";
+  const dateStr = dt.toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-  const timeStr = dt.toLocaleTimeString("en-GB", {
+  const timeStr = dt.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -839,9 +846,9 @@ function MatchCard({
   })();
 
   const STATUS_LABEL: Record<string, string> = {
-    watch_together: "Together",
-    watch: "At home",
-    skip: "Skip",
+    watch_together: t("watchMode.together"),
+    watch: t("watchMode.atHome"),
+    skip: t("watchMode.skip"),
   };
 
   const applyChoice = async (choice: PreferenceChoice, groupId: number) => {
@@ -1024,13 +1031,13 @@ function MatchCard({
             {match.stage}
             {match.matchday != null &&
               match.stage.toLowerCase().startsWith("group") && (
-                <> · MD {match.matchday}</>
+                <> · {t("match.md")} {match.matchday}</>
               )}
           </span>
           {isHot ? (
             <span className="status-tag matchon-tag">
               <span className="dot" />
-              Match on
+              {t("match.matchOn")}
             </span>
           ) : myPref ? (
             <span className={`status-tag ${myPref}`}>
@@ -1075,7 +1082,7 @@ function MatchCard({
             {dateStr} · {timeStr}
           </span>
           <span>·</span>
-          <span className="ko-rel">{relativeKick(dt)}</span>
+          <span className="ko-rel">{relativeKick(dt, t)}</span>
         </div>
 
         {/* Watch Mode */}
@@ -1093,15 +1100,16 @@ function MatchCard({
         {hasOdds && probabilities && (
           <div className="pred-insights">
             {[
-              { label: "Home Win", pct: probabilities.home },
-              { label: "Draw", pct: probabilities.draw },
-              { label: "Away Win", pct: probabilities.away },
+              { label: t("prediction.homeWin"), pct: probabilities.home },
+              { label: t("prediction.draw"), pct: probabilities.draw },
+              { label: t("prediction.awayWin"), pct: probabilities.away },
             ].map(({ label, pct }) => (
               <button
                 key={label}
                 className="pi-item"
                 onClick={(e) => { e.stopPropagation(); handleOpenTip(); }}
                 disabled={predLoading || isTbdMatch}
+                style={{ background: `linear-gradient(to right, color-mix(in oklab, var(--text) 12%, transparent) ${pct}%, var(--surface-2) ${pct}%)` }}
               >
                 <span className="pi-label">{label}</span>
                 <span className="pi-pct">{pct}%</span>
@@ -1115,7 +1123,7 @@ function MatchCard({
           <>
             {isTbdMatch && (
               <p className="tbd-note">
-                Predictions will open once both teams are confirmed.
+                {t("prediction.tbdNote")}
               </p>
             )}
             <button
@@ -1136,14 +1144,14 @@ function MatchCard({
               }}
             >
               {predLoading ? (
-                "Loading..."
+                t("common.loading")
               ) : prediction ? (
                 <>
                   {prediction.home_goals}–{prediction.away_goals}
                   {prediction.boosted && " ⚡"}
                 </>
               ) : (
-                "Submit Tip"
+                t("prediction.submitTip")
               )}
             </button>
           </>
@@ -1209,6 +1217,8 @@ function NextGame({
   match: Match | undefined;
   summaries: GroupPreferenceSummary[];
 }) {
+  const { t, i18n } = useTranslation();
+
   if (!match) {
     return (
       <div
@@ -1222,18 +1232,19 @@ function NextGame({
           textAlign: "center",
         }}
       >
-        <span className="stat-sub">No upcoming games on your watchlist</span>
+        <span className="stat-sub">{t("matches.noWatchlistGames")}</span>
       </div>
     );
   }
 
   const dt = new Date(match.match_datetime);
-  const dateStr = dt.toLocaleDateString("en-GB", {
+  const locale = i18n.language === "hu" ? "hu-HU" : "en-GB";
+  const dateStr = dt.toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-  const timeStr = dt.toLocaleTimeString("en-GB", {
+  const timeStr = dt.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -1268,11 +1279,11 @@ function NextGame({
       <div className="stat next-game">
         <div className="ng-label">
           <span className="ng-live" />
-          Your next game
+          {t("matches.yourNextGame")}
         </div>
         <div className="ng-teams">
           {homeTla}
-          <span className="vs">vs</span>
+          <span className="vs">{t("common.vs")}</span>
           {awayTla}
         </div>
         <div className="ng-meta">
@@ -1280,19 +1291,19 @@ function NextGame({
             {dateStr} · {timeStr}
           </span>
           <span>·</span>
-          <span>{relativeKick(dt)}</span>
+          <span>{relativeKick(dt, t)}</span>
           {isTogether && (
             <>
               <span>·</span>
               <span className="ng-badge">
-                Together · {togetherCount}/{totalCount}
+                {t("matches.togetherBadge", { count: togetherCount, total: totalCount })}
               </span>
             </>
           )}
           {!isTogether && (
             <>
               <span>·</span>
-              <span className="ng-badge">At home</span>
+              <span className="ng-badge">{t("matches.atHomeBadge")}</span>
             </>
           )}
         </div>
@@ -1303,14 +1314,8 @@ function NextGame({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const FILTERS: { key: FilterMode; label: string }[] = [
-  { key: "upcoming", label: "Upcoming" },
-  { key: "today", label: "Today" },
-  { key: "tomorrow", label: "Tomorrow" },
-  { key: "all", label: "All" },
-];
-
 export function MatchesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
@@ -1321,6 +1326,13 @@ export function MatchesPage() {
   >({});
   const [predictions, setPredictions] = useState<Record<number, MatchPrediction>>({});
   const fetchRef = useRef(0);
+
+  const FILTERS: { key: FilterMode; label: string }[] = [
+    { key: "upcoming", label: t("matches.upcoming") },
+    { key: "today", label: t("matches.today") },
+    { key: "tomorrow", label: t("matches.tomorrow") },
+    { key: "all", label: t("matches.all") },
+  ];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1490,7 +1502,7 @@ export function MatchesPage() {
       {/* Screen head */}
       <div className="screen-head">
         <div className="screen-title">
-          <h1>Matches</h1>
+          <h1>{t("matches.title")}</h1>
           {!loading && (
             <span className="count-pill">{matches.length}</span>
           )}
@@ -1513,9 +1525,9 @@ export function MatchesPage() {
         <div className="dash">
           <StatTile
             kind="together"
-            label="Together"
+            label={t("matches.together")}
             value={dashboardStats.together}
-            sub="watching as a group"
+            sub={t("matches.watchingAsGroup")}
             clickable
             active={activeFilter === "together"}
             onClick={() =>
@@ -1524,9 +1536,9 @@ export function MatchesPage() {
           />
           <StatTile
             kind="watch"
-            label="At Home"
+            label={t("matches.atHome")}
             value={dashboardStats.atHome}
-            sub="watching solo"
+            sub={t("matches.watchingSolo")}
             clickable
             active={activeFilter === "planned"}
             onClick={() =>
@@ -1535,9 +1547,9 @@ export function MatchesPage() {
           />
           <StatTile
             kind="skip"
-            label="Skip"
+            label={t("matches.skip")}
             value={dashboardStats.skipped}
-            sub="sitting out"
+            sub={t("matches.sittingOut")}
             clickable
             active={activeFilter === "skip"}
             onClick={() =>
@@ -1546,9 +1558,9 @@ export function MatchesPage() {
           />
           <StatTile
             kind="none"
-            label="Not Answered"
+            label={t("matches.notAnswered")}
             value={dashboardStats.notAnswered}
-            sub="waiting on you"
+            sub={t("matches.waitingOnYou")}
             clickable
             active={activeFilter === "not_answered"}
             onClick={() =>
@@ -1567,9 +1579,9 @@ export function MatchesPage() {
         <div className="dash-tips">
           <StatTile
             kind="tip-done"
-            label="Tips Submitted"
+            label={t("matches.tipsSubmitted")}
             value={dashboardStats.tipsSubmitted}
-            sub="upcoming with a tip"
+            sub={t("matches.upcomingWithTip")}
             clickable
             active={activeFilter === "tips_submitted"}
             onClick={() =>
@@ -1578,9 +1590,9 @@ export function MatchesPage() {
           />
           <StatTile
             kind="tip-todo"
-            label="Missing Tips"
+            label={t("matches.missingTips")}
             value={dashboardStats.tipsMissing}
-            sub="upcoming without a tip"
+            sub={t("matches.upcomingWithoutTip")}
             clickable
             active={activeFilter === "tips_missing"}
             onClick={() =>
@@ -1599,20 +1611,19 @@ export function MatchesPage() {
         </div>
       ) : matches.length === 0 ? (
         <div className="empty-day">
-          {activeFilter === "upcoming" && "No upcoming matches."}
-          {activeFilter === "today" && "No matches today."}
-          {activeFilter === "tomorrow" && "No matches tomorrow."}
-          {activeFilter === "together" && "No upcoming matches marked as Together."}
-          {activeFilter === "planned" && "No upcoming matches marked as At Home."}
-          {activeFilter === "skip" && "No upcoming matches marked as Skip."}
-          {activeFilter === "not_answered" && "All upcoming matches have been answered."}
-          {activeFilter === "tips_submitted" && "No upcoming matches with a submitted tip."}
-          {activeFilter === "tips_missing" && "No upcoming matches missing a tip — you're all caught up!"}
+          {activeFilter === "upcoming" && t("matches.noUpcomingMatches")}
+          {activeFilter === "today" && t("matches.noMatchesToday")}
+          {activeFilter === "tomorrow" && t("matches.noMatchesTomorrow")}
+          {activeFilter === "together" && t("matches.noTogetherMatches")}
+          {activeFilter === "planned" && t("matches.noAtHomeMatches")}
+          {activeFilter === "skip" && t("matches.noSkipMatches")}
+          {activeFilter === "not_answered" && t("matches.allAnswered")}
+          {activeFilter === "tips_submitted" && t("matches.noTipsSubmitted")}
+          {activeFilter === "tips_missing" && t("matches.noMissingTips")}
           {activeFilter === "all" && (
             <>
-              No matches found.
-              {allMatches.length === 0 &&
-                " An admin can sync match data from the Admin panel."}
+              {t("matches.noMatchesFound")}
+              {allMatches.length === 0 && t("matches.adminSyncNote")}
             </>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 import { useToast } from "../../contexts/ToastContext";
 import type { ManualReviewMatch } from "../../types";
@@ -16,6 +17,7 @@ function MatchReviewCard({
   item: ManualReviewMatch;
   onResolved: (matchId: number) => void;
 }) {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [form, setForm] = useState<ResolveForm>({
     home_score: "",
@@ -133,7 +135,7 @@ function MatchReviewCard({
               fontWeight: 700,
             }}
           >
-            {item.pending_predictions} pending
+            {item.pending_predictions} {t("admin.predictionsPage.pending")}
           </span>
         </div>
       </div>
@@ -159,7 +161,7 @@ function MatchReviewCard({
                 textAlign: "center",
               }}
             >
-              Home
+              {t("admin.predictionsPage.home")}
             </label>
             <input
               type="number"
@@ -206,7 +208,7 @@ function MatchReviewCard({
                 textAlign: "center",
               }}
             >
-              Away
+              {t("admin.predictionsPage.away")}
             </label>
             <input
               type="number"
@@ -236,7 +238,7 @@ function MatchReviewCard({
 
         <input
           type="text"
-          placeholder="Qualifier team (optional, knockout draws only)"
+          placeholder={t("admin.predictionsPage.qualifier")}
           value={form.qualifier_team_name}
           onChange={(e) =>
             setForm((f) => ({ ...f, qualifier_team_name: e.target.value }))
@@ -286,7 +288,7 @@ function MatchReviewCard({
             alignSelf: "flex-start",
           }}
         >
-          {submitting ? "Resolving..." : "Resolve"}
+          {submitting ? t("admin.predictionsPage.resolving") : t("admin.predictionsPage.resolve")}
         </button>
       </div>
     </div>
@@ -294,6 +296,7 @@ function MatchReviewCard({
 }
 
 export function AdminPredictionsPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<ManualReviewMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -307,10 +310,10 @@ export function AdminPredictionsPage() {
         setFetchError(null);
       })
       .catch(() => {
-        setFetchError("Failed to load matches for manual review.");
+        setFetchError(t("admin.predictionsPage.failedLoad"));
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const handleResolved = (matchId: number) => {
     setItems((prev) => prev.filter((i) => i.match_id !== matchId));
@@ -330,16 +333,16 @@ export function AdminPredictionsPage() {
             textTransform: "uppercase",
           }}
         >
-          Manual Review
+          {t("admin.predictionsPage.title")}
         </h2>
         <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 4, fontWeight: 600 }}>
-          Enter the actual match result to evaluate pending predictions.
+          {t("admin.predictionsPage.subtitle")}
         </p>
       </div>
 
       {loading ? (
         <div style={{ color: "var(--text-3)", fontSize: 14, fontWeight: 600 }}>
-          Loading...
+          {t("admin.predictionsPage.loading")}
         </div>
       ) : fetchError ? (
         <div
@@ -356,7 +359,7 @@ export function AdminPredictionsPage() {
         </div>
       ) : items.length === 0 ? (
         <div style={{ color: "var(--text-3)", fontSize: 14, fontWeight: 600 }}>
-          No matches pending review.
+          {t("admin.predictionsPage.noPending")}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

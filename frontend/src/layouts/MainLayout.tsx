@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -41,10 +42,47 @@ function dicebearUrl(seed: number | string): string {
   return `https://api.dicebear.com/7.x/thumbs/svg?seed=${seed}`;
 }
 
+function LangSwitcher() {
+  const { i18n } = useTranslation();
+  const current = i18n.language;
+  const switchTo = (lang: string) => {
+    void i18n.changeLanguage(lang);
+    localStorage.setItem("mn-lang", lang);
+  };
+  return (
+    <div style={{ display: "flex", gap: 2 }}>
+      {(["en", "hu"] as const).map((lang) => (
+        <button
+          key={lang}
+          onClick={() => switchTo(lang)}
+          style={{
+            padding: "2px 7px",
+            fontSize: 11,
+            fontWeight: 700,
+            fontFamily: "'Archivo', sans-serif",
+            fontStretch: "125%",
+            letterSpacing: "0.04em",
+            borderRadius: 4,
+            border: "1px solid var(--border)",
+            background: current === lang ? "var(--text)" : "transparent",
+            color: current === lang ? "var(--bg)" : "var(--text-3)",
+            cursor: "pointer",
+            transition: "all 0.12s",
+            textTransform: "uppercase",
+          }}
+        >
+          {lang.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function MainLayout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -68,10 +106,10 @@ export function MainLayout() {
   }, [profileOpen]);
 
   const navLinks = [
-    { to: "/matches", label: "Matches" },
-    { to: "/my-tips", label: "My Tips" },
-    { to: "/calendar", label: "Calendar" },
-    ...(user?.role === "admin" ? [{ to: "/admin", label: "Admin" }] : []),
+    { to: "/matches", label: t("nav.matches") },
+    { to: "/my-tips", label: t("nav.myTips") },
+    { to: "/calendar", label: t("nav.calendar") },
+    ...(user?.role === "admin" ? [{ to: "/admin", label: t("nav.admin") }] : []),
   ];
 
   return (
@@ -81,7 +119,7 @@ export function MainLayout() {
         <button
           className="mn-icon-btn mn-hamburger"
           onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Toggle menu"
+          aria-label={t("nav.toggleMenu")}
         >
           {menuOpen ? <XIcon /> : <MenuIcon />}
         </button>
@@ -111,12 +149,13 @@ export function MainLayout() {
           ))}
         </nav>
 
-        {/* Right: theme toggle + avatar */}
+        {/* Right: LangSwitcher | theme toggle | avatar */}
         <div className="mn-nav-right">
+          <LangSwitcher />
           <button
             className="mn-icon-btn"
             onClick={toggle}
-            aria-label="Toggle theme"
+            aria-label={t("nav.toggleTheme")}
           >
             {dark ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -190,7 +229,7 @@ export function MainLayout() {
                     <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style={{ flexShrink: 0 }}>
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    Log out
+                    {t("nav.logout")}
                   </button>
                 </div>
               )}
@@ -219,7 +258,7 @@ export function MainLayout() {
               {user?.full_name}
             </div>
             <button className="mn-mobile-link" onClick={handleLogout} style={{ width: "100%" }}>
-              Logout
+              {t("nav.logout")}
             </button>
           </div>
         </div>

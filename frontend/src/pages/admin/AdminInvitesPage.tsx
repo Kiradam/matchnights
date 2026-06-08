@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import type { Invite } from "../../types";
 
 export function AdminInvitesPage() {
+  const { t } = useTranslation();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -64,11 +66,11 @@ export function AdminInvitesPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Invite Links</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t("admin.inviteLinks.title")}</h2>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Expires in (hours)</label>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.inviteLinks.expiresIn")}</label>
           <input
             type="number"
             min="1"
@@ -82,14 +84,14 @@ export function AdminInvitesPage() {
           disabled={creating}
           className="px-4 py-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded hover:bg-gray-700 dark:hover:bg-white disabled:opacity-50"
         >
-          {creating ? "Creating…" : "Generate invite"}
+          {creating ? t("admin.inviteLinks.creating") : t("admin.inviteLinks.generate")}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-400 dark:text-gray-500">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.inviteLinks.loading")}</div>
       ) : invites.length === 0 ? (
-        <div className="text-sm text-gray-400 dark:text-gray-500">No invites yet.</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.inviteLinks.noInvites")}</div>
       ) : (
         <div className="space-y-2">
           {invites.map((inv) => {
@@ -104,25 +106,25 @@ export function AdminInvitesPage() {
                 <div className="mb-2">
                   <div className="text-xs font-mono text-gray-600 dark:text-gray-400 truncate">{inv.registration_url}</div>
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                    <span>Expires {new Date(inv.expires_at).toLocaleString()}</span>
+                    <span>{t("admin.inviteLinks.expires")} {new Date(inv.expires_at).toLocaleString()}</span>
                     <span className="text-gray-300 dark:text-gray-600">·</span>
                     <span className={exhausted ? "text-orange-500 dark:text-orange-400" : ""}>
-                      {inv.use_count}/{inv.max_uses} used
+                      {inv.use_count}/{inv.max_uses} {t("admin.inviteLinks.used")}
                     </span>
-                    {exhausted && <span className="text-orange-500 dark:text-orange-400">· exhausted</span>}
-                    {!exhausted && expired && <span className="text-red-500 dark:text-red-400">· expired</span>}
+                    {exhausted && <span className="text-orange-500 dark:text-orange-400">· {t("admin.inviteLinks.exhausted")}</span>}
+                    {!exhausted && expired && <span className="text-red-500 dark:text-red-400">· {t("admin.inviteLinks.expired")}</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => copyLink(inv)} disabled={inactive} className={btnCls}>
-                    {copied === inv.id ? "Copied!" : "Copy link"}
+                    {copied === inv.id ? t("admin.inviteLinks.copied") : t("admin.inviteLinks.copyLink")}
                   </button>
                   {!inactive && (
                     <button
                       onClick={() => setRevokeConfirm(inv)}
                       className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
                     >
-                      Revoke
+                      {t("admin.inviteLinks.revoke")}
                     </button>
                   )}
                 </div>
@@ -134,8 +136,8 @@ export function AdminInvitesPage() {
 
       {revokeConfirm && (
         <ConfirmModal
-          message="Revoke this invite link? It will no longer be usable."
-          confirmLabel="Revoke"
+          message={t("admin.inviteLinks.revokeConfirm")}
+          confirmLabel={t("admin.inviteLinks.revoke")}
           onConfirm={() => {
             revokeInvite(revokeConfirm.token);
             setRevokeConfirm(null);

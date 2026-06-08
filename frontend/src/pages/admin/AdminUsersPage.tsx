@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { useAuth } from "../../contexts/AuthContext";
@@ -15,6 +16,7 @@ const statusStyle = (active: boolean) =>
     : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400";
 
 export function AdminUsersPage() {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export function AdminUsersPage() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-        Users <span className="text-sm font-normal text-gray-400 dark:text-gray-500">({users.length})</span>
+        {t("admin.usersPage.title")} <span className="text-sm font-normal text-gray-400 dark:text-gray-500">({users.length})</span>
       </h2>
 
       {loading ? (
@@ -82,7 +84,14 @@ export function AdminUsersPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  {["Name", "Email", "Role", "Status", "Joined", ""].map((h) => (
+                  {[
+                    t("admin.usersPage.name"),
+                    t("admin.usersPage.email"),
+                    t("admin.usersPage.role"),
+                    t("admin.usersPage.status"),
+                    t("admin.usersPage.joined"),
+                    "",
+                  ].map((h) => (
                     <th key={h} className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-400">{h}</th>
                   ))}
                 </tr>
@@ -93,11 +102,13 @@ export function AdminUsersPage() {
                     <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{u.full_name}</td>
                     <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{u.email}</td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${roleStyle(u.role)}`}>{u.role}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${roleStyle(u.role)}`}>
+                        {u.role === "admin" ? t("admin.usersPage.roleAdmin") : u.role}
+                      </span>
                     </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded-full text-xs ${statusStyle(u.is_active)}`}>
-                        {u.is_active ? "active" : "inactive"}
+                        {u.is_active ? t("admin.usersPage.statusActive") : t("admin.usersPage.statusInactive")}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -111,7 +122,7 @@ export function AdminUsersPage() {
                             disabled={togglingRole === u.id}
                             className={`${actionBtn} ${u.role === "admin" ? "text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800" : ""}`}
                           >
-                            {u.role === "admin" ? "Revoke admin" : "Make admin"}
+                            {u.role === "admin" ? t("admin.usersPage.revokeAdmin") : t("admin.usersPage.makeAdmin")}
                           </button>
                         )}
                         <button
@@ -119,15 +130,15 @@ export function AdminUsersPage() {
                           disabled={toggling === u.id}
                           className={actionBtn}
                         >
-                          {u.is_active ? "Deactivate" : "Activate"}
+                          {u.is_active ? t("admin.usersPage.deactivate") : t("admin.usersPage.activate")}
                         </button>
                         <button onClick={() => resetPassword(u.id)} className={actionBtn}>
-                          Reset pw
+                          {t("admin.usersPage.resetPw")}
                         </button>
                       </div>
                       {resetLinks[u.id] && (
                         <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 break-all max-w-xs">
-                          <span className="font-medium">Reset link: </span>
+                          <span className="font-medium">{t("admin.usersPage.resetLink")} </span>
                           <span className="font-mono">{resetLinks[u.id]}</span>
                         </div>
                       )}
@@ -150,9 +161,11 @@ export function AdminUsersPage() {
                     <div className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{u.full_name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</div>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-xs ${roleStyle(u.role)}`}>{u.role}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-xs ${roleStyle(u.role)}`}>
+                        {u.role === "admin" ? t("admin.usersPage.roleAdmin") : u.role}
+                      </span>
                       <span className={`px-1.5 py-0.5 rounded text-xs ${statusStyle(u.is_active)}`}>
-                        {u.is_active ? "active" : "inactive"}
+                        {u.is_active ? t("admin.usersPage.statusActive") : t("admin.usersPage.statusInactive")}
                       </span>
                     </div>
                   </div>
@@ -167,7 +180,7 @@ export function AdminUsersPage() {
                       disabled={togglingRole === u.id}
                       className={`${actionBtn} ${u.role === "admin" ? "text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800" : ""}`}
                     >
-                      {u.role === "admin" ? "Revoke admin" : "Make admin"}
+                      {u.role === "admin" ? t("admin.usersPage.revokeAdmin") : t("admin.usersPage.makeAdmin")}
                     </button>
                   )}
                   <button
@@ -175,15 +188,15 @@ export function AdminUsersPage() {
                     disabled={toggling === u.id}
                     className={actionBtn}
                   >
-                    {u.is_active ? "Deactivate" : "Activate"}
+                    {u.is_active ? t("admin.usersPage.deactivate") : t("admin.usersPage.activate")}
                   </button>
                   <button onClick={() => resetPassword(u.id)} className={actionBtn}>
-                    Reset pw
+                    {t("admin.usersPage.resetPw")}
                   </button>
                 </div>
                 {resetLinks[u.id] && (
                   <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 break-all">
-                    <span className="font-medium">Reset link: </span>
+                    <span className="font-medium">{t("admin.usersPage.resetLink")} </span>
                     <span className="font-mono">{resetLinks[u.id]}</span>
                   </div>
                 )}
@@ -195,8 +208,8 @@ export function AdminUsersPage() {
 
       {toggleConfirm && (
         <ConfirmModal
-          message={`Deactivate ${toggleConfirm.full_name}? They will be logged out and unable to log in.`}
-          confirmLabel="Deactivate"
+          message={t("admin.usersPage.confirmDeactivate", { name: toggleConfirm.full_name })}
+          confirmLabel={t("admin.usersPage.deactivate")}
           onConfirm={() => {
             toggleActive(toggleConfirm);
             setToggleConfirm(null);
@@ -209,10 +222,10 @@ export function AdminUsersPage() {
         <ConfirmModal
           message={
             roleConfirm.role === "admin"
-              ? `Revoke admin access from ${roleConfirm.full_name}? They will lose all admin privileges.`
-              : `Make ${roleConfirm.full_name} an admin? They will gain full admin access.`
+              ? t("admin.usersPage.confirmRevokeAdmin", { name: roleConfirm.full_name })
+              : t("admin.usersPage.confirmMakeAdmin", { name: roleConfirm.full_name })
           }
-          confirmLabel={roleConfirm.role === "admin" ? "Revoke admin" : "Make admin"}
+          confirmLabel={roleConfirm.role === "admin" ? t("admin.usersPage.revokeAdmin") : t("admin.usersPage.makeAdmin")}
           onConfirm={() => {
             toggleRole(roleConfirm);
             setRoleConfirm(null);

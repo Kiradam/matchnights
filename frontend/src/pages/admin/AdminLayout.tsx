@@ -1,14 +1,17 @@
 import { NavLink, Outlet } from "react-router-dom";
-
-const links = [
-  { to: "/admin/invites", label: "Invites" },
-  { to: "/admin/users", label: "Users" },
-  { to: "/admin/groups", label: "Groups" },
-  { to: "/admin/sync", label: "Match Sync" },
-  { to: "/admin/predictions", label: "Predictions" },
-];
+import { useTranslation } from "react-i18next";
 
 export function AdminLayout() {
+  const { t } = useTranslation();
+
+  const links = [
+    { to: "/admin/invites", label: t("admin.invites") },
+    { to: "/admin/users", label: t("admin.users") },
+    { to: "/admin/groups", label: t("admin.groups") },
+    { to: "/admin/sync", label: t("admin.matchSync") },
+    { to: "/admin/predictions", label: t("admin.predictions") },
+  ];
+
   return (
     <div>
       {/* Mobile: horizontal scrollable tab bar */}

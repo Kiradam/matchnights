@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../../api/axios";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import type { Group, GroupMember, User } from "../../types";
@@ -11,6 +12,7 @@ interface RemoveConfirm {
 }
 
 function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) {
+  const { t } = useTranslation();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -69,7 +71,7 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
               onChange={(e) => setSelectedUserId(e.target.value)}
               className="flex-1 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 min-w-0"
             >
-              <option value="">Add a user…</option>
+              <option value="">{t("admin.groupsPage.addUser")}</option>
               {eligibleUsers.map((u) => (
                 <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
               ))}
@@ -79,14 +81,14 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
               disabled={!selectedUserId || adding}
               className="px-3 py-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm rounded disabled:opacity-40 shrink-0"
             >
-              Add
+              {t("admin.groupsPage.add")}
             </button>
           </div>
 
           {loading ? (
-            <div className="text-sm text-gray-400 dark:text-gray-500">Loading…</div>
+            <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.groupsPage.loading")}</div>
           ) : members.length === 0 ? (
-            <div className="text-sm text-gray-400 dark:text-gray-500">No members yet.</div>
+            <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.groupsPage.noMembers")}</div>
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
               {members.map((m) => (
@@ -99,7 +101,7 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
                     onClick={() => setRemoveConfirm({ userId: m.user_id, name: m.full_name })}
                     className="text-xs px-2 py-1 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0"
                   >
-                    Remove
+                    {t("common.remove")}
                   </button>
                 </li>
               ))}
@@ -110,8 +112,8 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
 
       {removeConfirm && (
         <ConfirmModal
-          message={`Remove ${removeConfirm.name} from ${group.name}?`}
-          confirmLabel="Remove"
+          message={t("admin.groupsPage.confirmRemove", { user: removeConfirm.name, group: group.name })}
+          confirmLabel={t("common.remove")}
           onConfirm={() => {
             removeMember(removeConfirm.userId);
             setRemoveConfirm(null);
@@ -124,6 +126,7 @@ function GroupDetail({ group, onClose }: { group: Group; onClose: () => void }) 
 }
 
 export function AdminGroupsPage() {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -164,17 +167,17 @@ export function AdminGroupsPage() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-        Groups <span className="text-sm font-normal text-gray-400 dark:text-gray-500">({groups.length})</span>
+        {t("admin.groupsPage.title")} <span className="text-sm font-normal text-gray-400 dark:text-gray-500">({groups.length})</span>
       </h2>
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Group name</label>
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Friends, Office" className={inputCls} onKeyDown={(e) => e.key === "Enter" && createGroup()} />
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.groupsPage.groupName")}</label>
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("admin.groupsPage.groupNamePlaceholder")} className={inputCls} onKeyDown={(e) => e.key === "Enter" && createGroup()} />
           </div>
           <div className="flex-1">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Description (optional)</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.groupsPage.description")}</label>
             <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className={inputCls} />
           </div>
           <button
@@ -188,9 +191,9 @@ export function AdminGroupsPage() {
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-400 dark:text-gray-500">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.groupsPage.loading")}</div>
       ) : groups.length === 0 ? (
-        <div className="text-sm text-gray-400 dark:text-gray-500">No groups yet.</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500">{t("admin.groupsPage.noGroups")}</div>
       ) : (
         <div className="space-y-2">
           {groups.map((g) => (
@@ -200,15 +203,15 @@ export function AdminGroupsPage() {
                   <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{g.name}</div>
                   {g.description && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{g.description}</div>}
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {g.member_count} member{g.member_count !== 1 ? "s" : ""}
+                    {g.member_count} {g.member_count !== 1 ? t("admin.groupsPage.membersCount") : t("admin.groupsPage.member")}
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => setSelected(g)} className="text-xs px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
-                    Members
+                    {t("admin.groupsPage.members")}
                   </button>
                   <button onClick={() => setDeleteConfirm(g)} className="text-xs px-2 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/30">
-                    Delete
+                    {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -223,8 +226,8 @@ export function AdminGroupsPage() {
 
       {deleteConfirm && (
         <ConfirmModal
-          message={`Delete group "${deleteConfirm.name}"? Members will lose group visibility.`}
-          confirmLabel="Delete"
+          message={t("admin.groupsPage.confirmDelete", { name: deleteConfirm.name })}
+          confirmLabel={t("common.delete")}
           onConfirm={() => {
             deleteGroup(deleteConfirm.id);
             setDeleteConfirm(null);
