@@ -1,8 +1,8 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 
 jobs:
   deploy:
@@ -21,6 +21,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd /home/ubuntu/matchnights
-            git pull origin main
+            git fetch --tags
+            git checkout ${{ github.ref_name }}
             sudo docker compose up -d --build
             sudo docker image prune -f
