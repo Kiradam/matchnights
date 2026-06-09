@@ -603,7 +603,8 @@ function ConfettiBurst() {
             height: p.h,
             background: p.color,
             borderRadius: 2,
-            animation: `pdm-confetti ${p.dur}s ease-in ${p.delay}s both`,
+            opacity: 0,
+            animation: `pdm-confetti ${p.dur}s ease-in ${p.delay}s forwards`,
           }}
         />
       ))}
