@@ -532,15 +532,87 @@ function DistributionCharts({
   );
 }
 
-// ── Leaderboard bar chart ─────────────────────────────────────────────────────
+// ── Stadium Trophy Stage ──────────────────────────────────────────────────────
 
-const MEDAL_COLORS = {
-  1: { base: "#FFD700", glow: "rgba(255,215,0,0.25)", platform: "linear-gradient(180deg,#FFD700 0%,#B8860B 100%)", height: 88 },
-  2: { base: "#C0C0C0", glow: "rgba(192,192,192,0.20)", platform: "linear-gradient(180deg,#D8D8D8 0%,#909090 100%)", height: 64 },
-  3: { base: "#CD7F32", glow: "rgba(205,127,50,0.20)", platform: "linear-gradient(180deg,#CD7F32 0%,#8B4513 100%)", height: 48 },
+const reducedMotion =
+  typeof window !== "undefined" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const SEAT_HEIGHTS = { 1: 224, 2: 162, 3: 132 } as const;
+const SEAT_ACCENT = {
+  1: { fg: "#FFD700", dim: "#b8860b", glow: "rgba(255,215,0,0.4)",    topBg: "linear-gradient(180deg,#ffe066 0%,#cc9900 100%)",  frontBg: "linear-gradient(180deg,#1a1400 0%,#0d0a00 100%)" },
+  2: { fg: "#C8C8C8", dim: "#888888", glow: "rgba(200,200,200,0.25)", topBg: "linear-gradient(180deg,#e0e0e0 0%,#909090 100%)",  frontBg: "linear-gradient(180deg,#1a1a1a 0%,#0d0d0d 100%)" },
+  3: { fg: "#CD7F32", dim: "#7a4a1e", glow: "rgba(205,127,50,0.25)",  topBg: "linear-gradient(180deg,#d4924a 0%,#7a4a1e 100%)",  frontBg: "linear-gradient(180deg,#1a0e05 0%,#0d0700 100%)" },
 } as const;
+const MEDALLION_GRAD = {
+  1: "conic-gradient(from 0deg,#8b6914 0deg,#ffd700 45deg,#fff3a0 90deg,#ffd700 135deg,#8b6914 180deg,#ffd700 225deg,#fff3a0 270deg,#ffd700 315deg,#8b6914 360deg)",
+  2: "conic-gradient(from 0deg,#666 0deg,#ccc 45deg,#fff 90deg,#ccc 135deg,#666 180deg,#ccc 225deg,#fff 270deg,#ccc 315deg,#666 360deg)",
+  3: "conic-gradient(from 0deg,#5a3010 0deg,#cd7f32 45deg,#eaac70 90deg,#cd7f32 135deg,#5a3010 180deg,#cd7f32 225deg,#eaac70 270deg,#cd7f32 315deg,#5a3010 360deg)",
+} as const;
+const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" } as const;
 
-function PodiumSlot({
+const PODIUM_CSS = `
+@keyframes pdm-rise {
+  from { transform: translateY(56px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes pdm-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  65%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes pdm-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes pdm-halo {
+  0%, 100% { opacity: 0.5;  transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.1); }
+}
+@keyframes pdm-confetti {
+  0%   { transform: translateY(0) rotate(0deg);       opacity: 1; }
+  100% { transform: translateY(220px) rotate(720deg); opacity: 0; }
+}
+@media (max-width: 719px) {
+  .pdm-stage { transform: scale(0.86); transform-origin: bottom center; }
+}
+`;
+
+const CONFETTI_PAL = ["#FFD700","#FF6347","#4FC3F7","#81C784","#CE93D8","#FFB74D","#F48FB1","#80DEEA"];
+const CONFETTI_PIECES = Array.from({ length: 44 }, (_, i) => ({
+  id: i,
+  left: 3 + (i / 43) * 94,
+  delay: Math.abs(Math.sin(i * 1.7)) * 0.5,
+  dur:   0.7 + Math.abs(Math.cos(i * 2.3)) * 0.6,
+  color: CONFETTI_PAL[i % CONFETTI_PAL.length],
+  w: 5 + (i % 5),
+  h: 3 + (i % 3),
+}));
+
+function ConfettiBurst() {
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 10 }}>
+      {CONFETTI_PIECES.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: `${p.left}%`,
+            width: p.w,
+            height: p.h,
+            background: p.color,
+            borderRadius: 2,
+            opacity: 0,
+            animation: `pdm-confetti ${p.dur}s ease-in ${p.delay}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PodiumSeat({
   entry,
   rank,
   isMe,
@@ -550,9 +622,10 @@ function PodiumSlot({
   isMe: boolean;
 }) {
   const { t } = useTranslation();
-  const medal = MEDAL_COLORS[rank];
-  const avatarSize = rank === 1 ? 60 : 48;
-  const label = rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉";
+  const acc = SEAT_ACCENT[rank];
+  const h = SEAT_HEIGHTS[rank];
+  const riseDelay = rank === 1 ? 0.55 : rank === 2 ? 0.30 : 0.10;
+  const popDelay  = rank === 1 ? 0.95 : rank === 2 ? 0.72 : 0.52;
 
   return (
     <div
@@ -560,39 +633,80 @@ function PodiumSlot({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        flex: 1,
+        flex: rank === 1 ? "0 0 38%" : "0 0 31%",
         minWidth: 0,
       }}
     >
-      {/* Avatar + name above the platform */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, paddingBottom: 8 }}>
-        <div
-          style={{
-            borderRadius: "50%",
-            padding: 3,
-            background: `linear-gradient(135deg, ${medal.base}, transparent)`,
-            boxShadow: `0 0 12px ${medal.glow}`,
-          }}
-        >
-          <img
-            src={dicebearUrl(entry.user_id)}
-            alt={entry.full_name}
+      {/* Person */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 5,
+          paddingBottom: 10,
+          animation: reducedMotion ? undefined : `pdm-pop 0.45s cubic-bezier(.22,.9,.36,1) ${popDelay}s both`,
+        }}
+      >
+        <div style={{ position: "relative" }}>
+          {rank === 1 && (
+            <div
+              style={{
+                position: "absolute",
+                inset: -10,
+                borderRadius: "50%",
+                background: `radial-gradient(circle, ${acc.glow} 0%, transparent 70%)`,
+                animation: reducedMotion ? undefined : "pdm-halo 1.8s ease-in-out 1.4s infinite",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          <div
             style={{
-              width: avatarSize,
-              height: avatarSize,
               borderRadius: "50%",
-              objectFit: "cover",
-              display: "block",
+              padding: rank === 1 ? 3 : 2,
+              background: `linear-gradient(135deg, ${acc.fg}, ${acc.dim})`,
+              boxShadow: `0 0 ${rank === 1 ? 18 : 8}px ${acc.glow}`,
+              animation: rank === 1 && !reducedMotion ? "pdm-bob 2.4s ease-in-out 1.4s infinite" : undefined,
             }}
-          />
+          >
+            <img
+              src={dicebearUrl(entry.user_id)}
+              alt={entry.full_name}
+              style={{
+                width: rank === 1 ? 64 : 48,
+                height: rank === 1 ? 64 : 48,
+                borderRadius: "50%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </div>
+          {rank === 1 && (
+            <div
+              style={{
+                position: "absolute",
+                top: -20,
+                left: "50%",
+                transform: "translateX(-50%)",
+                fontSize: 18,
+                filter: "drop-shadow(0 0 8px #FFD700)",
+                lineHeight: 1,
+                pointerEvents: "none",
+              }}
+            >
+              👑
+            </div>
+          )}
         </div>
+
         <div
           style={{
-            fontSize: 11,
+            fontSize: rank === 1 ? 12 : 11,
             fontWeight: 700,
-            color: isMe ? "var(--gold)" : "var(--text)",
+            color: isMe ? "var(--gold)" : "#c8d4e8",
             textAlign: "center",
-            maxWidth: 80,
+            maxWidth: rank === 1 ? 104 : 84,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -601,51 +715,212 @@ function PodiumSlot({
         >
           {entry.full_name}
           {isMe && (
-            <span style={{ color: "var(--text-3)", fontWeight: 500, marginLeft: 3, fontSize: 10 }}>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 500, marginLeft: 3, fontSize: 10 }}>
               {t("common.you")}
             </span>
           )}
         </div>
+
         <div
           style={{
             fontFamily: '"Archivo", sans-serif',
             fontStretch: "125%",
             fontWeight: 900,
-            fontSize: rank === 1 ? 15 : 13,
-            color: medal.base,
+            fontSize: rank === 1 ? 16 : 13,
+            color: acc.fg,
             fontVariantNumeric: "tabular-nums",
             lineHeight: 1,
           }}
         >
           {entry.total_points} pts
         </div>
+
         {entry.exact_score_count > 0 && (
-          <div style={{ fontSize: 9, fontWeight: 700, color: "var(--gold)", fontVariantNumeric: "tabular-nums" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#FFD700", fontVariantNumeric: "tabular-nums" }}>
             {entry.exact_score_count} {t("tips.exact")}
           </div>
         )}
       </div>
 
-      {/* Platform block */}
+      {/* Pedestal */}
       <div
         style={{
           width: "100%",
-          height: medal.height,
-          background: medal.platform,
-          borderRadius: "6px 6px 0 0",
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "center",
-          paddingTop: 10,
-          fontSize: rank === 1 ? 22 : 18,
-          boxShadow: `0 -2px 8px ${medal.glow}`,
-          border: `1px solid color-mix(in oklab, ${medal.base} 30%, transparent)`,
-          borderBottom: "none",
+          animation: reducedMotion ? undefined : `pdm-rise 0.55s cubic-bezier(.22,.9,.36,1) ${riseDelay}s both`,
         }}
       >
-        {label}
+        {/* Top face — 3D lid */}
+        <div
+          style={{
+            height: 18,
+            background: acc.topBg,
+            borderRadius: "4px 4px 0 0",
+            transform: "perspective(220px) rotateX(64deg)",
+            transformOrigin: "bottom center",
+            marginBottom: -2,
+          }}
+        />
+        {/* Front face */}
+        <div
+          style={{
+            height: h,
+            background: acc.frontBg,
+            border: `1px solid color-mix(in oklab, ${acc.fg} 18%, transparent)`,
+            borderTop: "none",
+            borderRadius: "0 0 4px 4px",
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {/* Ghost numeral */}
+          <div
+            style={{
+              position: "absolute",
+              fontSize: Math.round(h * 0.65),
+              fontFamily: '"Archivo", sans-serif',
+              fontStretch: "125%",
+              fontWeight: 900,
+              color: "white",
+              opacity: 0.05,
+              lineHeight: 1,
+              userSelect: "none",
+              pointerEvents: "none",
+            }}
+          >
+            {rank}
+          </div>
+          {/* Medallion */}
+          <div
+            style={{
+              width: rank === 1 ? 52 : 40,
+              height: rank === 1 ? 52 : 40,
+              borderRadius: "50%",
+              background: MEDALLION_GRAD[rank],
+              boxShadow: `0 0 16px ${acc.glow}, inset 0 1px 2px rgba(255,255,255,0.2)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: rank === 1 ? 22 : 18,
+              flexShrink: 0,
+            }}
+          >
+            {RANK_MEDAL[rank]}
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+function StadiumPodium({
+  top3,
+  currentUserId,
+  hasBelow,
+}: {
+  top3: LeaderboardEntry[];
+  currentUserId: number;
+  hasBelow: boolean;
+}) {
+  const [replayKey, setReplayKey] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setShowConfetti(true), 1400);
+    const t2 = setTimeout(() => setShowConfetti(false), 3600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [replayKey]);
+
+  if (top3.length === 0) return null;
+
+  const slots: { entry: LeaderboardEntry; rank: 1 | 2 | 3 }[] = [];
+  if (top3[1]) slots.push({ entry: top3[1], rank: 2 });
+  slots.push({ entry: top3[0], rank: 1 });
+  if (top3[2]) slots.push({ entry: top3[2], rank: 3 });
+
+  return (
+    <>
+      <style>{PODIUM_CSS}</style>
+      <div
+        key={replayKey}
+        className="pdm-stage"
+        style={{
+          position: "relative",
+          background: "linear-gradient(180deg,#111820 0%,#0d131c 100%)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: hasBelow ? "none" : undefined,
+          borderRadius: hasBelow ? "var(--radius) var(--radius) 0 0" : "var(--radius)",
+          overflow: "hidden",
+          padding: "24px 12px 0",
+        }}
+      >
+        {/* Light beams */}
+        {([
+          { left: "18%", opacity: 0.10 },
+          { left: "50%", opacity: 0.16 },
+          { left: "82%", opacity: 0.10 },
+        ] as const).map((beam, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: beam.left,
+              transform: "translateX(-50%)",
+              width: 120,
+              height: "100%",
+              background: `linear-gradient(180deg,rgba(255,255,255,${beam.opacity}) 0%,transparent 75%)`,
+              filter: "blur(28px)",
+              pointerEvents: "none",
+            }}
+          />
+        ))}
+
+        {/* Replay button */}
+        <button
+          onClick={() => setReplayKey((k) => k + 1)}
+          title="Replay"
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(255,255,255,0.06)",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 14,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 5,
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.13)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)")}
+        >
+          ↺
+        </button>
+
+        {showConfetti && !reducedMotion && <ConfettiBurst />}
+
+        {/* Podium row */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, perspective: "1300px" }}>
+          {slots.map(({ entry, rank }) => (
+            <PodiumSeat
+              key={entry.user_id}
+              entry={entry}
+              rank={rank}
+              isMe={entry.user_id === currentUserId}
+            />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -666,34 +941,9 @@ function LeaderboardBarChart({
   const rest = entries.slice(3);
   const maxPoints = Math.max(...entries.map((e) => e.total_points), 1);
 
-  // podium order: 2nd (left), 1st (center), 3rd (right)
-  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean) as LeaderboardEntry[];
-  const podiumRanks = top3[1] ? ([2, 1, 3] as const) : ([1] as const);
-
   return (
     <div>
-      {/* Podium */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: 4,
-          padding: "16px 12px 0",
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderBottom: rest.length > 0 ? "none" : "1px solid var(--border)",
-          borderRadius: rest.length > 0 ? "var(--radius) var(--radius) 0 0" : "var(--radius)",
-        }}
-      >
-        {podiumOrder.map((entry, i) => (
-          <PodiumSlot
-            key={entry.user_id}
-            entry={entry}
-            rank={podiumRanks[i] as 1 | 2 | 3}
-            isMe={entry.user_id === currentUserId}
-          />
-        ))}
-      </div>
+      <StadiumPodium top3={top3} currentUserId={currentUserId} hasBelow={rest.length > 0} />
 
       {/* 4th place and below */}
       {rest.length > 0 && (
