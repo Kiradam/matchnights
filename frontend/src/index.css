@@ -701,18 +701,54 @@ body {
   box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.7);
 }
 
-/* MATCH ON */
-.card.matchon {
-  border-color: var(--together);
+/* At home preference — blue glow */
+.card.watch-pref:not(.matchon)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--watch) 12%, transparent) 0%, transparent 60%);
+  pointer-events: none;
+  border-radius: var(--radius);
+}
+.card.watch-pref:not(.matchon) {
+  border-color: var(--watch);
 }
 
-.card.matchon::before {
+/* Together preference — green glow */
+.card.together-pref:not(.matchon)::before {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, color-mix(in oklab, var(--together) 10%, transparent) 0%, transparent 60%);
   pointer-events: none;
   border-radius: var(--radius);
+}
+.card.together-pref:not(.matchon) {
+  border-color: var(--together);
+}
+
+/* MATCH ON — pulsating gold (takes priority over watch-pref and together-pref) */
+.card.matchon {
+  border-color: var(--gold);
+  animation: matchon-gold-pulse 2s ease-in-out infinite;
+}
+
+.card.matchon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--gold) 12%, transparent) 0%, transparent 60%);
+  pointer-events: none;
+  border-radius: var(--radius);
+}
+
+@keyframes matchon-gold-pulse {
+  0%, 100% { box-shadow: 0 0 6px 0 color-mix(in oklab, var(--gold) 20%, transparent); }
+  50%       { box-shadow: 0 0 22px 5px color-mix(in oklab, var(--gold) 45%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.matchon { animation: none; }
 }
 
 /* Skipped */
@@ -771,11 +807,11 @@ body {
 }
 
 .status-tag.matchon-tag {
-  background: var(--together-tint);
-  color: var(--together);
+  background: var(--gold-tint);
+  color: var(--gold);
 }
 
-.status-tag.matchon-tag .dot { background: var(--together); }
+.status-tag.matchon-tag .dot { background: var(--gold); }
 
 .status-tag.watch_together {
   background: var(--together-tint);

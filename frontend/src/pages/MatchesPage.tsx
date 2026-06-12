@@ -765,12 +765,19 @@ function PredictionPopup({
 // ── Match card ────────────────────────────────────────────────────────────────
 
 function togetherPct(summaries: GroupPreferenceSummary[]): number {
-  const responded = summaries.reduce(
-    (s, g) => s + g.watch + g.watch_together + g.skip,
-    0
-  );
+  // Deduplicate users across groups so a member in multiple groups isn't counted twice.
+  // A user counts as "together" if they chose watch_together in any group.
+  const userChoices = new Map<number, Set<string>>();
+  for (const summary of summaries) {
+    for (const member of summary.members) {
+      if (member.choice === null) continue;
+      if (!userChoices.has(member.user_id)) userChoices.set(member.user_id, new Set());
+      userChoices.get(member.user_id)!.add(member.choice);
+    }
+  }
+  const responded = userChoices.size;
   if (responded < 2) return 0;
-  const together = summaries.reduce((s, g) => s + g.watch_together, 0);
+  const together = [...userChoices.values()].filter(c => c.has("watch_together")).length;
   return together / responded;
 }
 
@@ -1023,7 +1030,7 @@ function MatchCard({
       )}
 
       <article
-        className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
+        className={`card${isHot ? " matchon" : ""}${myPref === "watch_together" ? " together-pref" : ""}${myPref === "watch" ? " watch-pref" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
       >
         {/* Card head */}
         <div className="card-head">
