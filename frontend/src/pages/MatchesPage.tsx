@@ -764,21 +764,9 @@ function PredictionPopup({
 
 // ── Match card ────────────────────────────────────────────────────────────────
 
-function togetherPct(summaries: GroupPreferenceSummary[]): number {
-  // Deduplicate users across groups so a member in multiple groups isn't counted twice.
-  // A user counts as "together" if they chose watch_together in any group.
-  const userChoices = new Map<number, Set<string>>();
-  for (const summary of summaries) {
-    for (const member of summary.members) {
-      if (member.choice === null) continue;
-      if (!userChoices.has(member.user_id)) userChoices.set(member.user_id, new Set());
-      userChoices.get(member.user_id)!.add(member.choice);
-    }
-  }
-  const responded = userChoices.size;
-  if (responded < 2) return 0;
-  const together = [...userChoices.values()].filter(c => c.has("watch_together")).length;
-  return together / responded;
+function isMatchOn(summaries: GroupPreferenceSummary[]): boolean {
+  // Match On fires when at least one group has ≥50% of its total members watching together.
+  return summaries.some(g => g.members.length > 0 && g.watch_together / g.members.length >= 0.5);
 }
 
 function MatchCard({
@@ -821,7 +809,7 @@ function MatchCard({
 
   const isTbdMatch = isTbd(match);
 
-  const isHot = groupSummaries ? togetherPct(groupSummaries) >= 0.5 : false;
+  const isHot = groupSummaries ? isMatchOn(groupSummaries) : false;
   const isSkipped =
     hasMyChoice(match, ["skip"]) &&
     !hasMyChoice(match, ["watch", "watch_together"]);
