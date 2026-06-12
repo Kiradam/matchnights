@@ -1070,7 +1070,14 @@ function MatchCard({
               <div className="tla">{homeTla}</div>
               <div className="tname">{match.home_team}</div>
             </div>
-            <div className="score-mid">VS</div>
+            {match.status === "finished" && match.home_score != null && match.away_score != null ? (
+              <div className="score-mid result">
+                <span className="result-score">{match.home_score}–{match.away_score}</span>
+                <span className="result-label">FT</span>
+              </div>
+            ) : (
+              <div className="score-mid">VS</div>
+            )}
             <div className="team">
               <FlagChip
                 src={match.away_team_crest}

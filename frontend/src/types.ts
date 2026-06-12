@@ -34,6 +34,8 @@ export interface Match {
   match_datetime: string;
   venue: string | null;
   status: MatchStatus;
+  home_score: number | null;
+  away_score: number | null;
   my_preferences: MyGroupPreference[];
 }
 
