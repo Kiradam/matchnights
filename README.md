@@ -149,7 +149,7 @@ This pulls all fixtures from football-data.org and saves them to the local datab
 
 Each invite link can be used by up to 100 people (shown as "X/100 used" in the admin panel). You can revoke a link before it reaches its limit.
 
-That's it — everyone can now mark matches as **Watch**, **Together**, or **Skip** and see each other's choices.
+That's it — everyone can now mark matches as **At home**, **Together**, or **Skip** and see each other's choices.
 
 ## Environment variables
 
@@ -234,7 +234,7 @@ A backup of the database is taken before each migration.
 Each preference is scoped to a `(user, match, group)` triple:
 
 - **Together** — group-specific; clicking it asks which group you want to watch with
-- **Watch** — registers for all your groups simultaneously (you want to watch regardless of group)
+- **At home** — registers for all your groups simultaneously (you want to watch regardless of group)
 - **Skip** — registers for all your groups simultaneously
 
 The match list endpoint (`GET /matches`) returns each match with `my_preferences` — your choice per group — in a single efficient query.
