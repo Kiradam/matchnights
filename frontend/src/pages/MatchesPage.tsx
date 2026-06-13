@@ -764,14 +764,9 @@ function PredictionPopup({
 
 // ── Match card ────────────────────────────────────────────────────────────────
 
-function togetherPct(summaries: GroupPreferenceSummary[]): number {
-  const responded = summaries.reduce(
-    (s, g) => s + g.watch + g.watch_together + g.skip,
-    0
-  );
-  if (responded < 2) return 0;
-  const together = summaries.reduce((s, g) => s + g.watch_together, 0);
-  return together / responded;
+function isMatchOn(summaries: GroupPreferenceSummary[]): boolean {
+  // Match On fires when at least one group has ≥50% of its total members watching together.
+  return summaries.some(g => g.members.length > 0 && g.watch_together / g.members.length >= 0.5);
 }
 
 function MatchCard({
@@ -814,7 +809,7 @@ function MatchCard({
 
   const isTbdMatch = isTbd(match);
 
-  const isHot = groupSummaries ? togetherPct(groupSummaries) >= 0.5 : false;
+  const isHot = groupSummaries ? isMatchOn(groupSummaries) : false;
   const isSkipped =
     hasMyChoice(match, ["skip"]) &&
     !hasMyChoice(match, ["watch", "watch_together"]);
@@ -1023,7 +1018,7 @@ function MatchCard({
       )}
 
       <article
-        className={`card${isHot ? " matchon" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
+        className={`card${isHot ? " matchon" : ""}${myPref === "watch_together" ? " together-pref" : ""}${myPref === "watch" ? " watch-pref" : ""}${isSkipped ? " skipped" : ""}${isPast ? " past" : ""}`}
       >
         {/* Card head */}
         <div className="card-head">
@@ -1063,7 +1058,14 @@ function MatchCard({
               <div className="tla">{homeTla}</div>
               <div className="tname">{match.home_team}</div>
             </div>
-            <div className="score-mid">VS</div>
+            {match.status === "finished" && match.home_score != null && match.away_score != null ? (
+              <div className="score-mid result">
+                <span className="result-score">{match.home_score}–{match.away_score}</span>
+                <span className="result-label">FT</span>
+              </div>
+            ) : (
+              <div className="score-mid">VS</div>
+            )}
             <div className="team">
               <FlagChip
                 src={match.away_team_crest}
