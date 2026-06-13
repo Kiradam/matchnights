@@ -1,8 +1,8 @@
 """Tests for the standings computation logic."""
-import pytest
-from app.routers.standings import _compute_standings, _h2h_stats, _sort_group, _team_status
-from app.models.match import Match, MatchStatus
 from datetime import datetime
+
+from app.models.match import Match, MatchStatus
+from app.routers.standings import _compute_standings, _team_status
 
 
 def make_match(home, away, hs=None, as_=None, status=MatchStatus.scheduled, stage="Group A"):

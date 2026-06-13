@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -9,7 +8,13 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.match import Match
 from app.models.user import User
-from app.schemas.standings import BestThirdRow, GroupMatch, GroupStanding, StandingsOut, TeamRow
+from app.schemas.standings import (
+    BestThirdRow,
+    GroupMatch,
+    GroupStanding,
+    StandingsOut,
+    TeamRow,
+)
 
 router = APIRouter(prefix="/standings", tags=["standings"])
 
