@@ -22,6 +22,7 @@ from app.routers.groups import router as groups_router
 from app.routers.matches import router as matches_router
 from app.routers.predictions import router as predictions_router
 from app.routers.preferences import router as preferences_router
+from app.routers.standings import router as standings_router
 from app.routers.users import router as users_router
 from app.services.scheduler import start_scheduler, stop_scheduler
 
@@ -79,6 +80,7 @@ app.include_router(matches_router)
 app.include_router(preferences_router)
 app.include_router(groups_router)
 app.include_router(predictions_router)
+app.include_router(standings_router)
 app.include_router(admin_users_router)
 app.include_router(admin_groups_router)
 app.include_router(admin_matches_router)

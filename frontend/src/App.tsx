@@ -21,6 +21,7 @@ import { AdminGroupsPage } from "./pages/admin/AdminGroupsPage";
 import { AdminPredictionsPage } from "./pages/admin/AdminPredictionsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { MyTipsPage } from "./pages/MyTipsPage";
+import { StandingsPage } from "./pages/StandingsPage";
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
                 <Route path="/matches/:id" element={<MatchDetailPage />} />
                 <Route path="/my-tips" element={<MyTipsPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/standings" element={<StandingsPage />} />
 
                 <Route element={<ProtectedRoute adminOnly />}>
                   <Route path="/admin" element={<AdminLayout />}>

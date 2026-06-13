@@ -3,6 +3,7 @@
     "matches": "Matches",
     "myTips": "My Tips",
     "calendar": "Calendar",
+    "standings": "Standings",
     "admin": "Admin",
     "logout": "Log out",
     "toggleTheme": "Toggle theme",
@@ -236,6 +237,20 @@
     "yourRulesDesc": "If your group wants to celebrate the winner, that's entirely up to you and outside the platform.",
     "readyCta": "Ready for the next match night?",
     "readyDesc": "Start with your group, pick the matches, and make every night count."
+  },
+  "standings": {
+    "title": "Standings",
+    "group": "Group",
+    "showMatches": "Fixtures",
+    "hideMatches": "Hide",
+    "bestThird": "Best Third Place",
+    "bestThirdNote": "Top 8 of 12 advance to the Round of 32",
+    "error": "Failed to load standings.",
+    "legend": {
+      "qualified": "Qualified / clinched",
+      "in_play": "In contention",
+      "eliminated": "Eliminated"
+    }
   },
   "notFound": {
     "title": "Page not found",
