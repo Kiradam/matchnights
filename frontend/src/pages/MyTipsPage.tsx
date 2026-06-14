@@ -1114,11 +1114,6 @@ function PredictionCard({
   const showCharts = stats !== undefined && stats.total > 0;
 
   const hasResult = match && match.home_score !== null && match.away_score !== null;
-  const tipColor =
-    prediction.points_reason === "exact_score" ? "var(--together)"
-    : prediction.points_reason === "correct_outcome" ? "var(--together)"
-    : prediction.points_reason === "wrong" ? "var(--skip)"
-    : "var(--text)";
 
   return (
     <div
@@ -1180,7 +1175,7 @@ function PredictionCard({
               fontStretch: "125%",
               fontWeight: 900,
               fontSize: 18,
-              color: tipColor,
+              color: "var(--text)",
               letterSpacing: "-0.01em",
             }}
           >
