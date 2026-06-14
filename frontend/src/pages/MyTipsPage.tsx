@@ -1250,6 +1250,7 @@ export function MyTipsPage() {
   const [matchMap, setMatchMap] = useState<Record<number, Match>>({});
   const [predsLoading, setPredsLoading] = useState(true);
   const [predsError, setPredsError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<PredictionState | null>("tip_available");
 
   // ── Stats map ─────────────────────────────────────────────────────────────
   const [statsMap, setStatsMap] = useState<Record<number, MatchPredictionStats>>({});
@@ -1487,44 +1488,117 @@ export function MyTipsPage() {
           ) : predictions.length === 0 ? (
             <div className="empty-day">{t("tips.noPredictions")}</div>
           ) : (
-            <div
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius)",
-                overflow: "hidden",
-              }}
-            >
-              {/* Header row */}
-              <div
-                className="pred-header"
-                style={{
-                  gap: 12,
-                  padding: "10px 16px",
-                  background: "var(--surface-2)",
-                  borderBottom: "1px solid var(--border)",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textTransform: "uppercase" as const,
-                  letterSpacing: "0.07em",
-                  color: "var(--text-3)",
-                }}
-              >
-                <span style={{ flex: 1 }}>{t("tips.colMatch")}</span>
-                <span style={{ width: COL.score, flexShrink: 0, textAlign: "center" }}>{t("tips.colTip")}</span>
-                <span style={{ width: COL.boost, flexShrink: 0 }}></span>
-                <span style={{ width: COL.status, flexShrink: 0 }}>{t("tips.colStatus")}</span>
-                <span style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>{t("tips.colPoints")}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Status filter pills */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {([null, "tip_available", "tip_locked", "manual_review", "evaluated"] as (PredictionState | null)[]).map((s) => {
+                  const count = s === null ? predictions.length : predictions.filter(p => p.state === s).length;
+                  const isActive = statusFilter === s;
+                  const style = s ? STATE_STYLE[s] : null;
+                  const activeColor = style?.color as string | undefined;
+                  const label = s === null ? t("tips.filterAll")
+                    : s === "tip_available" ? t("tips.open")
+                    : s === "tip_locked" ? t("tips.locked")
+                    : s === "manual_review" ? t("tips.review")
+                    : t("tips.evaluated");
+                  return (
+                    <button
+                      key={s ?? "all"}
+                      onClick={() => setStatusFilter(s)}
+                      disabled={count === 0}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 14px",
+                        borderRadius: 20,
+                        border: `1.5px solid ${isActive && activeColor ? activeColor : isActive ? "var(--text)" : "var(--border)"}`,
+                        background: isActive
+                          ? (activeColor ?? "var(--text)")
+                          : "transparent",
+                        color: isActive ? "var(--bg)" : count === 0 ? "var(--text-3)" : "var(--text-2)",
+                        fontWeight: 800,
+                        fontSize: 11,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        cursor: count === 0 ? "default" : "pointer",
+                        opacity: count === 0 ? 0.4 : 1,
+                        transition: "all 0.15s",
+                        boxShadow: isActive && activeColor
+                          ? `0 0 14px color-mix(in oklab, ${activeColor} 45%, transparent)`
+                          : "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {label}
+                      <span style={{
+                        background: isActive
+                          ? "rgba(255,255,255,0.25)"
+                          : "var(--surface-2)",
+                        color: isActive ? "var(--bg)" : "var(--text-3)",
+                        borderRadius: 10,
+                        padding: "1px 6px",
+                        fontSize: 10,
+                        fontWeight: 900,
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {predictions.map((pred) => (
-                <PredictionCard
-                  key={pred.id}
-                  prediction={pred}
-                  match={matchMap[pred.match_id]}
-                  stats={statsMap[pred.match_id]}
-                />
-              ))}
+              {/* Table */}
+              {(() => {
+                const visible = statusFilter
+                  ? predictions.filter(p => p.state === statusFilter)
+                  : predictions;
+                return (
+                  <div
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Header row */}
+                    <div
+                      className="pred-header"
+                      style={{
+                        gap: 12,
+                        padding: "10px 16px",
+                        background: "var(--surface-2)",
+                        borderBottom: "1px solid var(--border)",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: "uppercase" as const,
+                        letterSpacing: "0.07em",
+                        color: "var(--text-3)",
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>{t("tips.colMatch")}</span>
+                      <span style={{ width: COL.score, flexShrink: 0, textAlign: "center" }}>{t("tips.colTip")}</span>
+                      <span style={{ width: COL.boost, flexShrink: 0 }}></span>
+                      <span style={{ width: COL.status, flexShrink: 0 }}>{t("tips.colStatus")}</span>
+                      <span style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>{t("tips.colPoints")}</span>
+                    </div>
+
+                    {visible.length === 0 ? (
+                      <div className="empty-day">{t("tips.noPredictions")}</div>
+                    ) : (
+                      visible.map((pred) => (
+                        <PredictionCard
+                          key={pred.id}
+                          prediction={pred}
+                          match={matchMap[pred.match_id]}
+                          stats={statsMap[pred.match_id]}
+                        />
+                      ))
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
