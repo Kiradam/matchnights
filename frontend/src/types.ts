@@ -164,6 +164,59 @@ export interface MatchPredictionStats {
   away_goal_dist: GoalDistEntry[];
 }
 
+export interface TeamRow {
+  position: number;
+  team: string;
+  tla: string | null;
+  crest: string | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  points: number;
+  status: "qualified" | "eliminated" | "in_play" | "out";
+}
+
+export interface GroupMatch {
+  id: number;
+  home_team: string;
+  home_team_tla: string | null;
+  home_team_crest: string | null;
+  away_team: string;
+  away_team_tla: string | null;
+  away_team_crest: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  match_datetime: string;
+  status: string;
+}
+
+export interface GroupStanding {
+  name: string;
+  table: TeamRow[];
+  matches: GroupMatch[];
+}
+
+export interface BestThirdRow {
+  group: string;
+  team: string;
+  tla: string | null;
+  crest: string | null;
+  played: number;
+  gd: number;
+  gf: number;
+  points: number;
+  advances: boolean;
+}
+
+export interface StandingsData {
+  groups: GroupStanding[];
+  best_third: BestThirdRow[];
+}
+
 export interface ManualReviewMatch {
   match_id: number;
   external_id: string;

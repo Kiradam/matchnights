@@ -3,6 +3,7 @@
     "matches": "Mérkőzések",
     "myTips": "Tippek",
     "calendar": "Naptár",
+    "standings": "Tabella",
     "admin": "Admin",
     "logout": "Kijelentkezés",
     "toggleTheme": "Téma váltása",
@@ -236,6 +237,20 @@
     "yourRulesDesc": "Ha a csoportod meg akarja ünnepelni a győztest, az teljesen rajtatok múlik és a platformon kívül esik.",
     "readyCta": "Készen állsz a következő fociestére?",
     "readyDesc": "Kezdj el a csoportoddal, válaszd ki a meccseket, és tedd emlékezetessé minden estét."
+  },
+  "standings": {
+    "title": "Tabella",
+    "group": "Csoport",
+    "showMatches": "Mérkőzések",
+    "hideMatches": "Elrejtés",
+    "bestThird": "Legjobb harmadik helyezettek",
+    "bestThirdNote": "A 12-ből a legjobb 8 jut a 32 közé",
+    "error": "Nem sikerült betölteni a tabellát.",
+    "legend": {
+      "qualified": "Továbbjutott / biztos",
+      "in_play": "Még játékban",
+      "eliminated": "Kiesett"
+    }
   },
   "notFound": {
     "title": "Az oldal nem található",

@@ -109,6 +109,7 @@ export function MainLayout() {
     { to: "/matches", label: t("nav.matches") },
     { to: "/my-tips", label: t("nav.myTips") },
     { to: "/calendar", label: t("nav.calendar") },
+    { to: "/standings", label: t("nav.standings") },
     ...(user?.role === "admin" ? [{ to: "/admin", label: t("nav.admin") }] : []),
   ];
 
