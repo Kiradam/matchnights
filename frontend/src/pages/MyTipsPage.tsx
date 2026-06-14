@@ -1079,12 +1079,11 @@ function LeaderboardBarChart({
   );
 }
 
-// Column widths — must match the header row exactly
 const COL = {
-  score:  44,  // "Tip"
-  boost:  76,  // "⚡ Boost" badge space
-  status: 88,  // "Status"
-  points: 68,  // "Points"
+  score:  56,  // "Tip / Result" — wide enough to stack two scores
+  boost:  76,
+  status: 88,
+  points: 68,
 } as const;
 
 // ── Prediction card ───────────────────────────────────────────────────────────
@@ -1114,6 +1113,8 @@ function PredictionCard({
 
   const showCharts = stats !== undefined && stats.total > 0;
 
+  const hasResult = match && match.home_score !== null && match.away_score !== null;
+
   return (
     <div
       style={{
@@ -1121,10 +1122,11 @@ function PredictionCard({
         borderBottom: "1px solid var(--border)",
       }}
     >
-      {/* Main prediction row — fixed columns, no wrap */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Main prediction row */}
+      <div className="pred-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {/* Match info */}
         <Link
+          className="pred-match-col"
           to={match ? `/matches/${match.id}` : "#"}
           style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
         >
@@ -1147,35 +1149,49 @@ function PredictionCard({
             </span>
             {awayTla}
           </div>
-          {match && (
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {match.stage} · {dateStr}
-            </div>
-          )}
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {match ? `${match.stage} · ${dateStr}` : ""}
+            {hasResult && (
+              <span style={{ color: "var(--text-2)", marginLeft: 6 }}>
+                · FT {match!.home_score}–{match!.away_score}
+              </span>
+            )}
+          </div>
         </Link>
 
-        {/* Predicted score — fixed width, centred under "Tip" */}
+        {/* Predicted score + actual result stacked */}
         <div
+          className="pred-score-col"
           style={{
             width: COL.score,
             flexShrink: 0,
             textAlign: "center",
-            fontFamily: '"Archivo", sans-serif',
-            fontStretch: "125%",
-            fontWeight: 900,
-            fontSize: 18,
-            color: "var(--text)",
             fontVariantNumeric: "tabular-nums",
-            letterSpacing: "-0.01em",
           }}
         >
-          {prediction.home_goals}
-          <span style={{ color: "var(--text-3)", margin: "0 1px" }}>:</span>
-          {prediction.away_goals}
+          <div
+            style={{
+              fontFamily: '"Archivo", sans-serif',
+              fontStretch: "125%",
+              fontWeight: 900,
+              fontSize: 18,
+              color: "var(--text)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {prediction.home_goals}
+            <span style={{ color: "var(--text-3)", margin: "0 1px" }}>:</span>
+            {prediction.away_goals}
+          </div>
+          {hasResult && (
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", marginTop: 1, letterSpacing: "0.02em" }}>
+              {match!.home_score}–{match!.away_score}
+            </div>
+          )}
         </div>
 
-        {/* Boost indicator — always occupies space; hidden when not boosted */}
-        <div style={{ width: COL.boost, flexShrink: 0, display: "flex", alignItems: "center" }}>
+        {/* Boost indicator */}
+        <div className="pred-boost-col" style={{ width: COL.boost, flexShrink: 0 }}>
           <span
             style={{
               visibility: prediction.boosted ? "visible" : "hidden",
@@ -1193,13 +1209,13 @@ function PredictionCard({
           </span>
         </div>
 
-        {/* State badge — fixed width */}
-        <div style={{ width: COL.status, flexShrink: 0 }}>
+        {/* State badge */}
+        <div className="pred-status-col" style={{ width: COL.status, flexShrink: 0 }}>
           <StateBadge state={prediction.state} />
         </div>
 
-        {/* Points — fixed width, right-aligned */}
-        <div style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>
+        {/* Points */}
+        <div className="pred-points-col" style={{ width: COL.points, flexShrink: 0, textAlign: "right" }}>
           {prediction.points_awarded !== null && (
             <Points points={prediction.points_awarded} boosted={prediction.boosted} />
           )}
@@ -1479,11 +1495,10 @@ export function MyTipsPage() {
                 overflow: "hidden",
               }}
             >
-              {/* Header row — widths mirror COL constants in PredictionCard */}
+              {/* Header row */}
               <div
+                className="pred-header"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
                   gap: 12,
                   padding: "10px 16px",
                   background: "var(--surface-2)",
@@ -1572,6 +1587,7 @@ export function MyTipsPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 12,
+                    flexWrap: "wrap",
                   }}
                 >
                   {/* Left trophy */}
@@ -1581,15 +1597,15 @@ export function MyTipsPage() {
                       flexShrink: 0,
                     }}
                   >
-                    <TrophySVG size={72} />
+                    <TrophySVG size={60} />
                   </div>
 
                   {/* Center: flag + country */}
                   <div
                     style={{
                       textAlign: "center",
-                      flex: 1,
-                      minWidth: 120,
+                      flex: "1 1 100px",
+                      minWidth: 0,
                     }}
                   >
                     {winnerInput ? (
@@ -1602,17 +1618,18 @@ export function MyTipsPage() {
                             justifyContent: "center",
                           }}
                         >
-                          <CrestImg src={crestMap[winnerInput]} name={winnerInput} size={96} />
+                          <CrestImg src={crestMap[winnerInput]} name={winnerInput} size={80} />
                         </div>
                         <div
                           style={{
                             fontFamily: '"Archivo", sans-serif',
                             fontStretch: "125%",
                             fontWeight: 900,
-                            fontSize: 22,
+                            fontSize: 18,
                             color: "var(--gold)",
                             letterSpacing: "0.01em",
                             lineHeight: 1.1,
+                            wordBreak: "break-word",
                           }}
                         >
                           {winnerInput}
@@ -1661,7 +1678,7 @@ export function MyTipsPage() {
                       flexShrink: 0,
                     }}
                   >
-                    <TrophySVG size={72} mirror />
+                    <TrophySVG size={60} mirror />
                   </div>
                 </div>
 
