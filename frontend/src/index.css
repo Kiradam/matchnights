@@ -1650,3 +1650,34 @@ body {
   font-size: 14px;
   font-weight: 600;
 }
+
+/* ── My Tips: prediction table mobile collapse ───────────────────────────── */
+@media (max-width: 520px) {
+  .pred-header { display: none; }
+
+  .pred-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 8px;
+  }
+
+  .pred-match-col {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .pred-boost-col { display: none; }
+
+  .pred-score-col {
+    width: auto !important;
+    flex: 1;
+    text-align: left !important;
+  }
+
+  .pred-status-col { width: auto !important; }
+
+  .pred-points-col {
+    width: auto !important;
+    text-align: right;
+  }
+}
