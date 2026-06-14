@@ -1191,7 +1191,7 @@ function PredictionCard({
         </div>
 
         {/* Boost indicator */}
-        <div className="pred-boost-col" style={{ width: COL.boost, flexShrink: 0, display: "flex", alignItems: "center" }}>
+        <div className="pred-boost-col" style={{ width: COL.boost, flexShrink: 0 }}>
           <span
             style={{
               visibility: prediction.boosted ? "visible" : "hidden",
@@ -1499,8 +1499,6 @@ export function MyTipsPage() {
               <div
                 className="pred-header"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
                   gap: 12,
                   padding: "10px 16px",
                   background: "var(--surface-2)",

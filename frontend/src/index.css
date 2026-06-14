@@ -1651,7 +1651,17 @@ body {
   font-weight: 600;
 }
 
-/* ── My Tips: prediction table mobile collapse ───────────────────────────── */
+/* ── My Tips: prediction table ───────────────────────────────────────────── */
+.pred-header {
+  display: flex;
+  align-items: center;
+}
+
+.pred-boost-col {
+  display: flex;
+  align-items: center;
+}
+
 @media (max-width: 520px) {
   .pred-header { display: none; }
 
@@ -1662,7 +1672,7 @@ body {
   }
 
   .pred-match-col {
-    flex-basis: 100%;
+    flex: 1 1 100% !important;
     min-width: 0;
   }
 
