@@ -4,11 +4,15 @@ A web application for small groups (~100 users) to coordinate which FIFA World C
 
 ## Visual Introduction
 
-![MatchNights landing page with the Every Match, Every Night hero](docs/screenshots/landing-page.png)
+![MatchNights landing page](docs/screenshots/homepage.png)
 
-| Match dashboard | Match detail |
+| Matches | Standings |
 | --- | --- |
-| ![MatchNights match dashboard showing upcoming fixtures and group watch choices](docs/screenshots/matches-page.png) | ![MatchNights match detail view showing group preferences for a selected fixture](docs/screenshots/match-detail.png) |
+| ![Match dashboard with group preferences and card glows](docs/screenshots/match_page_1.png) | ![Group standings with live tables and best third place](docs/screenshots/standings.png) |
+
+| My Tips | Leaderboard | Calendar |
+| --- | --- | --- |
+| ![My Tips page with predictions and filter pills](docs/screenshots/my_tips.png) | ![Leaderboard with stadium trophy podium](docs/screenshots/leaderboard.png) | ![Calendar week view](docs/screenshots/calendar.png) |
 
 MatchNights brings upcoming fixtures, group attendance, and watch preferences into one shared place so everyone can see what is coming up, who is joining, and which matches are turning into a group night.
 
