@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import require_admin
 from app.db.session import get_db
 from app.models.audit import AuditLog
-from app.models.match import Match
+from app.models.match import Match, MatchStatus
 from app.models.prediction import MatchPrediction, PredictionState
 from app.models.user import User
 from app.schemas.predictions import MatchPredictionOut, MatchResolveIn
@@ -81,6 +81,13 @@ async def resolve_match(
     match = match_result.scalar_one_or_none()
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+
+    # Record the result on the match itself so the score shows on cards and
+    # counts toward standings — the auto path gets this from sync, the manual
+    # path must set it here.
+    match.home_score = body.home_score
+    match.away_score = body.away_score
+    match.status = MatchStatus.finished
 
     count = await evaluate_match_predictions(
         match_id=match_id,
