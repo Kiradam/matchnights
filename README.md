@@ -38,7 +38,7 @@ MatchNights brings upcoming fixtures, group attendance, and watch preferences in
 - **Mobile-friendly** — hamburger nav with fixed dropdown sheet, single-column match grid, horizontally scrollable filter pills, responsive dashboard grid
 - **Group standings** — dedicated Standings page showing live group tables for all 12 groups, computed from match results with the full FIFA tiebreaker chain (points → goal difference → goals scored → head-to-head points → H2H goal difference → H2H goals scored); rows are colour-coded: green border = qualified / clinched, red = mathematically eliminated; a **Best Third Place** section below the groups ranks all 12 third-placed teams and marks the top 8 that currently advance to the Round of 32, with a divider at the cutoff; each group card is expandable to show all 6 fixtures with results or scheduled kickoffs, each linking to the match detail page; fully responsive — collapses to single column on mobile; EN + HU translations
 - **Calendar view** — week/day views with evening and late-night sections; week view uses TLA country codes with semantic left-border colour chips; today column highlighted in gold; **week navigation is bounded to tournament weeks** (8 Jun – 19 Jul 2026) with Previous/Next disabled at the boundaries; day columns have a minimum width so no match card content ever truncates; the entire week grid scrolls horizontally as a single unit on narrow screens with no internal column scrolling; section row heights are fixed (Evening: 3 cards, Late: 4 cards) so all matches are always visible without internal scrolling; match times are shown in the user's local timezone; the `.ics` export is a secondary action placed below the grid; **responsive two-row desktop header** (title row + controls row with view toggle, navigation, and filter) and **three-row mobile header** (title/toggle, full-width navigation, Today/filter)
-- **Admin panel** — invite management (copy-link button works over HTTP and HTTPS via Clipboard API with `execCommand` fallback), user activation/deactivation, role promotion, group CRUD with member management, one-click match sync (stores final scores for auto-evaluation), and a **Predictions** tab to manually enter results for matches that couldn't be scored automatically
+- **Admin panel** — invite management (copy-link button works over HTTP and HTTPS via Clipboard API with `execCommand` fallback), user activation/deactivation, role promotion, group CRUD with member management, one-click match sync (also runs automatically in the background after a match ends, storing final scores for auto-evaluation and filling in TBD knockout teams), and a **Predictions** tab to manually enter results for matches that couldn't be scored automatically (a manual result is written to the match too, so it appears on cards and in standings)
 - **Language support** — EN / HU language selector in the navbar; all UI strings are fully translated into natural Hungarian; language preference is persisted in localStorage and applied immediately without a page reload; dates and times are formatted using the correct locale for each language
 - **JWT auth** — short-lived access tokens (memory) + refresh tokens (HttpOnly cookie) with rotation and revocation
 - **Password reset** — admin-triggered reset link sent to user; time-limited single-use token; frontend reset page with confirmation and redirect to login
@@ -143,7 +143,7 @@ Log in with the email and password you set in Step 4.
 2. Go to the **Match Sync** tab
 3. Click **Sync matches now**
 
-This pulls all fixtures from football-data.org and saves them to the local database. It takes a few seconds. Re-sync periodically to pick up kick-off time changes and final scores — once a finished match has a score in the database, the background scheduler evaluates all locked predictions for it automatically (free tier allows 100 requests/day).
+This pulls all fixtures from football-data.org and saves them to the local database. It takes a few seconds. After the first sync you normally don't need to do this by hand again: a background job **automatically re-syncs whenever a match has recently ended but has no score yet** (and at most once every 30 minutes, to respect the free tier's 100 requests/day). That same automatic sync also fills in knockout fixtures whose teams were still TBD, once the earlier rounds finish. You can still trigger a manual sync any time from this tab.
 
 ### Step 7 — Invite your friends
 
@@ -261,10 +261,12 @@ tip_available  ──(kickoff)──▶  tip_locked  ──(result known)──�
 | `evaluated` | Points awarded based on the final score | Background job (every 15 min) once the match sync stores a result, or immediately after an admin manually enters the score |
 | `manual_review` | 24 h passed without a synced result | Admin enters the score via **Admin → Predictions** |
 
-**Auto-evaluation flow:**
-1. Admin runs **Match Sync** → finished matches have their `home_score`/`away_score` stored in the database.
+**Auto-evaluation flow (fully automatic):**
+1. A background job re-syncs fixtures whenever a match has recently ended without a score (every 30 min at most), storing each finished match's `home_score`/`away_score`.
 2. The background evaluator (runs every 15 minutes) detects tip-locked predictions whose match now has a score and evaluates them automatically.
-3. If no score arrives within 24 hours of kickoff, predictions are moved to `manual_review` so an admin can enter the result by hand.
+3. If no score arrives within 24 hours of kickoff, predictions are moved to `manual_review` so an admin can enter the result by hand. When an admin resolves a match manually, the score is also written to the match itself, so it shows on the match card and counts toward the group standings exactly like a synced result.
+
+No manual intervention is required for the common case — once the first sync is done, scores and points update on their own as matches finish.
 
 **World Cup winner prediction** is locked automatically when the first knockout-stage match kicks off, and is evaluated automatically when the admin resolves the Final.
 

@@ -2,6 +2,8 @@
 
 Jobs:
   - lock_predictions: every 5 minutes — lock tips for matches that have kicked off.
+  - auto_sync_finished_matches: every 30 minutes — pull fresh fixtures when a match
+    has recently ended but has no score yet (also fills in TBD knockout teams).
   - evaluate_finished_matches: every 15 minutes — auto-evaluate predictions for
     finished matches with scores; escalate to manual_review after 24h with no score.
 """
@@ -9,14 +11,22 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models.match import Match
 from app.models.prediction import MatchPrediction, PredictionState
+from app.services.match_sync import get_or_create_sync_state, perform_sync
 from app.services.prediction_evaluator import evaluate_match_predictions
 
 logger = logging.getLogger(__name__)
+
+# A match is "recently ended" between this many hours after kickoff (≈ full time)
+# and this many hours after (matching the 24h manual-review handoff + buffer).
+MATCH_ENDED_MIN_HOURS = 2
+MATCH_ENDED_MAX_HOURS = 26
+# Don't auto-sync more often than this, to respect upstream rate/quota limits.
+AUTO_SYNC_MIN_INTERVAL_MINUTES = 30
 
 
 async def lock_predictions(session_factory: async_sessionmaker) -> None:
@@ -39,6 +49,52 @@ async def lock_predictions(session_factory: async_sessionmaker) -> None:
         if preds:
             await db.commit()
             logger.info("lock_predictions: locked %d predictions", len(preds))
+
+
+async def auto_sync_finished_matches(session_factory: async_sessionmaker) -> None:
+    """Pull fresh fixtures when a match has recently ended but has no score yet.
+
+    Only calls the upstream API when there is actually a match that ended in the
+    last MATCH_ENDED_MAX_HOURS hours without a recorded score, and not more often
+    than AUTO_SYNC_MIN_INTERVAL_MINUTES, so the data source's rate/quota limits
+    are respected. A successful sync also fills in TBD knockout teams as a
+    side effect, since it refreshes every fixture.
+    """
+    now = datetime.now(UTC)
+    async with session_factory() as db:
+        result = await db.execute(
+            select(Match).where(
+                or_(Match.home_score.is_(None), Match.away_score.is_(None)),
+                Match.status != "cancelled",
+            )
+        )
+        pending = list(result.scalars())
+
+        def ended_recently(m: Match) -> bool:
+            dt = m.match_datetime
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            age_h = (now - dt).total_seconds() / 3600
+            return MATCH_ENDED_MIN_HOURS <= age_h <= MATCH_ENDED_MAX_HOURS
+
+        if not any(ended_recently(m) for m in pending):
+            return
+
+        state = await get_or_create_sync_state(db)
+        if state.last_sync_at:
+            last = state.last_sync_at
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=UTC)
+            if (now - last).total_seconds() / 60 < AUTO_SYNC_MIN_INTERVAL_MINUTES:
+                return
+
+        try:
+            payload = await perform_sync(db)
+            await db.commit()
+            logger.info("auto_sync_finished_matches: synced after match end: %s", payload)
+        except Exception as exc:
+            await db.rollback()
+            logger.error("auto_sync_finished_matches failed: %s", exc)
 
 
 async def evaluate_finished_matches(session_factory: async_sessionmaker) -> None:
@@ -107,6 +163,15 @@ def start_scheduler(session_factory: async_sessionmaker) -> AsyncIOScheduler:
         minutes=5,
         args=[session_factory],
         id="lock_predictions",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        auto_sync_finished_matches,
+        trigger="interval",
+        minutes=AUTO_SYNC_MIN_INTERVAL_MINUTES,
+        args=[session_factory],
+        id="auto_sync_finished_matches",
         replace_existing=True,
     )
 

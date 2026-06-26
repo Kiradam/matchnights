@@ -609,3 +609,60 @@ async def test_group_leaderboard_only_shows_group_members(client: AsyncClient, d
 
     user_ids = [e["user_id"] for e in r.json()]
     assert outsider.id not in user_ids
+
+
+# ---------------------------------------------------------------------------
+# POST /admin/predictions/{match_id}/resolve
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_resolve_sets_match_score_and_status(client: AsyncClient, db: AsyncSession):
+    """Manual resolution records the result on the match itself, not just predictions."""
+    admin = await _make_user(db, "admin@t.com", role=UserRole.admin)
+    player = await _make_user(db, "player@t.com")
+    match = await _make_match(db, hours_offset=-3, ext_id="resolve_m1")
+
+    # A locked, not-yet-evaluated prediction awaiting a result
+    pred = MatchPrediction(
+        user_id=player.id,
+        match_id=match.id,
+        home_goals=2,
+        away_goals=1,
+        predicted_outcome=PredictedOutcome.home_win,
+        boosted=False,
+        submitted_at=datetime.now(UTC),
+        state=PredictionState.manual_review,
+    )
+    db.add(pred)
+    await db.commit()
+
+    token = await _login(client, admin.email)
+    r = await client.post(
+        f"/admin/predictions/{match.id}/resolve",
+        json={"home_score": 2, "away_score": 1},
+        headers=_auth(token),
+    )
+    assert r.status_code == 200, r.text
+
+    await db.refresh(match)
+    assert match.home_score == 2
+    assert match.away_score == 1
+    assert match.status == MatchStatus.finished
+
+    await db.refresh(pred)
+    assert pred.state == PredictionState.evaluated
+    assert pred.points_awarded == 10  # exact score
+
+
+@pytest.mark.asyncio
+async def test_resolve_requires_admin(client: AsyncClient, db: AsyncSession):
+    player = await _make_user(db, "player@t.com")
+    match = await _make_match(db, hours_offset=-3, ext_id="resolve_m2")
+    token = await _login(client, player.email)
+    r = await client.post(
+        f"/admin/predictions/{match.id}/resolve",
+        json={"home_score": 1, "away_score": 0},
+        headers=_auth(token),
+    )
+    assert r.status_code == 403
