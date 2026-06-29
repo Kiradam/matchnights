@@ -260,6 +260,10 @@
     "clear": "Törlés",
     "error": "Nem sikerült betölteni az ágrajzot.",
     "hint": "Nagyításhoz csípd össze vagy görgess, húzással mozgathatod. Koppints egy csapatra vagy használd a választót az útjuk követéséhez.",
+    "kickoff": "Kezdés",
+    "fullTime": "Vége",
+    "yourTip": "A tipped",
+    "noTip": "Nincs leadott tipp",
     "round": {
       "r32": "Tizenhatoddöntő",
       "r16": "Nyolcaddöntő",

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useTranslation } from "react-i18next";
 import api from "../api/axios";
-import type { BracketData, BracketMatch, BracketTeam } from "../types";
+import type { BracketData, BracketMatch, BracketTeam, MatchPrediction } from "../types";
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -54,16 +54,30 @@ function Crest({ src, name, dim }: { src: string | null; name: string; dim: bool
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function BracketPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [data, setData] = useState<BracketData | null>(null);
   const [error, setError] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [activeMatchId, setActiveMatchId] = useState<number | null>(null);
+  const [predByMatch, setPredByMatch] = useState<Record<number, MatchPrediction>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [initialScale, setInitialScale] = useState(0.5);
 
   useEffect(() => {
     api.get<BracketData>("/bracket").then(r => setData(r.data)).catch(() => setError(true));
+    api.get<MatchPrediction[]>("/predictions").then(r => {
+      const map: Record<number, MatchPrediction> = {};
+      for (const p of r.data) map[p.match_id] = p;
+      setPredByMatch(map);
+    }).catch(() => {});
   }, []);
+
+  const fmtKickoff = (iso: string): string => {
+    const locale = i18n.language === "hu" ? "hu-HU" : "en-GB";
+    return new Date(iso).toLocaleString(locale, {
+      weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+  };
 
   const roundByKey = useMemo(() => {
     const map: Record<string, BracketMatch[]> = {};
@@ -294,7 +308,7 @@ export function BracketPage() {
                         return (
                           <path
                             key={i}
-                            d={`M ${sx} ${sy} H ${mx} V ${ey} H ${ex} ${ey}`}
+                            d={`M ${sx} ${sy} H ${mx} V ${ey} H ${ex}`}
                             fill="none"
                             stroke={lit ? "var(--gold)" : "var(--border-strong)"}
                             strokeWidth={lit ? 3 : 1.5}
@@ -329,13 +343,16 @@ export function BracketPage() {
                             return (
                               <button
                                 key={idx}
-                                onClick={() => !team.is_tbd && pickTeam(team.name)}
+                                onClick={() => {
+                                  if (!team.is_tbd) pickTeam(team.name);
+                                  setActiveMatchId(prev => (prev === n.match.id ? null : n.match.id));
+                                }}
                                 style={{
                                   display: "flex", alignItems: "center", gap: 7, width: "100%",
                                   height: NODE_H / 2, padding: "0 9px", border: "none",
                                   borderTop: idx === 1 ? "1px solid var(--border)" : "none",
                                   background: isSel ? "color-mix(in oklab, var(--gold) 16%, transparent)" : "transparent",
-                                  cursor: team.is_tbd ? "default" : "pointer",
+                                  cursor: "pointer",
                                   textAlign: "left",
                                 }}
                               >
@@ -377,6 +394,48 @@ export function BracketPage() {
                         {t("bracket.round.third")}
                       </div>
                     )}
+
+                    {/* Match info bubble */}
+                    {activeMatchId != null && nodeById[activeMatchId] && (() => {
+                      const node = nodeById[activeMatchId];
+                      const m = node.match;
+                      const pred = predByMatch[m.id];
+                      const played = m.home.score != null && m.away.score != null;
+                      return (
+                        <div style={{
+                          position: "absolute",
+                          left: node.x - 10, top: node.y + NODE_H + 10, width: NODE_W + 20,
+                          background: "var(--surface)", border: "1px solid var(--border-strong)",
+                          borderRadius: 10, padding: "9px 11px", zIndex: 20,
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.04em", color: "var(--text-2)" }}>
+                              {teamLabel(m.home)} <span style={{ color: "var(--text-3)" }}>v</span> {teamLabel(m.away)}
+                            </span>
+                            <button
+                              onClick={() => setActiveMatchId(null)}
+                              style={{ border: "none", background: "transparent", color: "var(--text-3)", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--text)", marginTop: 4 }}>
+                            {played
+                              ? `${t("bracket.fullTime")} ${m.home.score}–${m.away.score}`
+                              : `${t("bracket.kickoff")}: ${fmtKickoff(m.match_datetime)}`}
+                          </div>
+                          <div style={{
+                            fontSize: 11, fontWeight: 700, marginTop: 4,
+                            color: pred ? "var(--together)" : "var(--text-3)",
+                          }}>
+                            {pred
+                              ? `${t("bracket.yourTip")}: ${pred.home_goals}–${pred.away_goals}`
+                              : t("bracket.noTip")}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </TransformComponent>
               </>

@@ -260,6 +260,10 @@
     "clear": "Clear",
     "error": "Failed to load bracket.",
     "hint": "Pinch or scroll to zoom, drag to pan. Tap a team or use the picker to trace their run.",
+    "kickoff": "Kick-off",
+    "fullTime": "Full time",
+    "yourTip": "Your tip",
+    "noTip": "No tip submitted",
     "round": {
       "r32": "Round of 32",
       "r16": "Round of 16",
