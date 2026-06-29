@@ -4,6 +4,7 @@
     "myTips": "Tippek",
     "calendar": "Naptár",
     "standings": "Tabella",
+    "bracket": "Ágrajz",
     "admin": "Admin",
     "logout": "Kijelentkezés",
     "toggleTheme": "Téma váltása",
@@ -251,6 +252,21 @@
       "qualified": "Továbbjutott / biztos",
       "in_play": "Még játékban",
       "eliminated": "Kiesett"
+    }
+  },
+  "bracket": {
+    "title": "Kieséses ágrajz",
+    "highlightTeam": "Csapat kiemelése…",
+    "clear": "Törlés",
+    "error": "Nem sikerült betölteni az ágrajzot.",
+    "hint": "Nagyításhoz csípd össze vagy görgess, húzással mozgathatod. Koppints egy csapatra vagy használd a választót az útjuk követéséhez.",
+    "round": {
+      "r32": "Tizenhatoddöntő",
+      "r16": "Nyolcaddöntő",
+      "qf": "Negyeddöntő",
+      "sf": "Elődöntő",
+      "final": "Döntő",
+      "third": "Bronzmérkőzés"
     }
   },
   "notFound": {

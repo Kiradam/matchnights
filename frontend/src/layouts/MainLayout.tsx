@@ -110,6 +110,7 @@ export function MainLayout() {
     { to: "/my-tips", label: t("nav.myTips") },
     { to: "/calendar", label: t("nav.calendar") },
     { to: "/standings", label: t("nav.standings") },
+    { to: "/bracket", label: t("nav.bracket") },
     ...(user?.role === "admin" ? [{ to: "/admin", label: t("nav.admin") }] : []),
   ];
 
