@@ -13,8 +13,12 @@ from app.core.config import settings
 from app.models.match import Match
 from app.models.sync import SyncState
 from app.services.football_api import fetch_wc_fixtures
+from app.services.odds_api import fetch_wc_odds
 
 logger = logging.getLogger(__name__)
+
+# Match an odds event to a stored match when their kickoff times are within this.
+ODDS_MATCH_TOLERANCE_SECONDS = 300
 
 # A rescheduled match is one whose kickoff moved by more than this many seconds.
 RESCHEDULE_THRESHOLD_SECONDS = 1800
@@ -126,3 +130,32 @@ async def perform_sync(db: AsyncSession) -> dict:
     state.last_sync_at = now
     state.last_sync_result = payload
     return {**payload, "last_sync_at": now}
+
+
+async def perform_odds_sync(db: AsyncSession) -> int:
+    """Fetch 1X2 odds and update stored matches. Returns the number updated.
+
+    Returns 0 when no key is configured or no odds are returned. Does not commit.
+    """
+    odds_map = await fetch_wc_odds()
+    if not odds_map:
+        return 0
+
+    result = await db.execute(select(Match))
+    matches = result.scalars().all()
+
+    updated = 0
+    for match in matches:
+        match_dt = match.match_datetime
+        if match_dt.tzinfo is not None:
+            match_dt = match_dt.replace(tzinfo=None)
+        best = min(
+            odds_map.keys(),
+            key=lambda dt: abs((dt - match_dt).total_seconds()),
+            default=None,
+        )
+        if best is None or abs((best - match_dt).total_seconds()) > ODDS_MATCH_TOLERANCE_SECONDS:
+            continue
+        match.home_odds, match.draw_odds, match.away_odds = odds_map[best]
+        updated += 1
+    return updated

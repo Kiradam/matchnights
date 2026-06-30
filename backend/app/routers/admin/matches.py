@@ -3,22 +3,20 @@ import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import require_admin
 from app.db.session import get_db
 from app.models.audit import AuditLog
-from app.models.match import Match
 from app.models.user import User
 from app.schemas.match import SyncResultOut
 from app.services.match_sync import (
     get_or_create_sync_state,
+    perform_odds_sync,
     perform_sync,
     reset_daily_counter_if_needed,
 )
-from app.services.odds_api import fetch_wc_odds
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -89,31 +87,9 @@ async def sync_odds(
 ) -> dict:
     """Fetch 1X2 odds from the-odds-api.com and update stored matches."""
 
-    odds_map = await fetch_wc_odds()
-    if not odds_map:
+    updated = await perform_odds_sync(db)
+    if updated == 0:
         return {"updated": 0, "message": "No odds returned (check ODDS_API_KEY)"}
-
-    result = await db.execute(select(Match))
-    matches = result.scalars().all()
-
-    updated = 0
-    for match in matches:
-        match_dt = match.match_datetime
-        # find the closest event within tolerance
-        best = min(
-            odds_map.keys(),
-            key=lambda dt: abs((dt - match_dt).total_seconds()),
-            default=None,
-        )
-        if best is None:
-            continue
-        if abs((best - match_dt).total_seconds()) > 300:  # 5 min tolerance
-            continue
-        home_odds, draw_odds, away_odds = odds_map[best]
-        match.home_odds = home_odds
-        match.draw_odds = draw_odds
-        match.away_odds = away_odds
-        updated += 1
 
     db.add(AuditLog(actor_id=admin.id, action="matches.odds_synced", payload={"updated": updated}))
     await db.commit()
