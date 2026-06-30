@@ -18,6 +18,7 @@ from app.routers.admin.matches import router as admin_matches_router
 from app.routers.admin.predictions import router as admin_predictions_router
 from app.routers.admin.users import router as admin_users_router
 from app.routers.auth import router as auth_router
+from app.routers.bracket import router as bracket_router
 from app.routers.groups import router as groups_router
 from app.routers.matches import router as matches_router
 from app.routers.predictions import router as predictions_router
@@ -81,6 +82,7 @@ app.include_router(preferences_router)
 app.include_router(groups_router)
 app.include_router(predictions_router)
 app.include_router(standings_router)
+app.include_router(bracket_router)
 app.include_router(admin_users_router)
 app.include_router(admin_groups_router)
 app.include_router(admin_matches_router)

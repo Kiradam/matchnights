@@ -22,6 +22,7 @@ import { AdminPredictionsPage } from "./pages/admin/AdminPredictionsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { MyTipsPage } from "./pages/MyTipsPage";
 import { StandingsPage } from "./pages/StandingsPage";
+import { BracketPage } from "./pages/BracketPage";
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="/my-tips" element={<MyTipsPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/standings" element={<StandingsPage />} />
+                <Route path="/bracket" element={<BracketPage />} />
 
                 <Route element={<ProtectedRoute adminOnly />}>
                   <Route path="/admin" element={<AdminLayout />}>

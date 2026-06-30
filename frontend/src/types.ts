@@ -217,6 +217,35 @@ export interface StandingsData {
   best_third: BestThirdRow[];
 }
 
+export interface BracketTeam {
+  name: string;
+  tla: string | null;
+  crest: string | null;
+  score: number | null;
+  is_tbd: boolean;
+}
+
+export interface BracketMatch {
+  id: number;
+  stage: string;
+  match_datetime: string;
+  status: string;
+  home: BracketTeam;
+  away: BracketTeam;
+  home_source_match_id: number | null;
+  away_source_match_id: number | null;
+}
+
+export interface BracketRound {
+  key: string;
+  name: string;
+  matches: BracketMatch[];
+}
+
+export interface BracketData {
+  rounds: BracketRound[];
+}
+
 export interface ManualReviewMatch {
   match_id: number;
   external_id: string;
