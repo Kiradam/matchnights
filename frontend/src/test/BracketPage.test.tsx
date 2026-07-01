@@ -3,7 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
-import { BracketPage } from "../pages/BracketPage";
+import { BracketPage, childMatchIds } from "../pages/BracketPage";
+import type { BracketMatch } from "../types";
 import api from "../api/axios";
 
 vi.mock("../api/axios");
@@ -104,6 +105,20 @@ describe("BracketPage", () => {
       expect(screen.getByText(/Full time/)).toBeInTheDocument();
       expect(screen.getByText(/Your tip/)).toBeInTheDocument();
     });
+  });
+
+  it("connects edges by source id, not array position", () => {
+    // prev ordered by external_id, NOT bracket pairing. R16 match's teams came
+    // from prev[4]/prev[5] (ids 5,6); positional pairing would wrongly pick 1,2.
+    const prev = [1, 2, 3, 4, 5, 6].map((id) => ({ id })) as never as BracketMatch[];
+    const m = { home_source_match_id: 5, away_source_match_id: 6 } as BracketMatch;
+    expect(childMatchIds(m, prev, 0)).toEqual([5, 6]);
+  });
+
+  it("falls back to positional pairing when the match is still TBD", () => {
+    const prev = [10, 11].map((id) => ({ id })) as never as BracketMatch[];
+    const m = { home_source_match_id: null, away_source_match_id: null } as BracketMatch;
+    expect(childMatchIds(m, prev, 0)).toEqual([10, 11]);
   });
 
   it("shows error state when the request fails", async () => {

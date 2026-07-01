@@ -25,6 +25,17 @@ interface Node {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// The previous-round matches that feed this one. Prefer identity (backend-supplied
+// source ids) so edges stay correct regardless of match ordering; fall back to
+// positional pairing only while a match is still TBD (no known source).
+export function childMatchIds(m: BracketMatch, prev: BracketMatch[], i: number): number[] {
+  const ids = [m.home_source_match_id, m.away_source_match_id].filter(
+    (x): x is number => x != null,
+  );
+  if (ids.length > 0) return ids;
+  return [prev[2 * i], prev[2 * i + 1]].filter(Boolean).map((c) => c.id);
+}
+
 function teamLabel(t: BracketTeam): string {
   if (t.is_tbd) return "TBD";
   return t.tla ?? t.name.slice(0, 3).toUpperCase();
@@ -101,9 +112,12 @@ export function BracketPage() {
       const matches = roundByKey[key] ?? [];
       const prev = roundByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
-        const c1 = prev[2 * i] ? nodeById[prev[2 * i].id] : undefined;
-        const c2 = prev[2 * i + 1] ? nodeById[prev[2 * i + 1].id] : undefined;
-        const y = c1 && c2 ? (c1.y + c2.y) / 2 : TOP_PAD + i * PITCH;
+        const kids = childMatchIds(m, prev, i)
+          .map((id) => nodeById[id])
+          .filter(Boolean);
+        const y = kids.length
+          ? kids.reduce((s, k) => s + k.y, 0) / kids.length
+          : TOP_PAD + i * PITCH;
         const n: Node = { match: m, x: col * COL_STEP, y, col };
         nodes.push(n);
         nodeById[m.id] = n;
@@ -141,8 +155,8 @@ export function BracketPage() {
       const prev = roundByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
         const to = nodeById[m.id];
-        for (const child of [prev[2 * i], prev[2 * i + 1]]) {
-          if (child && nodeById[child.id] && to) out.push({ from: nodeById[child.id], to, dashed });
+        for (const childId of childMatchIds(m, prev, i)) {
+          if (nodeById[childId] && to) out.push({ from: nodeById[childId], to, dashed });
         }
       });
     };
