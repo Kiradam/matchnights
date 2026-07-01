@@ -25,15 +25,30 @@ interface Node {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// The previous-round matches that feed this one. Prefer identity (backend-supplied
-// source ids) so edges stay correct regardless of match ordering; fall back to
-// positional pairing only while a match is still TBD (no known source).
-export function childMatchIds(m: BracketMatch, prev: BracketMatch[], i: number): number[] {
-  const ids = [m.home_source_match_id, m.away_source_match_id].filter(
-    (x): x is number => x != null,
-  );
-  if (ids.length > 0) return ids;
-  return [prev[2 * i], prev[2 * i + 1]].filter(Boolean).map((c) => c.id);
+// Reorder a round so a plain binary-tree pairing (child 2i / 2i+1 → parent i)
+// lines up with the *real* feeders. The API lists matches by external_id, which
+// is not bracket order, so positional pairing alone links the wrong matches.
+// We group each child under the parent it actually feeds (backend source ids);
+// still-TBD parents contribute nothing, so their children keep their original
+// order — enough to render a valid skeleton until identity is known.
+export function orderChildRound(
+  parents: BracketMatch[],
+  children: BracketMatch[],
+): BracketMatch[] {
+  const byId = new Map(children.map((c) => [c.id, c]));
+  const used = new Set<number>();
+  const ordered: BracketMatch[] = [];
+  for (const p of parents) {
+    for (const cid of [p.home_source_match_id, p.away_source_match_id]) {
+      const child = cid != null ? byId.get(cid) : undefined;
+      if (child && !used.has(child.id)) {
+        ordered.push(child);
+        used.add(child.id);
+      }
+    }
+  }
+  for (const c of children) if (!used.has(c.id)) ordered.push(c);
+  return ordered;
 }
 
 function teamLabel(t: BracketTeam): string {
@@ -96,12 +111,25 @@ export function BracketPage() {
     return map;
   }, [data]);
 
+  // Reorder each round into bracket order (top-down: parent order fixes child
+  // grouping) so the positional tree below links the correct matches.
+  const orderedByKey = useMemo(() => {
+    const ordered: Record<string, BracketMatch[]> = { ...roundByKey };
+    const chain: [string, string][] = [
+      ["final", "sf"], ["sf", "qf"], ["qf", "r16"], ["r16", "r32"],
+    ];
+    for (const [parentKey, childKey] of chain) {
+      ordered[childKey] = orderChildRound(ordered[parentKey] ?? [], roundByKey[childKey] ?? []);
+    }
+    return ordered;
+  }, [roundByKey]);
+
   // Positional binary-tree layout: each parent sits centred between its two children.
   const { nodes, nodeById, width, height } = useMemo(() => {
     const nodeById: Record<number, Node> = {};
     const nodes: Node[] = [];
 
-    const r32 = roundByKey.r32 ?? [];
+    const r32 = orderedByKey.r32 ?? [];
     r32.forEach((m, i) => {
       const n: Node = { match: m, x: 0, y: TOP_PAD + i * PITCH, col: 0 };
       nodes.push(n);
@@ -109,15 +137,12 @@ export function BracketPage() {
     });
 
     const layoutRound = (key: string, col: number, prevKey: string) => {
-      const matches = roundByKey[key] ?? [];
-      const prev = roundByKey[prevKey] ?? [];
+      const matches = orderedByKey[key] ?? [];
+      const prev = orderedByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
-        const kids = childMatchIds(m, prev, i)
-          .map((id) => nodeById[id])
-          .filter(Boolean);
-        const y = kids.length
-          ? kids.reduce((s, k) => s + k.y, 0) / kids.length
-          : TOP_PAD + i * PITCH;
+        const c1 = prev[2 * i] ? nodeById[prev[2 * i].id] : undefined;
+        const c2 = prev[2 * i + 1] ? nodeById[prev[2 * i + 1].id] : undefined;
+        const y = c1 && c2 ? (c1.y + c2.y) / 2 : TOP_PAD + i * PITCH;
         const n: Node = { match: m, x: col * COL_STEP, y, col };
         nodes.push(n);
         nodeById[m.id] = n;
@@ -145,18 +170,18 @@ export function BracketPage() {
       width: 5 * COL_STEP - COL_GAP,
       height: maxY + NODE_H + 24,
     };
-  }, [roundByKey]);
+  }, [orderedByKey, roundByKey]);
 
   // Skeleton connectors by positional adjacency (parent ← two children).
   const edges = useMemo(() => {
     const out: { from: Node; to: Node; dashed: boolean }[] = [];
     const connect = (key: string, prevKey: string, dashed = false) => {
-      const matches = roundByKey[key] ?? [];
-      const prev = roundByKey[prevKey] ?? [];
+      const matches = orderedByKey[key] ?? [];
+      const prev = orderedByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
         const to = nodeById[m.id];
-        for (const childId of childMatchIds(m, prev, i)) {
-          if (nodeById[childId] && to) out.push({ from: nodeById[childId], to, dashed });
+        for (const child of [prev[2 * i], prev[2 * i + 1]]) {
+          if (child && nodeById[child.id] && to) out.push({ from: nodeById[child.id], to, dashed });
         }
       });
     };
@@ -166,12 +191,12 @@ export function BracketPage() {
     connect("final", "sf");
     // Third place is fed by the two semi-final losers.
     const third = (roundByKey.third ?? [])[0];
-    const sf = roundByKey.sf ?? [];
+    const sf = orderedByKey.sf ?? [];
     if (third && nodeById[third.id]) {
       for (const s of sf) if (nodeById[s.id]) out.push({ from: nodeById[s.id], to: nodeById[third.id], dashed: true });
     }
     return out;
-  }, [roundByKey, nodeById]);
+  }, [orderedByKey, roundByKey, nodeById]);
 
   const allTeams = useMemo(() => {
     const set = new Set<string>();
