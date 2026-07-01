@@ -3,7 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
-import { BracketPage, orderChildRound } from "../pages/BracketPage";
+import { BracketPage } from "../pages/BracketPage";
+import { orderChildRound } from "../pages/bracketLayout";
 import type { BracketMatch } from "../types";
 import api from "../api/axios";
 
