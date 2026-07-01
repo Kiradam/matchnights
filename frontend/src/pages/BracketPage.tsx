@@ -3,6 +3,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useTranslation } from "react-i18next";
 import api from "../api/axios";
 import type { BracketData, BracketMatch, BracketTeam, MatchPrediction } from "../types";
+import { orderChildRound } from "./bracketLayout";
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -85,12 +86,25 @@ export function BracketPage() {
     return map;
   }, [data]);
 
+  // Reorder each round into bracket order (top-down: parent order fixes child
+  // grouping) so the positional tree below links the correct matches.
+  const orderedByKey = useMemo(() => {
+    const ordered: Record<string, BracketMatch[]> = { ...roundByKey };
+    const chain: [string, string][] = [
+      ["final", "sf"], ["sf", "qf"], ["qf", "r16"], ["r16", "r32"],
+    ];
+    for (const [parentKey, childKey] of chain) {
+      ordered[childKey] = orderChildRound(ordered[parentKey] ?? [], roundByKey[childKey] ?? []);
+    }
+    return ordered;
+  }, [roundByKey]);
+
   // Positional binary-tree layout: each parent sits centred between its two children.
   const { nodes, nodeById, width, height } = useMemo(() => {
     const nodeById: Record<number, Node> = {};
     const nodes: Node[] = [];
 
-    const r32 = roundByKey.r32 ?? [];
+    const r32 = orderedByKey.r32 ?? [];
     r32.forEach((m, i) => {
       const n: Node = { match: m, x: 0, y: TOP_PAD + i * PITCH, col: 0 };
       nodes.push(n);
@@ -98,8 +112,8 @@ export function BracketPage() {
     });
 
     const layoutRound = (key: string, col: number, prevKey: string) => {
-      const matches = roundByKey[key] ?? [];
-      const prev = roundByKey[prevKey] ?? [];
+      const matches = orderedByKey[key] ?? [];
+      const prev = orderedByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
         const c1 = prev[2 * i] ? nodeById[prev[2 * i].id] : undefined;
         const c2 = prev[2 * i + 1] ? nodeById[prev[2 * i + 1].id] : undefined;
@@ -131,14 +145,14 @@ export function BracketPage() {
       width: 5 * COL_STEP - COL_GAP,
       height: maxY + NODE_H + 24,
     };
-  }, [roundByKey]);
+  }, [orderedByKey, roundByKey]);
 
   // Skeleton connectors by positional adjacency (parent ← two children).
   const edges = useMemo(() => {
     const out: { from: Node; to: Node; dashed: boolean }[] = [];
     const connect = (key: string, prevKey: string, dashed = false) => {
-      const matches = roundByKey[key] ?? [];
-      const prev = roundByKey[prevKey] ?? [];
+      const matches = orderedByKey[key] ?? [];
+      const prev = orderedByKey[prevKey] ?? [];
       matches.forEach((m, i) => {
         const to = nodeById[m.id];
         for (const child of [prev[2 * i], prev[2 * i + 1]]) {
@@ -152,12 +166,12 @@ export function BracketPage() {
     connect("final", "sf");
     // Third place is fed by the two semi-final losers.
     const third = (roundByKey.third ?? [])[0];
-    const sf = roundByKey.sf ?? [];
+    const sf = orderedByKey.sf ?? [];
     if (third && nodeById[third.id]) {
       for (const s of sf) if (nodeById[s.id]) out.push({ from: nodeById[s.id], to: nodeById[third.id], dashed: true });
     }
     return out;
-  }, [roundByKey, nodeById]);
+  }, [orderedByKey, roundByKey, nodeById]);
 
   const allTeams = useMemo(() => {
     const set = new Set<string>();

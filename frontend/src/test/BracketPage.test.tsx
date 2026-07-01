@@ -4,6 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n";
 import { BracketPage } from "../pages/BracketPage";
+import { orderChildRound } from "../pages/bracketLayout";
+import type { BracketMatch } from "../types";
 import api from "../api/axios";
 
 vi.mock("../api/axios");
@@ -104,6 +106,23 @@ describe("BracketPage", () => {
       expect(screen.getByText(/Full time/)).toBeInTheDocument();
       expect(screen.getByText(/Your tip/)).toBeInTheDocument();
     });
+  });
+
+  it("orders children so positional pairing matches real feeders", () => {
+    // Children listed by external_id (ids 1..6), NOT bracket order. Parents pull
+    // their true feeders (5,6 then 1,2) to the front so pairing 2i/2i+1 is correct.
+    const children = [1, 2, 3, 4, 5, 6].map((id) => ({ id })) as never as BracketMatch[];
+    const parents = [
+      { home_source_match_id: 5, away_source_match_id: 6 },
+      { home_source_match_id: 1, away_source_match_id: 2 },
+    ] as BracketMatch[];
+    expect(orderChildRound(parents, children).map((c) => c.id)).toEqual([5, 6, 1, 2, 3, 4]);
+  });
+
+  it("keeps children in original order under still-TBD parents", () => {
+    const children = [10, 11].map((id) => ({ id })) as never as BracketMatch[];
+    const parents = [{ home_source_match_id: null, away_source_match_id: null }] as BracketMatch[];
+    expect(orderChildRound(parents, children).map((c) => c.id)).toEqual([10, 11]);
   });
 
   it("shows error state when the request fails", async () => {
